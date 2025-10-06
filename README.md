@@ -13,20 +13,20 @@
 ## 运行方式
 
 ```bash
-python windows/run_tray.py
+python run_tray.py
 ```
 
 首次运行会自动生成配置文件并载入默认值。若需要指定 Pythonw 以避免弹出控制台，可执行：
 
 ```bash
-pythonw windows/run_tray.py
+pythonw run_tray.py
 ```
 
 ## 开发提示
-- 依赖列表见 `windows/requirements.txt`，其中包含对根目录 `requirements-client.txt` 的引用。
-- `TrayBackend` 通过后台线程运行原有 async 客户端逻辑，核心入口位于 `windows/tray_app.py`。
-- UI 相关组件集中在 `windows/settings_dialog.py`、`windows/hotkey_dialog.py` 与 `windows/tray_icons.py`。
-- 启动项管理封装在 `windows/autostart.py`，仅在 Windows 环境下有效。
+- 依赖列表见 `requirements.txt`，其中包含对根目录 `requirements-client.txt` 的引用。
+- `TrayBackend` 通过后台线程运行原有 async 客户端逻辑，核心入口位于 `tray_app.py`。
+- UI 相关组件集中在 `settings_dialog.py`、`hotkey_dialog.py` 与 `tray_icons.py`。
+- 启动项管理封装在 `autostart.py`，仅在 Windows 环境下有效。
 
 ## 打包
-可继续沿用项目现有的 PyInstaller 方案，设置入口为 `windows/run_tray.py`，建议追加参数 `--noconsole` 与 `--icon assets/icon.ico` 生成 `CapsWriterTray.exe`。
+可继续沿用项目现有的 PyInstaller 方案，设置入口为 `run_tray.py`，建议追加参数 `--noconsole` 与 `--icon assets/icon.ico` 生成 `CapsWriterTray.exe`。
