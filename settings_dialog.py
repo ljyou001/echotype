@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, Iterable, List, Tuple
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
+    QApplication,
     QButtonGroup,
     QCheckBox,
     QComboBox,
@@ -360,7 +361,23 @@ class SettingsDialog(QDialog):
         if self._on_start_server is None:
             QMessageBox.information(self, '操作不可用', '当前环境不支持从此处启动服务器。')
             return
-        self._on_start_server()
+        original_text = self.local_start_button.text()
+        self.local_start_button.setEnabled(False)
+        self.local_start_button.setText('启动中…')
+        QApplication.processEvents()
+        success = False
+        try:
+            result = self._on_start_server()
+            success = bool(result)
+        except Exception as exc:
+            message = str(exc) or '模型启动失败'
+            QMessageBox.critical(self, '模型启动失败', message)
+        finally:
+            self.local_start_button.setEnabled(True)
+            if success:
+                self.local_start_button.setText('重新加载模型')
+            else:
+                self.local_start_button.setText(original_text)
 
     def _current_model_source(self) -> str:
         if self.model_option_local.isChecked():

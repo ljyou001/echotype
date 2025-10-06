@@ -181,7 +181,11 @@ class TrayApp:
                 self._listening = True
 
     def _open_settings(self) -> None:
-        dialog = SettingsDialog(self.config, self._list_audio_devices(), on_start_server=self._start_server)
+        dialog = SettingsDialog(
+            self.config,
+            self._list_audio_devices(),
+            on_start_server=lambda: self._start_server(from_settings=True),
+        )
         if dialog.exec() == QDialog.DialogCode.Accepted:
             new_config = dialog.updated_config()
             restart_required = self._config_requires_restart(self.config, new_config)
@@ -250,18 +254,39 @@ class TrayApp:
                     return candidate
         return None
 
-    def _start_server(self) -> None:
+    def _start_server(self, checked: bool = False, *, from_settings: bool = False) -> bool:
+        _ = checked  # QAction 触发会传递布尔值
+        success, message = self._launch_server_process()
+        if from_settings:
+            if not success:
+                raise RuntimeError(message)
+        else:
+            if success:
+                QMessageBox.information(None, '模型启动', message)
+            else:
+                QMessageBox.warning(None, '启动失败', message)
+        return success
+
+    def _launch_server_process(self) -> Tuple[bool, str]:
         entry = self._resolve_server_entry()
         if entry is None:
-            QMessageBox.warning(None, '无法启动', '未找到 server 启动入口')
-            return
+            message = '未找到 server 启动入口'
+            self._show_notification('模型启动失败', message, force=True)
+            return False, message
         try:
+            self._show_notification('模型加载中', f'正在启动 {entry.name}…', force=True)
             if entry.suffix.lower() == '.exe':
                 subprocess.Popen([str(entry)], cwd=str(entry.parent))
             else:
                 subprocess.Popen([sys.executable, str(entry)], cwd=str(entry.parent))
         except Exception as exc:
-            QMessageBox.critical(None, '启动失败', str(exc))
+            message = str(exc) or '模型启动失败'
+            self._show_notification('模型启动失败', message, force=True)
+            return False, message
+        else:
+            message = '模型服务已启动，请稍候等待初始化完成。'
+            self._show_notification('模型加载完成', message)
+            return True, message
 
     def _quit(self) -> None:
         self.backend.stop_listening()
