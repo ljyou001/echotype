@@ -29,6 +29,7 @@ def init_recognizer(queue_in: Queue, queue_out: Queue, sockets_id):
         from funasr_onnx import CT_Transformer
         disable_jieba_debug()
     console.print('[green4]模块加载完成', end='\n\n')
+    queue_out.put({'stage': 'modules', 'status': 'done'})
 
     # 载入语音模型
     console.print('[yellow]语音模型载入中', end='\r'); t1 = time.time()
@@ -36,6 +37,7 @@ def init_recognizer(queue_in: Queue, queue_out: Queue, sockets_id):
         **{key: value for key, value in ParaformerArgs.__dict__.items() if not key.startswith('_')}
     )
     console.print(f'[green4]语音模型载入完成', end='\n\n')
+    queue_out.put({'stage': 'speech_model', 'status': 'done'})
 
     # 载入标点模型
     punc_model = None
@@ -43,6 +45,9 @@ def init_recognizer(queue_in: Queue, queue_out: Queue, sockets_id):
         console.print('[yellow]标点模型载入中', end='\r')
         punc_model = CT_Transformer(ModelPaths.punc_model_dir, quantize=True)
         console.print(f'[green4]标点模型载入完成', end='\n\n')
+        queue_out.put({'stage': 'punc_model', 'status': 'done'})
+    else:
+        queue_out.put({'stage': 'punc_model', 'status': 'skipped'})
 
     console.print(f'模型加载耗时 {time.time() - t1 :.2f}s', end='\n\n')
 
@@ -50,7 +55,7 @@ def init_recognizer(queue_in: Queue, queue_out: Queue, sockets_id):
     if system() == 'Windows':
         empty_current_working_set()
 
-    queue_out.put(True)  # 通知主进程加载完了
+    queue_out.put({'stage': 'loaded', 'status': 'done'})
 
     while True:
         # 从队列中获取任务消息

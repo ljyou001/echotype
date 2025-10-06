@@ -1,6 +1,8 @@
 import os
 import sys
 import asyncio
+import json
+from pathlib import Path
 from multiprocessing import Process, Manager
 from platform import system
 
@@ -14,6 +16,29 @@ from util.server_init_recognizer import init_recognizer
 from util.empty_working_set import empty_current_working_set
 
 BASE_DIR = os.path.dirname(__file__); os.chdir(BASE_DIR)    # 确保 os.getcwd() 位置正确，用相对路径加载模型
+PROGRESS_FILE = Path(__file__).with_name('progress.json')
+
+
+def _reset_progress_file() -> None:
+    try:
+        PROGRESS_FILE.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def _append_progress(update: dict) -> None:
+    try:
+        data = []
+        if PROGRESS_FILE.exists():
+            with PROGRESS_FILE.open('r', encoding='utf-8') as fp:
+                data = json.load(fp)
+                if not isinstance(data, list):
+                    data = []
+        data.append(update)
+        with PROGRESS_FILE.open('w', encoding='utf-8') as fp:
+            json.dump(data, fp, ensure_ascii=False)
+    except Exception:
+        pass
 
 async def main():
 
@@ -30,14 +55,26 @@ async def main():
     Cosmic.sockets_id = Manager().list()
 
     # 负责识别的子进程
+    _reset_progress_file()
     recognize_process = Process(target=init_recognizer,
                                 args=(Cosmic.queue_in,
                                       Cosmic.queue_out,
                                       Cosmic.sockets_id),
                                 daemon=True)
     recognize_process.start()
-    Cosmic.queue_out.get()
-    console.rule('[green3]开始服务')
+    while True:
+        flag = Cosmic.queue_out.get()
+        if isinstance(flag, dict):
+            stage = flag.get("stage")
+            status = flag.get("status")
+            if stage and status:
+                console.print(f"[cyan]加载进度[/] -> {stage}: {status}")
+                _append_progress({'stage': stage, 'status': status})
+            if stage == "loaded" and status == "done":
+                break
+            continue
+        break
+    console.rule('[green3]模型加载完成，开始服务')
     console.line()
 
     # 清空物理内存工作集

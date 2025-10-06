@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
+import socket
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
@@ -257,7 +260,7 @@ class TrayApp:
 
     def _start_server(self, checked: bool = False, *, from_settings: bool = False) -> bool:
         _ = checked  # QAction 触发会传递布尔值
-        success, message = self._launch_server_process()
+        success, message, progress = self._launch_server_process(return_progress=True)
         if from_settings:
             if not success:
                 raise RuntimeError(message)
@@ -268,26 +271,89 @@ class TrayApp:
                 QMessageBox.warning(None, '启动失败', message)
         return success
 
-    def _launch_server_process(self) -> Tuple[bool, str]:
+    def _launch_server_process(self, return_progress: bool = False) -> Tuple[bool, str, List[Dict[str, str]]]:
         entry = self._resolve_server_entry()
         if entry is None:
             message = '未找到 server 启动入口'
             self._show_notification('模型启动失败', message, force=True)
-            return False, message
+            return False, message, []
+        progress: List[Dict[str, str]] = []
+        progress_file = self._package_dir / 'server' / 'progress.json'
+        try:
+            progress_file.unlink(missing_ok=True)
+        except Exception:
+            pass
+        ready = False
         try:
             self._show_notification('模型加载中', f'正在启动 {entry.name}…', force=True)
             if entry.suffix.lower() == '.exe':
                 subprocess.Popen([str(entry)], cwd=str(entry.parent))
             else:
                 subprocess.Popen([sys.executable, str(entry)], cwd=str(entry.parent))
+            if return_progress:
+                for stage in self._wait_for_server_ready(progress_file):
+                    progress.append(stage)
+                    label = stage.get('stage')
+                    status = stage.get('status')
+                    if label and status:
+                        self._show_notification('模型加载中', f'{label}: {status}', force=True)
+                    if stage.get('stage') == 'loaded' and stage.get('status') == 'done':
+                        ready = True
+                        break
+                else:
+                    ready = any(
+                        item.get('stage') == 'loaded' and item.get('status') == 'done'
+                        for item in progress
+                    )
+            else:
+                ready = True
         except Exception as exc:
             message = str(exc) or '模型启动失败'
             self._show_notification('模型启动失败', message, force=True)
-            return False, message
+            return False, message, progress
         else:
+            if return_progress and not ready:
+                message = '模型启动超时，请查看日志或稍后重试。'
+                self._show_notification('模型启动失败', message, force=True)
+                return False, message, progress
             message = '模型服务已启动，请稍候等待初始化完成。'
             self._show_notification('模型加载完成', message)
-            return True, message
+            return True, message, progress
+
+    def _wait_for_server_ready(self, progress_file: Path, timeout: float = 30.0):
+        addr = self.config.get('addr', '127.0.0.1')
+        port = int(self.config.get('port', 6016))
+        deadline = time.monotonic() + timeout
+        seen: set[Tuple[str | None, str | None]] = set()
+
+        while time.monotonic() < deadline:
+            updates = []
+            if progress_file.exists():
+                try:
+                    data = json.loads(progress_file.read_text(encoding='utf-8') or '[]')
+                    if isinstance(data, list):
+                        updates = data
+                except Exception:
+                    updates = []
+            for update in updates:
+                stage = update.get('stage')
+                status = update.get('status')
+                key = (stage, status)
+                if key in seen:
+                    continue
+                seen.add(key)
+                yield update
+                if stage == 'loaded' and status == 'done':
+                    return
+            try:
+                with socket.create_connection((addr, port), timeout=1):
+                    if ('loaded', 'done') not in seen:
+                        yield {'stage': 'loaded', 'status': 'done'}
+                    return
+            except OSError:
+                pass
+            time.sleep(0.5)
+        yield {'stage': 'loaded', 'status': 'timeout'}
 
     def _quit(self) -> None:
         self.backend.stop_listening()
