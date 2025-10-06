@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Tuple
 
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QRadioButton,
     QSpinBox,
@@ -30,11 +31,19 @@ from util.client_hot_update import HOTWORD_DIR
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, config: Dict[str, Any], audio_devices: Iterable[Tuple[str, str]] | None = None, parent=None) -> None:
+    def __init__(
+        self,
+        config: Dict[str, Any],
+        audio_devices: Iterable[Tuple[str, str]] | None = None,
+        parent=None,
+        *,
+        on_start_server: Callable[[], None] | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle('CapsWriter 设置')
         self._config = dict(config)
         self._current_hotkey = self._config.get('shortcut', '')
+        self._on_start_server = on_start_server
 
         self._tabs = QTabWidget(self)
         self._build_model_tab()
@@ -60,19 +69,33 @@ class SettingsDialog(QDialog):
         page = QWidget()
         layout = QVBoxLayout(page)
 
-        selection_group = QGroupBox('模式选择')
+        selection_group = QGroupBox('模型选择')
         selection_layout = QHBoxLayout(selection_group)
-        self.model_source_server = QRadioButton('使用本地服务器')
-        self.model_source_builtin = QRadioButton('使用预置模型')
+        self.model_option_local = QRadioButton('本地模型')
+        self.model_option_custom = QRadioButton('自定义服务器')
+        self.model_option_prebuilt = QRadioButton('使用预置模型')
         self.model_source_group = QButtonGroup(self)
-        self.model_source_group.addButton(self.model_source_server)
-        self.model_source_group.addButton(self.model_source_builtin)
-        selection_layout.addWidget(self.model_source_server)
-        selection_layout.addWidget(self.model_source_builtin)
+        self.model_source_group.addButton(self.model_option_local)
+        self.model_source_group.addButton(self.model_option_custom)
+        self.model_source_group.addButton(self.model_option_prebuilt)
+        selection_layout.addWidget(self.model_option_local)
+        selection_layout.addWidget(self.model_option_custom)
+        selection_layout.addWidget(self.model_option_prebuilt)
         layout.addWidget(selection_group)
 
-        self.server_group = QGroupBox('服务器（默认本地服务）')
-        server_form = QFormLayout(self.server_group)
+        self.local_group = QGroupBox('本地模型')
+        local_layout = QVBoxLayout(self.local_group)
+        local_info = QLabel('使用内置的本地离线模型，需要在本机启动服务器后才能开始识别。')
+        local_info.setWordWrap(True)
+        local_layout.addWidget(local_info)
+        self.local_start_button = QPushButton('启动服务器')
+        self.local_start_button.setEnabled(self._on_start_server is not None)
+        self.local_start_button.clicked.connect(self._handle_start_server)
+        local_layout.addWidget(self.local_start_button)
+        layout.addWidget(self.local_group)
+
+        self.custom_group = QGroupBox('自定义服务器')
+        server_form = QFormLayout(self.custom_group)
         self.addr_edit = QLineEdit(self._config.get('addr', '127.0.0.1'))
         self.port_edit = QLineEdit(str(self._config.get('port', '6016')))
         self.reconnect_spin = QSpinBox()
@@ -81,7 +104,7 @@ class SettingsDialog(QDialog):
         server_form.addRow('服务器地址', self.addr_edit)
         server_form.addRow('端口', self.port_edit)
         server_form.addRow('自动重连 (秒)', self.reconnect_spin)
-        layout.addWidget(self.server_group)
+        layout.addWidget(self.custom_group)
 
         self.prebuilt_group = QGroupBox('预置模型')
         prebuilt_form = QFormLayout(self.prebuilt_group)
@@ -106,14 +129,16 @@ class SettingsDialog(QDialog):
         prebuilt_form.addRow(note_label)
         layout.addWidget(self.prebuilt_group)
 
-        source = self._config.get('model_source', 'server')
+        source = self._config.get('model_source', 'local')
         if source == 'builtin':
-            self.model_source_builtin.setChecked(True)
+            self.model_option_prebuilt.setChecked(True)
+        elif source in ('custom', 'server'):
+            self.model_option_custom.setChecked(True)
         else:
-            self.model_source_server.setChecked(True)
+            self.model_option_local.setChecked(True)
 
-        self.model_source_server.toggled.connect(self._update_model_ui_state)
-        self.model_source_builtin.toggled.connect(self._update_model_ui_state)
+        for button in (self.model_option_local, self.model_option_custom, self.model_option_prebuilt):
+            button.toggled.connect(self._update_model_ui_state)
         self._update_model_ui_state()
 
         layout.addStretch(1)
@@ -261,9 +286,11 @@ class SettingsDialog(QDialog):
         self._tabs.addTab(page, '常规')
 
     def _update_model_ui_state(self) -> None:
-        use_server = self.model_source_server.isChecked()
-        self.server_group.setEnabled(use_server)
-        self.prebuilt_group.setEnabled(not use_server)
+        mode = self._current_model_source()
+        self.local_group.setVisible(mode == 'local')
+        self.local_start_button.setVisible(mode == 'local')
+        self.custom_group.setVisible(mode == 'custom')
+        self.prebuilt_group.setVisible(mode == 'builtin')
 
     def _open_hotword_folder(self) -> None:
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(HOTWORD_DIR)))
@@ -300,7 +327,7 @@ class SettingsDialog(QDialog):
 
     def _collect_config(self) -> Dict[str, Any]:
         config = dict(self._config)
-        config['model_source'] = 'builtin' if self.model_source_builtin.isChecked() else 'server'
+        config['model_source'] = self._current_model_source()
         model_name = self.model_combo.currentData() if self.model_combo.currentData() else 'paraformer'
         config['model_name'] = model_name
         config['model_api_url'] = self.model_api_url_edit.text().strip()
@@ -328,6 +355,19 @@ class SettingsDialog(QDialog):
         config['minimize_to_tray'] = self.minimize_checkbox.isChecked()
         config['log_level'] = self.log_level_combo.currentText()
         return config
+
+    def _handle_start_server(self) -> None:
+        if self._on_start_server is None:
+            QMessageBox.information(self, '操作不可用', '当前环境不支持从此处启动服务器。')
+            return
+        self._on_start_server()
+
+    def _current_model_source(self) -> str:
+        if self.model_option_local.isChecked():
+            return 'local'
+        if self.model_option_prebuilt.isChecked():
+            return 'builtin'
+        return 'custom'
 
     def updated_config(self) -> Dict[str, Any]:
         return dict(self._config)

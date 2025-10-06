@@ -6,7 +6,7 @@ class ClientConfig:
     port = '6016'
 
 
-    model_source = 'server'  # 'server' or 'builtin'
+    model_source = 'local'  # 'local', 'custom', or 'builtin'
     model_name = 'paraformer'
     model_api_url = ''
     model_api_key = ''

@@ -181,7 +181,7 @@ class TrayApp:
                 self._listening = True
 
     def _open_settings(self) -> None:
-        dialog = SettingsDialog(self.config, self._list_audio_devices())
+        dialog = SettingsDialog(self.config, self._list_audio_devices(), on_start_server=self._start_server)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             new_config = dialog.updated_config()
             restart_required = self._config_requires_restart(self.config, new_config)
