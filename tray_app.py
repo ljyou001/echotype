@@ -239,6 +239,7 @@ class TrayApp:
         search_dirs = [
             Path.cwd(),
             self._package_dir,
+            self._package_dir / 'server',
             self._package_dir.parent,
             self._package_dir.parent / 'server',
         ]
