@@ -257,8 +257,8 @@ class TrayApp:
             if hotkey and hotkey != self.config.get('shortcut'):
                 self.config['shortcut'] = hotkey
                 self.backend.update_config(self.config)
-                self.backend.restart_listening()
-                self._listening = True
+                # 延迟重启，避免事件循环冲突
+                QTimer.singleShot(100, self._do_restart_listening)
 
     def _open_settings(self) -> None:
         # 如果已经有设置对话框打开，就不再打开新的
@@ -270,7 +270,7 @@ class TrayApp:
         dialog = SettingsDialog(
             self.config,
             self._list_audio_devices(),
-            self,
+            on_apply=self._apply_settings,
         )
         self._settings_dialog = dialog
         
@@ -283,22 +283,35 @@ class TrayApp:
     
     def _apply_settings(self, new_config: Dict[str, Any]) -> None:
         """应用设置（从应用按钮调用）"""
-        self._apply_config_changes(new_config)
+        # 使用QTimer延迟执行，避免事件循环问题
+        QTimer.singleShot(0, lambda: self._apply_config_changes(new_config))
     
     def _apply_config_changes(self, new_config: Dict[str, Any]) -> None:
         """应用配置变更"""
         restart_required = self._config_requires_restart(self.config, new_config)
         auto_changed = self.config.get('auto_startup') != new_config.get('auto_startup')
         self.config = new_config
+        config_manager.save_config(self.config)  # 保存配置
         self.backend.update_config(self.config)
         self._apply_log_level()
         if auto_changed:
             self._apply_auto_startup(self.config.get('auto_startup', False))
         if restart_required:
-            self.backend.restart_listening()
-            self._listening = True
+            # 延迟重启，避免事件循环冲突
+            QTimer.singleShot(100, self._do_restart_listening)
         self._sync_mode_actions()
         self._sync_language_actions()
+    
+    def _do_restart_listening(self) -> None:
+        """延迟重启监听"""
+        self.logger.info('准备重启监听服务...')
+        try:
+            self.backend.restart_listening()
+            self._listening = True
+            self._update_toggle_action()
+            self.logger.info('监听服务重启成功')
+        except Exception as e:
+            self.logger.error(f'重启监听失败: {e}')
 
     def _config_requires_restart(self, old: Dict[str, Any], new: Dict[str, Any]) -> bool:
         restart_keys = {'shortcut', 'hold_mode', 'suppress', 'threshold', 'audio_input_device', 'model_source', 'model_name', 'model_api_url', 'model_api_key'}

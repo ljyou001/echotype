@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import time
 from typing import Optional
 
 import websockets
@@ -61,10 +62,16 @@ class MicSession:
             return
         self._stopped = True
         self._stop_event.set()
-        if self._recv_task:
-            self._recv_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._recv_task
+        
+        # 等待recv_task自然结束
+        if self._recv_task and not self._recv_task.done():
+            try:
+                await asyncio.wait_for(self._recv_task, timeout=2.0)
+            except asyncio.TimeoutError:
+                self._recv_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await self._recv_task
+        
         await self._cleanup()
         Cosmic.emit_status('stopped', None)
 
@@ -92,6 +99,8 @@ class MicSession:
     async def _cleanup_partial(self) -> None:
         with contextlib.suppress(Exception):
             unbond_shortcut()
+        # Add a delay to give the OS time to release the hook
+        time.sleep(0.5)
         if Cosmic.stream is not None:
             with contextlib.suppress(Exception):
                 Cosmic.stream.close()
@@ -103,11 +112,10 @@ class MicSession:
             self._observer.stop()
             await asyncio.to_thread(self._observer.join, timeout=2)
             self._observer = None
-        if Cosmic.websocket is not None and not Cosmic.websocket.closed:
+        if Cosmic.websocket is not None:
             with contextlib.suppress(Exception):
                 await Cosmic.websocket.close()
         Cosmic.websocket = None
         Cosmic.queue_in = asyncio.Queue()
         Cosmic.queue_out = asyncio.Queue()
         Cosmic.loop = None
-

@@ -17,7 +17,7 @@ async def send_message(message):
     # 发送数据
     if not Cosmic.websocket_is_open():
         if message['is_final']:
-            Cosmic.audio_files.pop(message['task_id'])
+            Cosmic.audio_files.pop(message['task_id'], None)  # 使用pop的默认值，避免KeyError
             console.print('    服务端未连接，无法发送\n')
     else:
         try:

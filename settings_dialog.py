@@ -2,7 +2,7 @@
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Tuple
 
 from PySide6.QtCore import Qt, QUrl, QTimer
 from PySide6.QtGui import QDesktopServices, QIcon
@@ -39,12 +39,15 @@ class SettingsDialog(QDialog):
         config: Dict[str, Any],
         audio_devices: Iterable[Tuple[str, str]] | None = None,
         parent=None,
+        *,
+        on_apply: Callable[[Dict[str, Any]], None] | None = None,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle('CapsWriter 设置')
         self._set_window_icon()
         self._config = dict(config)
         self._current_hotkey = self._config.get('shortcut', '')
+        self._on_apply = on_apply
 
         self._tabs = QTabWidget(self)
         self._build_model_tab()
@@ -390,10 +393,9 @@ class SettingsDialog(QDialog):
     def _handle_apply(self) -> None:
         """应用设置但不关闭对话框"""
         new_config = self._collect_config()
-        # 通知父窗口应用设置
-        if hasattr(self.parent(), '_apply_settings'):
-            self.parent()._apply_settings(new_config)
         self._config = new_config
+        if self._on_apply:
+            self._on_apply(new_config)
     
     def _handle_accept(self) -> None:
         self._config = self._collect_config()

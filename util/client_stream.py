@@ -36,7 +36,8 @@ def stream_reopen():
     print('重启音频流')
 
     # 关闭旧流
-    Cosmic.stream.close()
+    if Cosmic.stream is not None:
+        Cosmic.stream.close()
 
     # 重载 PortAudio，更新设备列表
     sd._terminate()

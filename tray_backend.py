@@ -72,6 +72,9 @@ class TrayBackend:
 
     def restart_listening(self) -> None:
         self.stop_listening()
+        # 等待一下确保旧的循环完全清理
+        import time
+        time.sleep(0.2)
         self.start_listening()
 
     def is_running(self) -> bool:
