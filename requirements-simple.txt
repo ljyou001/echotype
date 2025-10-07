@@ -1,0 +1,16 @@
+PySide6>=6.6
+pyinstaller
+
+rich
+keyboard
+pyclip
+numpy
+sounddevice
+websockets
+pypinyin
+watchdog
+typer
+srt
+
+typeguard==2.13.3
+jieba

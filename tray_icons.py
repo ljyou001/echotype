@@ -36,8 +36,8 @@ def build_status_icons(base_icon: QIcon) -> Dict[TrayStatus, QIcon]:
             painter = QPainter(overlay)
             painter.setRenderHint(QPainter.Antialiasing)
             painter.drawPixmap(0, 0, pixmap)
-            radius = max(20, size // 2)
-            margin = max(2, size // 16)
+            radius = size // 2
+            margin = size // 32
             painter.setPen(Qt.NoPen)
             painter.setBrush(color)
             painter.drawEllipse(overlay.width() - radius - margin, overlay.height() - radius - margin, radius, radius)

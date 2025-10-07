@@ -1,0 +1,52 @@
+[project]
+name = "echotype"
+version = "0.1.0"
+description = "Fast · Free · Offline Voice Input Tool"
+authors = [
+    {name = "EchoType Team"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+dependencies = [
+    "PySide6>=6.6",
+    "rich",
+    "keyboard",
+    "pyclip",
+    "numpy",
+    "sounddevice",
+    "websockets",
+    "pypinyin",
+    "watchdog",
+    "typer",
+    "srt",
+    "typeguard==2.13.3",
+    "sherpa_onnx==1.8.11",
+    "funasr_onnx==0.2.5",
+    "kaldi-native-fbank==1.17",
+    "jieba",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pyinstaller",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[tool.uv]
+package = false
+
+[tool.uv.extra-build-dependencies]
+sherpa-onnx = ["cmake"]
+kaldi-native-fbank = ["cmake"]
+
+[dependency-groups]
+dev = [
+    "pyinstaller",
+]

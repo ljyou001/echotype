@@ -8,12 +8,12 @@
   
   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
   [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](#)
-  <!-- [![Release](https://img.shields.io/github/v/release/your-repo/your-project.svg)](https://github.com/your-repo/your-project/releases) -->
+  <!-- [![Release](https://img.shields.io/github/v/release/ljyou001/echotype.svg)](https://github.com/ljyou001/echotype/releases) -->
   
   **Languages / 语言**: [English](README.md) | [中文](README_ZH.md)
   
-  [📥 Download Latest](https://github.com/your-repo/your-project/releases) · [📖 Documentation](#quick-start) · [🐛 Issues](https://github.com/your-repo/your-project/issues)  
-  [📥 下载最新版本](https://github.com/your-repo/your-project/releases) · [📖 使用文档](#快速开始) · [🐛 问题反馈](https://github.com/your-repo/your-project/issues)
+  [📥 Download Latest](https://github.com/ljyou001/echotype/releases) · [📖 Documentation](#quick-start) · [🐛 Issues](https://github.com/ljyou001/echotype/issues)  
+  [📥 下载最新版本](https://github.com/ljyou001/echotype/releases) · [📖 使用文档](#快速开始) · [🐛 问题反馈](https://github.com/ljyou001/echotype/issues)
 </div>
 
 ---
@@ -61,7 +61,7 @@
    ```
    Download the latest EchoType.exe from releases
    ```
-   [👉 Click to Download](https://github.com/your-repo/your-project/releases)
+   [👉 Click to Download](https://github.com/ljyou001/echotype/releases)
 
 2. **Launch Program**
    ```
@@ -125,19 +125,94 @@
 4. Save settings and restart program
 </details>
 
+<details>
+<summary><strong>❓ Installation issues with sherpa-onnx?</strong></summary>
+
+**Problem:** `ModuleNotFoundError: No module named 'cmake.cmake_extension'` or compilation errors
+
+**Solution:**
+1. Use precompiled packages instead of building from source:
+   ```bash
+   pip install --find-links https://k2-fsa.github.io/sherpa/onnx/install/python.html sherpa-onnx
+   pip install funasr-onnx==0.2.5
+   ```
+2. Make sure Visual Studio Build Tools with C++ support is installed
+3. Install cmake: `pip install cmake`
+4. If still failing, use client-only mode and connect to a remote server
+</details>
+
 ## 🛠️ Development Information
 
 <details>
 <summary><strong>🔧 Developer Guide</strong></summary>
 
-### Environment Setup
-```bash
-# Install dependencies
-pip install -r requirements.txt
+### Architecture
 
-# Run program (recommended to use pythonw to avoid console window)
+EchoType uses a client-server architecture:
+- **Client** (run_tray.py): Tray icon, hotkey monitoring, audio recording
+- **Server** (server/): Voice recognition service (requires sherpa-onnx, etc.)
+
+You can:
+1. Install only client dependencies and connect to a remote server
+2. Install full dependencies to run the server locally (requires C++ compilation)
+
+### Option 1: Client Only (Recommended)
+
+```bash
+# 1. Create virtual environment
+python -m venv .venv
+
+# 2. Activate virtual environment
+.venv\Scripts\activate
+
+# 3. Install client dependencies
+pip install -r requirements-simple.txt
+
+# 4. Run client
+pythonw run_tray.py
+
+# 5. Configure remote server connection in settings (if available)
+```
+
+### Option 2: Full Environment (Including Server)
+
+The voice recognition server requires `sherpa-onnx`, `funasr-onnx`, `kaldi-native-fbank` packages.
+
+**Prerequisites:**
+1. Install Visual Studio Build Tools
+   - Download: https://visualstudio.microsoft.com/downloads/
+   - Select "Desktop development with C++"
+2. Install CMake (via winget or from cmake.org)
+
+**Installation Steps:**
+
+```bash
+# 1. Create virtual environment
+python -m venv .venv
+
+# 2. Activate virtual environment
+call .venv\Scripts\activate
+
+# 3. Install client dependencies first
+pip install -r requirements-simple.txt
+
+# 4. Install build dependencies
+pip install setuptools wheel cmake
+
+# 5. Install sherpa-onnx from precompiled wheels
+pip install --find-links https://k2-fsa.github.io/sherpa/onnx/install/python.html sherpa-onnx
+
+# 6. Install funasr-onnx (includes kaldi-native-fbank)
+pip install funasr-onnx==0.2.5
+
+# 7. Start server in background
+start /B python server/start_server.py
+
+# 8. Run client
 pythonw run_tray.py
 ```
+
+**Note:** If you encounter compilation errors with the original requirements.txt, use the method above which installs precompiled packages instead of building from source.
 
 ### Project Structure
 ```
@@ -173,7 +248,7 @@ The program generates a configuration file at `%APPDATA%\CapsWriter\client.json`
   
   **🌟 If this project helps you, please give it a Star!**
   
-  [⭐ Star](https://github.com/your-repo/your-project) · [🍴 Fork](https://github.com/your-repo/your-project/fork) · [📝 Issues](https://github.com/your-repo/your-project/issues)
+  [⭐ Star](https://github.com/ljyou001/echotype) · [🍴 Fork](https://github.com/ljyou001/echotype/fork) · [📝 Issues](https://github.com/ljyou001/echotype/issues)
   
   ---
   
