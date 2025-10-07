@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import Qt, QUrl, QTimer
 from PySide6.QtGui import QDesktopServices, QIcon
 from PySide6.QtWidgets import (
     QApplication,
@@ -107,6 +107,7 @@ class SettingsDialog(QDialog):
         local_layout.addWidget(self.local_manage_button)
         
         self._check_server_status()
+        self._start_status_monitor()
         layout.addWidget(self.local_group)
 
         self.custom_group = QGroupBox('自定义服务器')
@@ -322,14 +323,28 @@ class SettingsDialog(QDialog):
         except (socket.timeout, ConnectionRefusedError, OSError):
             self.server_status_label.setText('○ 未运行')
             self.server_status_label.setStyleSheet('color: red; font-weight: bold;')
+    
+    def _start_status_monitor(self) -> None:
+        """启动服务器状态监控定时器"""
+        self._status_timer = QTimer(self)
+        self._status_timer.timeout.connect(self._check_server_status)
+        self._status_timer.start(2000)  # 每2秒检查一次
 
     def _update_model_ui_state(self) -> None:
         mode = self._current_model_source()
-        self.local_group.setVisible(mode == 'local')
+        is_local = mode == 'local'
+        self.local_group.setVisible(is_local)
         self.custom_group.setVisible(mode == 'custom')
         self.prebuilt_group.setVisible(mode == 'builtin')
-        if mode == 'local':
-            self._check_server_status()
+        
+        # 根据模式启动/停止状态监控
+        if hasattr(self, '_status_timer'):
+            if is_local:
+                self._check_server_status()
+                if not self._status_timer.isActive():
+                    self._status_timer.start(2000)
+            else:
+                self._status_timer.stop()
 
     def _open_hotword_folder(self) -> None:
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(HOTWORD_DIR)))
@@ -436,3 +451,9 @@ class SettingsDialog(QDialog):
 
     def updated_config(self) -> Dict[str, Any]:
         return dict(self._config)
+    
+    def closeEvent(self, event):
+        """关闭对话框时停止定时器"""
+        if hasattr(self, '_status_timer'):
+            self._status_timer.stop()
+        event.accept()
