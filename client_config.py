@@ -8,6 +8,7 @@ class ClientConfig:
 
     model_source = 'local'  # 'local', 'custom', or 'builtin'
     model_name = 'paraformer'
+    output_language = 'zh'
     model_api_url = ''
     model_api_key = ''
 

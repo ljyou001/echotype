@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Any, Callable, Dict, Iterable, List, Tuple
 
@@ -89,10 +89,29 @@ class SettingsDialog(QDialog):
         local_info = QLabel('使用内置的本地离线模型，需要在本机启动服务器后才能开始识别。')
         local_info.setWordWrap(True)
         local_layout.addWidget(local_info)
-        self.local_start_button = QPushButton('启动服务器')
+        
+        self._server_process = None
+        self._server_running = False
+        self._models_available = self._check_models()
+        
+        self.local_download_button = QPushButton('下载模型')
+        self.local_download_button.clicked.connect(self._handle_download_model)
+        local_layout.addWidget(self.local_download_button)
+        
+        self.local_start_button = QPushButton('启动模型服务器')
         self.local_start_button.setEnabled(self._on_start_server is not None)
         self.local_start_button.clicked.connect(self._handle_start_server)
         local_layout.addWidget(self.local_start_button)
+        
+        self.local_stop_button = QPushButton('停止服务器')
+        self.local_stop_button.clicked.connect(self._handle_stop_server)
+        local_layout.addWidget(self.local_stop_button)
+        
+        self.local_reload_button = QPushButton('重新加载')
+        self.local_reload_button.clicked.connect(self._handle_reload_server)
+        local_layout.addWidget(self.local_reload_button)
+        
+        self._update_local_model_ui()
         layout.addWidget(self.local_group)
 
         self.custom_group = QGroupBox('自定义服务器')
@@ -221,6 +240,17 @@ class SettingsDialog(QDialog):
     def _build_output_tab(self) -> None:
         page = QWidget()
         form = QFormLayout(page)
+        
+        self.output_language_combo = QComboBox()
+        self.output_language_combo.addItem('中文', 'zh')
+        self.output_language_combo.addItem('English', 'en')
+        self.output_language_combo.addItem('日本語', 'ja')
+        current_lang = self._config.get('output_language', 'zh')
+        index = self.output_language_combo.findData(current_lang)
+        if index >= 0:
+            self.output_language_combo.setCurrentIndex(index)
+        form.addRow('输出语言', self.output_language_combo)
+        
         self.paste_checkbox = QCheckBox('写入剪贴板并粘贴')
         self.paste_checkbox.setChecked(self._config.get('paste', True))
         self.restore_clip_checkbox = QCheckBox('粘贴后恢复剪贴板')
@@ -286,12 +316,37 @@ class SettingsDialog(QDialog):
         page.setLayout(form)
         self._tabs.addTab(page, '常规')
 
+    def _check_models(self) -> bool:
+        try:
+            from model_checker import check_local_models
+            return check_local_models()
+        except Exception:
+            return False
+
+    def _update_local_model_ui(self) -> None:
+        if not self._models_available:
+            self.local_download_button.setVisible(True)
+            self.local_start_button.setVisible(False)
+            self.local_stop_button.setVisible(False)
+            self.local_reload_button.setVisible(False)
+        elif self._server_running:
+            self.local_download_button.setVisible(False)
+            self.local_start_button.setVisible(False)
+            self.local_stop_button.setVisible(True)
+            self.local_reload_button.setVisible(True)
+        else:
+            self.local_download_button.setVisible(False)
+            self.local_start_button.setVisible(True)
+            self.local_stop_button.setVisible(False)
+            self.local_reload_button.setVisible(False)
+
     def _update_model_ui_state(self) -> None:
         mode = self._current_model_source()
         self.local_group.setVisible(mode == 'local')
-        self.local_start_button.setVisible(mode == 'local')
         self.custom_group.setVisible(mode == 'custom')
         self.prebuilt_group.setVisible(mode == 'builtin')
+        if mode == 'local':
+            self._update_local_model_ui()
 
     def _open_hotword_folder(self) -> None:
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(HOTWORD_DIR)))
@@ -344,6 +399,7 @@ class SettingsDialog(QDialog):
         config['save_audio'] = self.save_audio_checkbox.isChecked()
         config['audio_input_device'] = self.audio_device_combo.currentData()
         config['audio_name_len'] = int(self.audio_name_spin.value())
+        config['output_language'] = self.output_language_combo.currentData() or 'zh'
         config['paste'] = self.paste_checkbox.isChecked()
         config['restore_clip'] = self.restore_clip_checkbox.isChecked()
         config['show_notifications'] = self.show_notification_checkbox.isChecked()
@@ -357,13 +413,31 @@ class SettingsDialog(QDialog):
         config['log_level'] = self.log_level_combo.currentText()
         return config
 
+    def _handle_download_model(self) -> None:
+        from model_checker import get_model_download_url
+        url = get_model_download_url()
+        QDesktopServices.openUrl(QUrl(url))
+        QMessageBox.information(
+            self,
+            '下载模型',
+            '请从浏览器中下载模型文件,并解压到:\n./windows/server/models/\n\n下载完成后请重新打开设置。'
+        )
+
+    def _handle_stop_server(self) -> None:
+        self._server_running = False
+        self._update_local_model_ui()
+        QMessageBox.information(self, '停止服务器', '请手动关闭服务器窗口或进程。')
+
+    def _handle_reload_server(self) -> None:
+        self._handle_stop_server()
+        self._handle_start_server()
+
     def _handle_start_server(self) -> None:
         if self._on_start_server is None:
             QMessageBox.information(self, '操作不可用', '当前环境不支持从此处启动服务器。')
             return
-        original_text = self.local_start_button.text()
         self.local_start_button.setEnabled(False)
-        self.local_start_button.setText('启动中…')
+        self.local_start_button.setText('加载中...')
         QApplication.processEvents()
         success = False
         try:
@@ -374,10 +448,10 @@ class SettingsDialog(QDialog):
             QMessageBox.critical(self, '模型启动失败', message)
         finally:
             self.local_start_button.setEnabled(True)
+            self.local_start_button.setText('启动模型服务器')
             if success:
-                self.local_start_button.setText('重新加载模型')
-            else:
-                self.local_start_button.setText(original_text)
+                self._server_running = True
+                self._update_local_model_ui()
 
     def _current_model_source(self) -> str:
         if self.model_option_local.isChecked():

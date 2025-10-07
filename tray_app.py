@@ -111,6 +111,22 @@ class TrayApp:
         mode_menu.addAction(self.mode_hold)
         mode_menu.addAction(self.mode_click)
 
+        lang_menu = self.menu.addMenu('输出语言')
+        self.lang_group = QActionGroup(self.menu)
+        self.lang_group.setExclusive(True)
+        self.lang_zh = QAction('中文', self.menu, checkable=True)
+        self.lang_en = QAction('English', self.menu, checkable=True)
+        self.lang_ja = QAction('日本語', self.menu, checkable=True)
+        self.lang_group.addAction(self.lang_zh)
+        self.lang_group.addAction(self.lang_en)
+        self.lang_group.addAction(self.lang_ja)
+        self.lang_zh.triggered.connect(lambda: self._set_output_language('zh'))
+        self.lang_en.triggered.connect(lambda: self._set_output_language('en'))
+        self.lang_ja.triggered.connect(lambda: self._set_output_language('ja'))
+        lang_menu.addAction(self.lang_zh)
+        lang_menu.addAction(self.lang_en)
+        lang_menu.addAction(self.lang_ja)
+
         self.menu.addAction('设置监听按键…', self._open_hotkey_dialog)
         self.menu.addAction('打开设置…', self._open_settings)
         self.menu.addSeparator()
@@ -122,6 +138,7 @@ class TrayApp:
 
         self.menu.addAction('退出', self._quit)
         self._sync_mode_actions()
+        self._sync_language_actions()
         self._update_toggle_action()
 
     # endregion -------------------------------------------------
@@ -171,6 +188,25 @@ class TrayApp:
         self._listening = True
         self._sync_mode_actions()
 
+    def _sync_language_actions(self) -> None:
+        lang = self.config.get('output_language', 'zh')
+        self.lang_zh.blockSignals(True)
+        self.lang_en.blockSignals(True)
+        self.lang_ja.blockSignals(True)
+        self.lang_zh.setChecked(lang == 'zh')
+        self.lang_en.setChecked(lang == 'en')
+        self.lang_ja.setChecked(lang == 'ja')
+        self.lang_zh.blockSignals(False)
+        self.lang_en.blockSignals(False)
+        self.lang_ja.blockSignals(False)
+
+    def _set_output_language(self, lang: str) -> None:
+        if self.config.get('output_language') == lang:
+            return
+        self.config['output_language'] = lang
+        self.backend.update_config(self.config)
+        self._sync_language_actions()
+
     def _open_hotkey_dialog(self) -> None:
         from hotkey_dialog import HotkeyDialog
 
@@ -202,6 +238,7 @@ class TrayApp:
                 self.backend.restart_listening()
                 self._listening = True
             self._sync_mode_actions()
+            self._sync_language_actions()
 
     def _config_requires_restart(self, old: Dict[str, Any], new: Dict[str, Any]) -> bool:
         restart_keys = {'shortcut', 'hold_mode', 'suppress', 'threshold', 'audio_input_device', 'model_source', 'model_name', 'model_api_url', 'model_api_key'}

@@ -23,6 +23,9 @@ def build_status_icons(base_icon: QIcon) -> Dict[TrayStatus, QIcon]:
     icons: Dict[TrayStatus, QIcon] = {}
     base_sizes = [16, 24, 32, 48, 64, 128, 256]
     for status, color in STATUS_COLORS.items():
+        if status == TrayStatus.READY:
+            icons[status] = base_icon
+            continue
         composite = QIcon()
         for size in base_sizes:
             pixmap = base_icon.pixmap(size, size)
@@ -33,8 +36,8 @@ def build_status_icons(base_icon: QIcon) -> Dict[TrayStatus, QIcon]:
             painter = QPainter(overlay)
             painter.setRenderHint(QPainter.Antialiasing)
             painter.drawPixmap(0, 0, pixmap)
-            radius = max(6, size // 5)
-            margin = max(2, size // 12)
+            radius = max(20, size // 2)
+            margin = max(2, size // 16)
             painter.setPen(Qt.NoPen)
             painter.setBrush(color)
             painter.drawEllipse(overlay.width() - radius - margin, overlay.height() - radius - margin, radius, radius)
