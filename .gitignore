@@ -1,3 +1,5 @@
 __pycache__
 models
 modelsserver/progress.json
+dist
+build

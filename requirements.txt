@@ -1,2 +1,20 @@
--r ../requirements-client.txt
 PySide6>=6.6
+pyinstaller
+
+rich
+keyboard
+pyclip
+numpy
+sounddevice
+websockets
+pypinyin
+watchdog
+typer
+srt
+
+rich
+typeguard==2.13.3
+sherpa_onnx==1.8.11
+funasr_onnx==0.2.5
+kaldi-native-fbank==1.17
+jieba

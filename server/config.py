@@ -58,7 +58,7 @@ class ClientConfig:
 
 class ModelPaths:
     base_dir = Path(__file__).resolve().parent
-    model_dir = base_dir.parent / 'models'
+    model_dir = base_dir / 'models'
     paraformer_path = model_dir / 'paraformer-offline-zh' / 'model.int8.onnx'
     tokens_path = model_dir / 'paraformer-offline-zh' / 'tokens.txt'
     punc_model_dir = model_dir / 'punc_ct-transformer_cn-en'
