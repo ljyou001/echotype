@@ -75,3 +75,24 @@ class Cosmic:
             except Exception:
                 logging.getLogger(__name__).exception('Notification handler failed for %s', title)
 
+    @classmethod
+    def websocket_is_open(cls) -> bool:
+        ws = cls.websocket
+        if ws is None:
+            return False
+        closed_attr = getattr(ws, 'closed', None)
+        if isinstance(closed_attr, bool):
+            return not closed_attr
+        state = getattr(ws, 'state', None)
+        if state is None:
+            return True
+        try:
+            return state in (websockets.State.CONNECTING, websockets.State.OPEN)
+        except Exception:
+            state_str = str(state).upper()
+            return state_str not in {'CLOSING', 'CLOSED'}
+
+    @classmethod
+    def websocket_is_closed(cls) -> bool:
+        return not cls.websocket_is_open()
+
