@@ -91,6 +91,7 @@ class TrayApp:
             on_result=self.signals.resultReceived.emit,
             on_notification=self.signals.notificationRequested.emit,
         )
+        self._server_process: subprocess.Popen | None = None
 
         QTimer.singleShot(0, self._auto_start)
 
@@ -132,8 +133,6 @@ class TrayApp:
         self.menu.addSeparator()
 
         self.menu.addAction('查看日志…', self._open_logs)
-        self.action_start_server = self.menu.addAction('启动服务器', self._start_server)
-        self.action_start_server.setEnabled(self._has_server_entry())
         self.menu.addSeparator()
 
         self.menu.addAction('退出', self._quit)
@@ -144,6 +143,12 @@ class TrayApp:
     # endregion -------------------------------------------------
 
     def _auto_start(self) -> None:
+        # 检查是否需要自动启动服务器
+        if self.config.get('model_source', 'local') == 'local' and self.config.get('auto_start_server', True):
+            if not self._check_server_running():
+                self.logger.info('服务器未运行，尝试自动启动...')
+                self._auto_launch_server()
+        
         try:
             self.backend.start_listening()
             self._listening = True
@@ -152,6 +157,41 @@ class TrayApp:
             self._show_notification('启动失败', str(exc), force=True)
             self._listening = False
         self._update_toggle_action()
+    
+    def _check_server_running(self) -> bool:
+        """检查服务器是否运行"""
+        addr = self.config.get('addr', '127.0.0.1')
+        port = int(self.config.get('port', 6016))
+        try:
+            with socket.create_connection((addr, port), timeout=1):
+                return True
+        except (socket.timeout, ConnectionRefusedError, OSError):
+            return False
+    
+    def _auto_launch_server(self) -> None:
+        """自动启动服务器（后台模式）"""
+        entry = self._resolve_server_entry()
+        if entry is None:
+            self.logger.warning('未找到服务器启动文件')
+            return
+        
+        try:
+            if entry.suffix.lower() == '.exe':
+                self._server_process = subprocess.Popen(
+                    [str(entry)],
+                    cwd=str(entry.parent),
+                    creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
+                )
+            else:
+                self._server_process = subprocess.Popen(
+                    [sys.executable, str(entry)],
+                    cwd=str(entry.parent),
+                    creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
+                )
+            self.logger.info('服务器已自动启动')
+            self._show_notification('服务器启动', '正在加载模型，请稍候...')
+        except Exception as e:
+            self.logger.error(f'自动启动服务器失败: {e}')
 
     def _toggle_listening(self) -> None:
         if self._listening:
@@ -223,7 +263,6 @@ class TrayApp:
         dialog = SettingsDialog(
             self.config,
             self._list_audio_devices(),
-            on_start_server=lambda: self._start_server(from_settings=True),
         )
         if dialog.exec() == QDialog.DialogCode.Accepted:
             new_config = dialog.updated_config()
@@ -324,9 +363,9 @@ class TrayApp:
         try:
             self._show_notification('模型加载中', f'正在启动 {entry.name}…', force=True)
             if entry.suffix.lower() == '.exe':
-                subprocess.Popen([str(entry)], cwd=str(entry.parent))
+                self._server_process = subprocess.Popen([str(entry)], cwd=str(entry.parent))
             else:
-                subprocess.Popen([sys.executable, str(entry)], cwd=str(entry.parent))
+                self._server_process = subprocess.Popen([sys.executable, str(entry)], cwd=str(entry.parent))
             if return_progress:
                 for stage in self._wait_for_server_ready(progress_file):
                     progress.append(stage)
@@ -394,6 +433,16 @@ class TrayApp:
 
     def _quit(self) -> None:
         self.backend.stop_listening()
+        if self._server_process:
+            try:
+                self._server_process.terminate()
+                self._server_process.wait(timeout=3)
+            except Exception:
+                try:
+                    self._server_process.kill()
+                except Exception:
+                    pass
+            self._server_process = None
         self.tray_icon.hide()
         self.app.quit()
 
@@ -412,8 +461,13 @@ class TrayApp:
             self._listening = True
         if status == 'error' and detail_text:
             self._show_notification('发生错误', detail_text, force=True)
-        if status in {'connection_failed', 'connection_lost'} and detail_text:
+        if status in {'connection_failed', 'connection_lost'}:
             self.logger.warning('连接问题: %s', detail_text)
+            # 如果是本地模型且开启了自动启动，尝试启动服务器
+            if self.config.get('model_source', 'local') == 'local' and self.config.get('auto_start_server', True):
+                if not self._check_server_running() and not self._server_process:
+                    self.logger.info('检测到连接失败，尝试自动启动服务器...')
+                    self._auto_launch_server()
         self._update_toggle_action()
 
     @Slot(str, object)

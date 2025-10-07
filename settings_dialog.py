@@ -1,9 +1,11 @@
 ﻿from __future__ import annotations
 
-from typing import Any, Callable, Dict, Iterable, List, Tuple
+import sys
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Tuple
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QDesktopServices, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -37,14 +39,12 @@ class SettingsDialog(QDialog):
         config: Dict[str, Any],
         audio_devices: Iterable[Tuple[str, str]] | None = None,
         parent=None,
-        *,
-        on_start_server: Callable[[], None] | None = None,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle('CapsWriter 设置')
+        self._set_window_icon()
         self._config = dict(config)
         self._current_hotkey = self._config.get('shortcut', '')
-        self._on_start_server = on_start_server
 
         self._tabs = QTabWidget(self)
         self._build_model_tab()
@@ -90,28 +90,23 @@ class SettingsDialog(QDialog):
         local_info.setWordWrap(True)
         local_layout.addWidget(local_info)
         
-        self._server_process = None
-        self._server_running = False
-        self._models_available = self._check_models()
+        status_layout = QHBoxLayout()
+        status_layout.addWidget(QLabel('服务器状态:'))
+        self.server_status_label = QLabel('检测中...')
+        self.server_status_label.setStyleSheet('font-weight: bold;')
+        status_layout.addWidget(self.server_status_label)
+        status_layout.addStretch()
+        local_layout.addLayout(status_layout)
         
-        self.local_download_button = QPushButton('下载模型')
-        self.local_download_button.clicked.connect(self._handle_download_model)
-        local_layout.addWidget(self.local_download_button)
+        self.auto_start_server_checkbox = QCheckBox('自动启动服务器（当服务器未运行时）')
+        self.auto_start_server_checkbox.setChecked(self._config.get('auto_start_server', True))
+        local_layout.addWidget(self.auto_start_server_checkbox)
         
-        self.local_start_button = QPushButton('启动模型服务器')
-        self.local_start_button.setEnabled(self._on_start_server is not None)
-        self.local_start_button.clicked.connect(self._handle_start_server)
-        local_layout.addWidget(self.local_start_button)
+        self.local_manage_button = QPushButton('打开服务器管理')
+        self.local_manage_button.clicked.connect(self._handle_open_server_manager)
+        local_layout.addWidget(self.local_manage_button)
         
-        self.local_stop_button = QPushButton('停止服务器')
-        self.local_stop_button.clicked.connect(self._handle_stop_server)
-        local_layout.addWidget(self.local_stop_button)
-        
-        self.local_reload_button = QPushButton('重新加载')
-        self.local_reload_button.clicked.connect(self._handle_reload_server)
-        local_layout.addWidget(self.local_reload_button)
-        
-        self._update_local_model_ui()
+        self._check_server_status()
         layout.addWidget(self.local_group)
 
         self.custom_group = QGroupBox('自定义服务器')
@@ -316,29 +311,17 @@ class SettingsDialog(QDialog):
         page.setLayout(form)
         self._tabs.addTab(page, '常规')
 
-    def _check_models(self) -> bool:
+    def _check_server_status(self) -> None:
+        import socket
+        addr = self._config.get('addr', '127.0.0.1')
+        port = int(self._config.get('port', 6016))
         try:
-            from model_checker import check_local_models
-            return check_local_models()
-        except Exception:
-            return False
-
-    def _update_local_model_ui(self) -> None:
-        if not self._models_available:
-            self.local_download_button.setVisible(True)
-            self.local_start_button.setVisible(False)
-            self.local_stop_button.setVisible(False)
-            self.local_reload_button.setVisible(False)
-        elif self._server_running:
-            self.local_download_button.setVisible(False)
-            self.local_start_button.setVisible(False)
-            self.local_stop_button.setVisible(True)
-            self.local_reload_button.setVisible(True)
-        else:
-            self.local_download_button.setVisible(False)
-            self.local_start_button.setVisible(True)
-            self.local_stop_button.setVisible(False)
-            self.local_reload_button.setVisible(False)
+            with socket.create_connection((addr, port), timeout=1):
+                self.server_status_label.setText('● 运行中')
+                self.server_status_label.setStyleSheet('color: green; font-weight: bold;')
+        except (socket.timeout, ConnectionRefusedError, OSError):
+            self.server_status_label.setText('○ 未运行')
+            self.server_status_label.setStyleSheet('color: red; font-weight: bold;')
 
     def _update_model_ui_state(self) -> None:
         mode = self._current_model_source()
@@ -346,10 +329,21 @@ class SettingsDialog(QDialog):
         self.custom_group.setVisible(mode == 'custom')
         self.prebuilt_group.setVisible(mode == 'builtin')
         if mode == 'local':
-            self._update_local_model_ui()
+            self._check_server_status()
 
     def _open_hotword_folder(self) -> None:
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(HOTWORD_DIR)))
+
+    def _set_window_icon(self) -> None:
+        package_dir = Path(__file__).resolve().parent
+        icon_paths = [
+            package_dir / 'assets' / 'icon.ico',
+            package_dir.parent / 'assets' / 'icon.ico',
+        ]
+        for icon_path in icon_paths:
+            if icon_path.exists():
+                self.setWindowIcon(QIcon(str(icon_path)))
+                break
 
     # endregion -------------------------------------------------
 
@@ -411,47 +405,27 @@ class SettingsDialog(QDialog):
         config['auto_startup'] = self.auto_startup_checkbox.isChecked()
         config['minimize_to_tray'] = self.minimize_checkbox.isChecked()
         config['log_level'] = self.log_level_combo.currentText()
+        config['auto_start_server'] = self.auto_start_server_checkbox.isChecked()
         return config
 
-    def _handle_download_model(self) -> None:
-        from model_checker import get_model_download_url
-        url = get_model_download_url()
-        QDesktopServices.openUrl(QUrl(url))
-        QMessageBox.information(
-            self,
-            '下载模型',
-            '请从浏览器中下载模型文件,并解压到:\n./windows/server/models/\n\n下载完成后请重新打开设置。'
-        )
-
-    def _handle_stop_server(self) -> None:
-        self._server_running = False
-        self._update_local_model_ui()
-        QMessageBox.information(self, '停止服务器', '请手动关闭服务器窗口或进程。')
-
-    def _handle_reload_server(self) -> None:
-        self._handle_stop_server()
-        self._handle_start_server()
-
-    def _handle_start_server(self) -> None:
-        if self._on_start_server is None:
-            QMessageBox.information(self, '操作不可用', '当前环境不支持从此处启动服务器。')
-            return
-        self.local_start_button.setEnabled(False)
-        self.local_start_button.setText('加载中...')
-        QApplication.processEvents()
-        success = False
-        try:
-            result = self._on_start_server()
-            success = bool(result)
-        except Exception as exc:
-            message = str(exc) or '模型启动失败'
-            QMessageBox.critical(self, '模型启动失败', message)
-        finally:
-            self.local_start_button.setEnabled(True)
-            self.local_start_button.setText('启动模型服务器')
-            if success:
-                self._server_running = True
-                self._update_local_model_ui()
+    def _handle_open_server_manager(self) -> None:
+        import subprocess
+        from pathlib import Path
+        
+        package_dir = Path(__file__).resolve().parent
+        server_ui_paths = [
+            package_dir / 'server' / 'server_manager_ui.py',
+            package_dir.parent / 'server' / 'server_manager_ui.py',
+        ]
+        
+        server_ui = next((p for p in server_ui_paths if p.exists()), None)
+        if server_ui:
+            try:
+                subprocess.Popen([sys.executable, str(server_ui)], cwd=str(server_ui.parent))
+            except Exception as e:
+                QMessageBox.warning(self, '错误', f'无法启动服务器管理: {e}')
+        else:
+            QMessageBox.warning(self, '错误', '未找到服务器管理程序')
 
     def _current_model_source(self) -> str:
         if self.model_option_local.isChecked():
