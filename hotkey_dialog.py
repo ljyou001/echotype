@@ -23,13 +23,64 @@ class HotkeyDialog(QDialog):
         self._active_keys: Set[str] = set()
         self._capture_buffer: List[str] = []
 
-        instructions = QLabel('按下新的快捷键。当前支持单个按键，并可区分 Left/Right Ctrl、Alt 等。按 Backspace 清除，按 Esc 取消。')
+        instructions = QLabel('按下新的快捷键，或点击下方按钮选择特殊按键。按 Backspace 清除，按 Esc 取消。')
         instructions.setWordWrap(True)
 
         self._display_label = QLabel()
         self._display_label.setAlignment(Qt.AlignCenter)
         self._display_label.setMinimumHeight(32)
         self._update_display(self._current_keys)
+
+        # 常用按键快捷按钮
+        quick_keys_label = QLabel('快速选择特殊按键:')
+        quick_keys_row1 = QHBoxLayout()
+        quick_keys_row2 = QHBoxLayout()
+        quick_keys_row3 = QHBoxLayout()
+        
+        # 第一行: 修饰键
+        quick_buttons_row1 = [
+            ('Caps Lock', 'caps lock'),
+            ('左Ctrl', 'left ctrl'),
+            ('右Ctrl', 'right ctrl'),
+            ('左Alt', 'left alt'),
+            ('右Alt', 'right alt'),
+        ]
+        
+        for label, key in quick_buttons_row1:
+            btn = QPushButton(label)
+            btn.setMaximumWidth(100)
+            btn.clicked.connect(lambda checked, k=key: self._set_quick_key(k))
+            quick_keys_row1.addWidget(btn)
+        
+        # 第二行: 特殊功能键
+        quick_buttons_row2 = [
+            ('左Shift', 'left shift'),
+            ('右Shift', 'right shift'),
+            ('菜单键', 'menu'),
+            ('Scroll Lock', 'scroll lock'),
+            ('Pause', 'pause'),
+        ]
+        
+        for label, key in quick_buttons_row2:
+            btn = QPushButton(label)
+            btn.setMaximumWidth(100)
+            btn.clicked.connect(lambda checked, k=key: self._set_quick_key(k))
+            quick_keys_row2.addWidget(btn)
+        
+        # 第三行: F键和其他
+        quick_buttons_row3 = [
+            ('F1', 'f1'),
+            ('F2', 'f2'),
+            ('F4', 'f4'),
+            ('F12', 'f12'),
+            ('Print Screen', 'print screen'),
+        ]
+        
+        for label, key in quick_buttons_row3:
+            btn = QPushButton(label)
+            btn.setMaximumWidth(100)
+            btn.clicked.connect(lambda checked, k=key: self._set_quick_key(k))
+            quick_keys_row3.addWidget(btn)
 
         clear_button = QPushButton('清除')
         clear_button.clicked.connect(self._clear_hotkey)
@@ -46,10 +97,14 @@ class HotkeyDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(instructions)
         layout.addWidget(self._display_label)
+        layout.addWidget(quick_keys_label)
+        layout.addLayout(quick_keys_row1)
+        layout.addLayout(quick_keys_row2)
+        layout.addLayout(quick_keys_row3)
         layout.addLayout(button_row)
         layout.addWidget(buttons)
         self.setLayout(layout)
-        self.resize(400, 160)
+        self.resize(550, 340)
 
     def showEvent(self, event):  # type: ignore[override]
         super().showEvent(event)
@@ -71,7 +126,9 @@ class HotkeyDialog(QDialog):
             return
 
         name = self._event_to_key_name(event)
+        # 调试信息：打印键值
         if not name:
+            print(f"Debug: Unrecognized key - Qt.Key={key}, VK={event.nativeVirtualKey()}, SC={event.nativeScanCode()}")
             event.ignore()
             return
         if name not in self._active_keys:
@@ -101,6 +158,8 @@ class HotkeyDialog(QDialog):
         native_vk = event.nativeVirtualKey()
         native_sc = event.nativeScanCode()
         vk_map = {
+            0x11: 'ctrl',  # VK_CONTROL (17)
+            0x12: 'alt',   # VK_MENU (18)
             0xA2: 'left ctrl',
             0xA3: 'right ctrl',
             0xA4: 'left alt',
@@ -110,14 +169,20 @@ class HotkeyDialog(QDialog):
             0x5B: 'left windows',
             0x5C: 'right windows',
             0x14: 'caps lock',
+            0x5D: 'menu',  # 右键菜单键 (Context Menu)
+            0x91: 'scroll lock',  # VK_SCROLL (145)
         }
         scan_map = {
             29: 'left ctrl',
             157: 'right ctrl',
+            57373: 'right ctrl',  # 右Ctrl的扫描码
             42: 'left shift',
             54: 'right shift',
             56: 'left alt',
             312: 'right alt',
+            57400: 'right alt',  # 右Alt的扫描码
+            349: 'menu',  # 右键菜单键的扫描码
+            70: 'scroll lock',  # Scroll Lock的扫描码
         }
         if native_vk in vk_map:
             return vk_map[native_vk]
@@ -153,9 +218,22 @@ class HotkeyDialog(QDialog):
             Qt.Key_Right: 'right',
             Qt.Key_Up: 'up',
             Qt.Key_Down: 'down',
+            Qt.Key_Menu: 'menu',  # 右键菜单键
+            Qt.Key_ScrollLock: 'scroll lock',  # Scroll Lock
+            Qt.Key_NumLock: 'num lock',  # Num Lock
+            Qt.Key_CapsLock: 'caps lock',  # Caps Lock
+            Qt.Key_Pause: 'pause',  # Pause/Break
+            Qt.Key_Print: 'print screen',  # Print Screen
         }
         return special.get(key, '')
 
+    def _set_quick_key(self, key: str) -> None:
+        """通过快捷按钮设置按键"""
+        self._current_keys = [key]
+        self._capture_buffer.clear()
+        self._active_keys.clear()
+        self._update_display(self._current_keys)
+    
     def _clear_hotkey(self) -> None:
         self._current_keys = []
         self._capture_buffer.clear()

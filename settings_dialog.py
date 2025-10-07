@@ -54,8 +54,9 @@ class SettingsDialog(QDialog):
         self._build_vocabulary_tab()
         self._build_general_tab()
 
-        buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel, parent=self)
+        buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Apply | QDialogButtonBox.Cancel, parent=self)
         buttons.accepted.connect(self._handle_accept)
+        buttons.button(QDialogButtonBox.Apply).clicked.connect(self._handle_apply)
         buttons.rejected.connect(self.reject)
 
         layout = QVBoxLayout(self)
@@ -386,6 +387,14 @@ class SettingsDialog(QDialog):
                 self._current_hotkey = hotkey
                 self.hotkey_label.setText(hotkey)
 
+    def _handle_apply(self) -> None:
+        """应用设置但不关闭对话框"""
+        new_config = self._collect_config()
+        # 通知父窗口应用设置
+        if hasattr(self.parent(), '_apply_settings'):
+            self.parent()._apply_settings(new_config)
+        self._config = new_config
+    
     def _handle_accept(self) -> None:
         self._config = self._collect_config()
         self.accept()

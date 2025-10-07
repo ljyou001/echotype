@@ -92,6 +92,7 @@ class TrayApp:
             on_notification=self.signals.notificationRequested.emit,
         )
         self._server_process: subprocess.Popen | None = None
+        self._settings_dialog: SettingsDialog | None = None
 
         QTimer.singleShot(0, self._auto_start)
 
@@ -260,24 +261,44 @@ class TrayApp:
                 self._listening = True
 
     def _open_settings(self) -> None:
+        # 如果已经有设置对话框打开，就不再打开新的
+        if self._settings_dialog is not None:
+            self._settings_dialog.raise_()
+            self._settings_dialog.activateWindow()
+            return
+        
         dialog = SettingsDialog(
             self.config,
             self._list_audio_devices(),
+            self,
         )
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            new_config = dialog.updated_config()
-            restart_required = self._config_requires_restart(self.config, new_config)
-            auto_changed = self.config.get('auto_startup') != new_config.get('auto_startup')
-            self.config = new_config
-            self.backend.update_config(self.config)
-            self._apply_log_level()
-            if auto_changed:
-                self._apply_auto_startup(self.config.get('auto_startup', False))
-            if restart_required:
-                self.backend.restart_listening()
-                self._listening = True
-            self._sync_mode_actions()
-            self._sync_language_actions()
+        self._settings_dialog = dialog
+        
+        try:
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                new_config = dialog.updated_config()
+                self._apply_config_changes(new_config)
+        finally:
+            self._settings_dialog = None
+    
+    def _apply_settings(self, new_config: Dict[str, Any]) -> None:
+        """应用设置（从应用按钮调用）"""
+        self._apply_config_changes(new_config)
+    
+    def _apply_config_changes(self, new_config: Dict[str, Any]) -> None:
+        """应用配置变更"""
+        restart_required = self._config_requires_restart(self.config, new_config)
+        auto_changed = self.config.get('auto_startup') != new_config.get('auto_startup')
+        self.config = new_config
+        self.backend.update_config(self.config)
+        self._apply_log_level()
+        if auto_changed:
+            self._apply_auto_startup(self.config.get('auto_startup', False))
+        if restart_required:
+            self.backend.restart_listening()
+            self._listening = True
+        self._sync_mode_actions()
+        self._sync_language_actions()
 
     def _config_requires_restart(self, old: Dict[str, Any], new: Dict[str, Any]) -> bool:
         restart_keys = {'shortcut', 'hold_mode', 'suppress', 'threshold', 'audio_input_device', 'model_source', 'model_name', 'model_api_url', 'model_api_key'}
