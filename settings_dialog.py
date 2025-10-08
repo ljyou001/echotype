@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Tuple
 
 from PySide6.QtCore import Qt, QUrl, QTimer
-from PySide6.QtGui import QDesktopServices, QIcon
+from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -56,6 +56,7 @@ class SettingsDialog(QDialog):
         self._build_output_tab()
         self._build_vocabulary_tab()
         self._build_general_tab()
+        self._build_about_tab()
 
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Apply | QDialogButtonBox.Cancel, parent=self)
         buttons.accepted.connect(self._handle_accept)
@@ -315,6 +316,41 @@ class SettingsDialog(QDialog):
         form.addRow('日志级别', self.log_level_combo)
         page.setLayout(form)
         self._tabs.addTab(page, '常规')
+
+    def _build_about_tab(self) -> None:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+
+        icon_label = QLabel()
+        package_dir = Path(__file__).resolve().parent
+        icon_path = package_dir / 'assets' / 'icon.png'
+        if icon_path.exists():
+            pixmap = QPixmap(str(icon_path))
+            icon_label.setPixmap(pixmap.scaledToWidth(64, Qt.SmoothTransformation))
+        icon_label.setAlignment(Qt.AlignCenter)
+
+        title_label = QLabel("EchoType")
+        title_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+        title_label.setAlignment(Qt.AlignCenter)
+
+        version_label = QLabel("版本: 1.0.0")
+        version_label.setAlignment(Qt.AlignCenter)
+
+        author_label = QLabel("作者: ljyou001")
+        author_label.setAlignment(Qt.AlignCenter)
+
+        github_link = QLabel("<a href='https://github.com/ljyou001/EchoType'>GitHub 项目地址</a>")
+        github_link.setOpenExternalLinks(True)
+        github_link.setAlignment(Qt.AlignCenter)
+
+        layout.addWidget(icon_label)
+        layout.addWidget(title_label)
+        layout.addWidget(version_label)
+        layout.addWidget(author_label)
+        layout.addWidget(github_link)
+        layout.addStretch(1)
+
+        self._tabs.addTab(page, "关于")
 
     def _check_server_status(self) -> None:
         import socket
