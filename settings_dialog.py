@@ -488,22 +488,36 @@ class SettingsDialog(QDialog):
 
     def _handle_open_server_manager(self) -> None:
         import subprocess
+        import sys
         from pathlib import Path
+
+        # Check if running in a PyInstaller bundle
+        if getattr(sys, 'frozen', False):
+            base_dir = Path(sys.executable).parent
+            manager_exe = base_dir / 'EchoTypeServerManager.exe'
+            if manager_exe.exists():
+                try:
+                    subprocess.Popen([str(manager_exe)], cwd=str(base_dir))
+                    return
+                except Exception as e:
+                    QMessageBox.warning(self, _('Error'), f'{_("Failed to launch server manager")}: {e}')
+                    return
         
+        # Fallback for development environment
         package_dir = Path(__file__).resolve().parent
         server_ui_paths = [
             package_dir / 'server' / 'server_manager_ui.py',
             package_dir.parent / 'server' / 'server_manager_ui.py',
         ]
-        
-        server_ui = next((p for p in server_ui_paths if p.exists()), None)
-        if server_ui:
+        server_ui_script = next((p for p in server_ui_paths if p.exists()), None)
+
+        if server_ui_script:
             try:
-                subprocess.Popen([sys.executable, str(server_ui)], cwd=str(server_ui.parent))
+                subprocess.Popen([sys.executable, str(server_ui_script)], cwd=str(server_ui_script.parent))
             except Exception as e:
-                QMessageBox.warning(self, '错误', f'无法启动服务器管理: {e}')
+                QMessageBox.warning(self, _('Error'), f'{_("Failed to launch server manager")}: {e}')
         else:
-            QMessageBox.warning(self, '错误', '未找到服务器管理程序')
+            QMessageBox.warning(self, _('Error',), _('Server manager program not found.'))
 
     def _current_model_source(self) -> str:
         if self.model_option_local.isChecked():

@@ -141,7 +141,7 @@
 4. If still failing, use client-only mode and connect to a remote server
 </details>
 
-## 🛠️ Development Information
+## 🛠️ Development & Packaging
 
 <details>
 <summary><strong>🔧 Developer Guide</strong></summary>
@@ -152,93 +152,124 @@ EchoType uses a client-server architecture:
 - **Client** (run_tray.py): Tray icon, hotkey monitoring, audio recording
 - **Server** (server/): Voice recognition service (requires sherpa-onnx, etc.)
 
-You can:
-1. Install only client dependencies and connect to a remote server
-2. Install full dependencies to run the server locally (requires C++ compilation)
+### Environment Setup (Full, with Local Server)
 
-### Option 1: Client Only (Recommended)
-
-```bash
-# 1. Create virtual environment
-python -m venv .venv
-
-# 2. Activate virtual environment
-.venv\Scripts\activate
-
-# 3. Install client dependencies
-pip install -r requirements-simple.txt
-
-# 4. Run client
-pythonw run_tray.py
-
-# 5. Configure remote server connection in settings (if available)
-```
-
-### Option 2: Full Environment (Including Server)
-
-The voice recognition server requires `sherpa-onnx`, `funasr-onnx`, `kaldi-native-fbank` packages.
+The voice recognition server requires `sherpa-onnx`, `funasr-onnx`, etc.
 
 **Prerequisites:**
-1. Install Visual Studio Build Tools
-   - Download: https://visualstudio.microsoft.com/downloads/
-   - Select "Desktop development with C++"
-2. Install CMake (via winget or from cmake.org)
+1. Install Visual Studio Build Tools with "Desktop development with C++".
+2. Install CMake.
 
 **Installation Steps:**
 
 ```bash
-# 1. Create virtual environment
+# 1. Create and activate a virtual environment
 python -m venv .venv
+.venv\Scripts\activate
 
-# 2. Activate virtual environment
-call .venv\Scripts\activate
+# 2. Install dependencies
+pip install -r requirements.txt
+```
 
-# 3. Install client dependencies first
-pip install -r requirements-simple.txt
+### Running in Development
 
-# 4. Install build dependencies
-pip install setuptools wheel cmake
-
-# 5. Install sherpa-onnx from precompiled wheels
-pip install --find-links https://k2-fsa.github.io/sherpa/onnx/install/python.html sherpa-onnx
-
-# 6. Install funasr-onnx (includes kaldi-native-fbank)
-pip install funasr-onnx==0.2.5
-
-# 7. Start server in background
+```bash
+# 1. Start the server in the background
 start /B python server/start_server.py
 
-# 8. Run client
+# 2. Run the client
 pythonw run_tray.py
 ```
 
-**Note:** If you encounter compilation errors with the original requirements.txt, use the method above which installs precompiled packages instead of building from source.
+</details>
 
-### Project Structure
+<details>
+<summary><strong>📦 Packaging for Distribution</strong></summary>
+
+To package the project into standalone executables, [PyInstaller](https://pyinstaller.org/) is recommended.
+
+**Step 1: Install Dependencies**
+
+```shell
+pip install pyinstaller psutil
 ```
-windows/
-├── assets/           # Resource files (icons, etc.)
-├── util/            # Utility modules
-├── tray_app.py      # Tray application main entry
-├── settings_dialog.py # Settings dialog
-├── hotkey_dialog.py # Hotkey settings
-└── run_tray.py      # Launch script
+*(`psutil` is required by the Server Manager UI to find and manage server processes.)*
+
+**Step 2: Generate .spec Files**
+
+Run the following commands from the project root to generate configuration files for each executable:
+
+1.  **Client App:**
+    ```shell
+    pyinstaller --name EchoType --windowed --icon=assets/icon.ico run_tray.py
+    ```
+
+2.  **Server Backend:**
+    ```shell
+    pyinstaller --name EchoTypeServer server/start_server.py
+    ```
+
+3.  **Server Manager UI:**
+    ```shell
+    pyinstaller --name EchoTypeServerManager --windowed --icon=server/assets/icon.ico server/server_manager_ui.py
+    ```
+
+**Step 3: Modify .spec Files**
+
+Edit the generated `.spec` files to include necessary data files by modifying the `datas` list.
+
+1.  **Edit `EchoType.spec`**:
+    Add `assets`, `locales`, and `hotwords` directories.
+    ```python
+    datas=[('assets', 'assets', 'DATA'), ('locales', 'locales', 'DATA'), ('hotwords', 'hotwords', 'DATA')]
+    ```
+
+2.  **Edit `EchoTypeServer.spec`**:
+    Add the `models` directory.
+    ```python
+    datas=[('server/models', 'models', 'DATA')]
+    ```
+
+3.  **Edit `EchoTypeServerManager.spec`**:
+    Add the server assets icon directory.
+    ```python
+    datas=[('server/assets', 'assets', 'DATA')]
+    ```
+
+**Step 4: Build the Executables**
+
+Run PyInstaller with the modified spec files:
+
+```shell
+pyinstaller EchoType.spec
+pyinstaller EchoTypeServer.spec
+pyinstaller EchoTypeServerManager.spec
 ```
 
-### Core Components
-- **TrayBackend**: Background thread running client logic
-- **SettingsDialog**: Graphical configuration interface
-- **HotkeyDialog**: Hotkey management
-- **AutoStart**: Startup item management
+**Step 5: Consolidate Files**
 
-### Build & Release
-```bash
-# Package with PyInstaller
-pyinstaller --noconsole --icon assets/icon.ico run_tray.py
+After packaging, the `dist` directory will contain three folders. You need to merge their contents into a single directory for distribution.
+
+1.  Create a final distribution folder (e.g., `EchoType_v1.0`).
+2.  Copy the **entire contents** of `dist/EchoType` into `EchoType_v1.0`.
+3.  Copy the executable `dist/EchoTypeServer/EchoTypeServer.exe` into `EchoType_v1.0`.
+4.  Copy the executable `dist/EchoTypeServerManager/EchoTypeServerManager.exe` into `EchoType_v1.0`.
+5.  Copy the `models` folder from `dist/EchoTypeServer` into `EchoType_v1.0`.
+
+Your final distribution folder should look like this:
+
 ```
-
-### Configuration File
-The program generates a configuration file at `%APPDATA%\EchoType\client.json` on first run.
+EchoType_v1.0/
+├── EchoType.exe              (Main client app)
+├── EchoTypeServer.exe        (Backend server)
+├── EchoTypeServerManager.exe (Server Manager UI)
+├── assets/
+├── hotwords/
+├── locales/
+├── models/
+└── (and many other .dll and dependency files)
+```
+This folder is now a self-contained, distributable package.
 
 </details>
 
