@@ -15,10 +15,10 @@ def check_model():
 
     未找到：{path}
 
-    本服务端需要 paraformer-offline-zh 模型和 punc_ct-transformer_zh-cn 模型，
-    请下载模型并放置到： {ModelPaths.model_dir} 
+    本服务端需要 paraformer-offline-zh 模型和 punc_ct-transformer_cn-en 模型，
+    请下载模型并解压到： {ModelPaths.model_dir} 
     
-    下载地址在： https://github.com/ljyou001/EchoType/releases/ 
+    直接下载链接： https://github.com/ljyou001/echotype/releases/download/v1.0-model/models.zip 
 
         ''', style='bright_red')
         input('按回车退出')
