@@ -1,0 +1,286 @@
+msgid "EchoType Settings"
+msgstr "EchoType 设置"
+
+#* Tabs
+msgid "Model"
+msgstr "模型"
+
+msgid "Shortcut"
+msgstr "快捷键"
+
+msgid "Audio"
+msgstr "音频"
+
+msgid "Output"
+msgstr "输出"
+
+msgid "Vocabulary"
+msgstr "词库"
+
+msgid "General"
+msgstr "常规"
+
+msgid "About"
+msgstr "关于"
+
+#* General Buttons
+msgid "Save"
+msgstr "保存"
+
+msgid "Apply"
+msgstr "应用"
+
+msgid "Cancel"
+msgstr "取消"
+
+#* General Tab
+msgid "Interface Language"
+msgstr "界面语言"
+
+msgid "Auto-detect"
+msgstr "自动检测"
+
+msgid "Startup on system boot"
+msgstr "随系统启动"
+
+msgid "Minimize to tray on startup"
+msgstr "启动后最小化到托盘"
+
+msgid "Log Level"
+msgstr "日志级别"
+
+#* Model Tab
+msgid "Model Source"
+msgstr "模型来源"
+
+msgid "Local Model"
+msgstr "本地模型"
+
+msgid "Custom Server"
+msgstr "自定义服务器"
+
+msgid "Pre-built Model"
+msgstr "预置模型"
+
+msgid "Use the built-in local offline model. The server must be started on this machine before recognition can begin."
+msgstr "使用内置的本地离线模型。在本机启动服务器后才能开始识别。"
+
+msgid "Server Status:"
+msgstr "服务器状态："
+
+msgid "Checking..."
+msgstr "检测中..."
+
+msgid "Auto-start server (if not running)"
+msgstr "自动启动服务器（如果未运行）"
+
+msgid "Open Server Manager"
+msgstr "打开服务器管理"
+
+msgid "Server Address"
+msgstr "服务器地址"
+
+msgid "Port"
+msgstr "端口"
+
+msgid "Auto-reconnect (sec)"
+msgstr "自动重连（秒）"
+
+msgid "Paraformer (Chinese Offline)"
+msgstr "Paraformer（中文离线）"
+
+msgid "Vosk (English/Multilingual)"
+msgstr "Vosk（英文/多语种）"
+
+msgid "e.g., https://api.example.com/recognize"
+msgstr "例如：https://api.example.com/recognize"
+
+msgid "Optional: Access Key"
+msgstr "可选：访问密钥"
+
+msgid "API URL"
+msgstr "API 地址"
+
+msgid "API Key"
+msgstr "API 密钥"
+
+msgid "Note: Pre-built model mode directly calls the selected local/remote model. If the API fields are left blank, built-in configurations will be used."
+msgstr "提示：预置模型模式将直接调用选定的本地/远程模型。若留空 API 字段，将使用内置配置。"
+
+msgid "● Running"
+msgstr "● 运行中"
+
+msgid "○ Not Running"
+msgstr "○ 未运行"
+
+#* Shortcut Tab
+msgid "Not Set"
+msgstr "未设置"
+
+msgid "Change..."
+msgstr "修改..."
+
+msgid "Current Shortcut"
+msgstr "当前快捷键"
+
+msgid "Listening Mode"
+msgstr "监听模式"
+
+msgid "Push-to-talk (Walkie-talkie mode)"
+msgstr "按住说话（对讲机模式）"
+
+msgid "Click to start/stop (Single-click mode)"
+msgstr "点击开始/停止（单击模式）"
+
+msgid "Suppress key from being passed to other programs"
+msgstr "屏蔽按键传递给其它程序"
+
+msgid "Restore original key state on completion"
+msgstr "完成后恢复原按键状态"
+
+msgid "Advanced"
+msgstr "高级"
+
+msgid "Trigger Threshold (sec)"
+msgstr "触发阈值（秒）"
+
+#* Audio Tab
+msgid "Save audio files"
+msgstr "保存录音文件"
+
+msgid "Default"
+msgstr "默认"
+
+msgid "Input Device"
+msgstr "输入设备"
+
+msgid "File Naming Length"
+msgstr "文件命名长度"
+
+#* Output Tab
+msgid "Write to clipboard and paste"
+msgstr "写入剪贴板并粘贴"
+
+msgid "Restore clipboard after pasting"
+msgstr "粘贴后恢复剪贴板"
+
+msgid "Show system notifications"
+msgstr "显示系统通知"
+
+msgid "Show result popup on completion"
+msgstr "识别完成时弹出结果"
+
+#* Vocabulary Tab
+msgid "Enable Chinese hotwords"
+msgstr "启用中文热词"
+
+msgid "Enable English hotwords"
+msgstr "启用英文热词"
+
+msgid "Enable custom rules"
+msgstr "启用自定义规则"
+
+msgid "Enable hotword diary"
+msgstr "启用热词日记"
+
+msgid "Hotword Directory"
+msgstr "热词目录"
+
+msgid "Open Hotword Folder"
+msgstr "打开热词文件夹"
+
+msgid "Config File"
+msgstr "配置文件"
+
+#* About Tab
+msgid "Version: 1.0.0"
+msgstr "版本: 1.0.0"
+
+msgid "Author: ljyou001"
+msgstr "作者: ljyou001"
+
+msgid "GitHub Project"
+msgstr "GitHub 项目"
+
+#* Tray App
+msgid "Language Changed"
+msgstr "语言已更改"
+
+msgid "The language has been changed. Please restart the application for the changes to take effect."
+msgstr "语言已更改。请重启程序以使设置生效。"
+
+msgid "EchoType tray client started"
+msgstr "EchoType 托盘客户端已启动"
+
+msgid "Tray icon file not found, using default icon"
+msgstr "未找到托盘图标文件，使用默认图标"
+
+msgid "EchoType Tray Client"
+msgstr "EchoType 托盘客户端"
+
+msgid "Start Listening"
+msgstr "启动监听"
+
+msgid "Stop Listening"
+msgstr "停止监听"
+
+msgid "Push-to-talk"
+msgstr "按住说话"
+
+msgid "Click to start/stop"
+msgstr "点击开始/停止"
+
+msgid "Output Language"
+msgstr "输出语言"
+
+msgid "Chinese"
+msgstr "中文"
+
+msgid "English"
+msgstr "英文"
+
+msgid "Japanese"
+msgstr "日文"
+
+msgid "Set Hotkey..."
+msgstr "设置快捷键..."
+
+msgid "Open Settings..."
+msgstr "打开设置..."
+
+msgid "View Logs..."
+msgstr "查看日志..."
+
+msgid "Quit"
+msgstr "退出"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "Click to talk"
+msgstr "点击说话"
+
+msgid "An error occurred"
+msgstr "发生错误"
+
+msgid "Connection failed, attempting to auto-start server..."
+msgstr "连接失败，尝试自动启动服务器..."
+
+#* Tray Status
+msgid "Starting"
+msgstr "正在启动"
+
+msgid "Connecting to server"
+msgstr "正在连接服务器"
+
+msgid "Ready to be woken up"
+msgstr "等待唤起"
+
+msgid "Recording"
+msgstr "录音中"
+
+msgid "Connection lost"
+msgstr "连接已断开"
+
+msgid "Listening stopped"
+msgstr "监听已停止"

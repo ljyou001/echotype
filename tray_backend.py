@@ -48,7 +48,7 @@ class TrayBackend:
             if self._running:
                 return
             self._running = True
-            self._thread = threading.Thread(target=self._run_thread, name='CapsWriterTray', daemon=True)
+            self._thread = threading.Thread(target=self._run_thread, name='EchoTypeTray', daemon=True)
             self._thread.start()
 
     def stop_listening(self) -> None:

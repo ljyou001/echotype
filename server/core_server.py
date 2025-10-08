@@ -46,8 +46,8 @@ async def main():
     check_model()
 
     console.line(2)
-    console.rule('[bold #d55252]CapsWriter Offline Server'); console.line()
-    console.print(f'项目地址：[cyan underline]https://github.com/HaujetZhao/CapsWriter-Offline', end='\n\n')
+    console.rule('[bold #d55252]EchoType Offline Server'); console.line()
+    console.print(f'项目地址：[cyan underline]https://github.com/ljyou001/echotype', end='\n\n')
     console.print(f'当前基文件夹：[cyan underline]{BASE_DIR}', end='\n\n')
     console.print(f'绑定的服务地址：[cyan underline]{Config.addr}:{Config.port}', end='\n\n')
 

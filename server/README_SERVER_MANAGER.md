@@ -66,4 +66,4 @@ python run_server_manager.py
 
 - 服务器默认监听地址: 127.0.0.1:6016
 - 进度信息存储在: server/progress.json
-- 服务器入口文件: start_server.py 或 CapsWriterServer.exe
+- 服务器入口文件: start_server.py

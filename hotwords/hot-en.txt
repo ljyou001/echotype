@@ -106,7 +106,6 @@ CPU
 Creative Cloud
 Cubase
 ChatGPT
-CapsWriter
 
 # D开头
 Dell
@@ -122,6 +121,7 @@ EU
 Evernote
 Excel
 EXIF
+EchoType
 
 # F开头
 Facebook

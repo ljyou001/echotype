@@ -61,7 +61,7 @@ class ServerManagerUI(QDialog):
 
     def _find_server_entry(self) -> Optional[Path]:
         candidates = [
-            self.server_dir / 'CapsWriterServer.exe',
+            self.server_dir / 'EchoTypeServer.exe',
             self.server_dir / 'start_server.py',
         ]
         for path in candidates:
@@ -244,7 +244,7 @@ class ServerManagerUI(QDialog):
             try:
                 cmdline = proc.info.get('cmdline') or []
                 cmdline_str = ' '.join(cmdline).lower()
-                if 'start_server.py' in cmdline_str or 'core_server.py' in cmdline_str or 'capswriterserver' in cmdline_str:
+                if 'start_server.py' in cmdline_str or 'core_server.py' in cmdline_str or 'echotypeserver' in cmdline_str:
                     processes.append(proc)
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass

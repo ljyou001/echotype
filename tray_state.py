@@ -14,15 +14,21 @@ class TrayStatus(str, Enum):
 
 
 STATUS_LABELS = {
-    TrayStatus.STARTING: '正在启动',
-    TrayStatus.CONNECTING: '正在连接服务器',
-    TrayStatus.READY: '等待唤起',
-    TrayStatus.RECORDING: '录音中',
-    TrayStatus.CONNECTION_LOST: '连接已断开',
-    TrayStatus.STOPPED: '监听已停止',
-    TrayStatus.ERROR: '发生错误',
+    TrayStatus.STARTING: 'Starting',
+    TrayStatus.CONNECTING: 'Connecting to server',
+    TrayStatus.READY: 'Ready to be woken up',
+    TrayStatus.RECORDING: 'Recording',
+    TrayStatus.CONNECTION_LOST: 'Connection lost',
+    TrayStatus.STOPPED: 'Listening stopped',
+    TrayStatus.ERROR: 'An error occurred',
 }
 
 
 def status_label(status: TrayStatus) -> str:
-    return STATUS_LABELS.get(status, status.value)
+    label = STATUS_LABELS.get(status, status.value)
+    try:
+        # The _ function is installed into builtins by language.py
+        return _(label)
+    except NameError:
+        # Fallback for rare cases where translation is not yet initialized
+        return label

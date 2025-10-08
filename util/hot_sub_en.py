@@ -80,7 +80,7 @@ if __name__ == '__main__':
         iPhone4S
         7-Zip
         AI
-        CapsWriter
+        EchoType
         GB
         IP
     '''
@@ -91,4 +91,3 @@ if __name__ == '__main__':
 
 
     print(f'{res}')
-

@@ -238,7 +238,7 @@ pyinstaller --noconsole --icon assets/icon.ico run_tray.py
 ```
 
 ### Configuration File
-The program generates a configuration file at `%APPDATA%\CapsWriter\client.json` on first run.
+The program generates a configuration file at `%APPDATA%\EchoType\client.json` on first run.
 
 </details>
 

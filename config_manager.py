@@ -9,9 +9,9 @@ from client_config import ClientConfig
 
 APPDATA = Path(os.getenv("APPDATA") or Path.home() / "AppData" / "Roaming")
 LOCALAPPDATA = Path(os.getenv("LOCALAPPDATA") or APPDATA)
-CONFIG_DIR = APPDATA / "CapsWriter"
+CONFIG_DIR = APPDATA / "EchoType"
 CONFIG_PATH = CONFIG_DIR / "client.json"
-LOG_DIR = LOCALAPPDATA / "CapsWriter" / "logs"
+LOG_DIR = LOCALAPPDATA / "EchoType" / "logs"
 
 _EXTRA_DEFAULTS = {
     "auto_startup": False,
@@ -22,6 +22,7 @@ _EXTRA_DEFAULTS = {
     "config_path": str(CONFIG_PATH),
     "reconnect_interval": 5,
     "minimize_to_tray": True,
+    "language": "auto",
 }
 
 

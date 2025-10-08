@@ -6,9 +6,9 @@ from typing import Optional
 
 def setup_logging(log_dir: Path, level: str = "INFO") -> logging.Logger:
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_file = log_dir / "capswriter-tray.log"
+    log_file = log_dir / "echotype-tray.log"
 
-    logger = logging.getLogger("capswriter.tray")
+    logger = logging.getLogger("echotype.tray")
     logger.setLevel(getattr(logging, level.upper(), logging.INFO))
 
     if not any(isinstance(handler, RotatingFileHandler) for handler in logger.handlers):

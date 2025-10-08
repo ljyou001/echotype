@@ -11,7 +11,7 @@ except ImportError:  # pragma: no cover - non Windows
 
 
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
-APP_NAME = 'CapsWriterTray'
+APP_NAME = 'EchoTypeTray'
 
 
 def _open_run_key():
@@ -58,4 +58,3 @@ def _default_command() -> str:
         pythonw = exe.parent / 'pythonw.exe'
         python = pythonw if pythonw.exists() else exe
     return f'"{python}" "{script}"'
-

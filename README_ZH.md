@@ -142,7 +142,7 @@ pythonw run_tray.py
 
 **注意：** 如果使用原始 requirements.txt 遇到编译错误，请使用上述方法，它会安装预编译包而不是从源码构建。
 
-首次运行会自动在 `%APPDATA%\CapsWriter\client.json` 生成配置文件并载入默认值。
+首次运行会自动在 `%APPDATA%\EchoType\client.json` 生成配置文件并载入默认值。
 
 ### 开发提示
 - 依赖列表见 `requirements.txt`（完整）或 `requirements-simple.txt`（仅客户端）。

@@ -18,7 +18,7 @@ def check_model():
     本服务端需要 paraformer-offline-zh 模型和 punc_ct-transformer_zh-cn 模型，
     请下载模型并放置到： {ModelPaths.model_dir} 
     
-    下载地址在： https://github.com/HaujetZhao/CapsWriter-Offline/releases/tag/v0.3 
+    下载地址在： https://github.com/ljyou001/EchoType/releases/ 
 
         ''', style='bright_red')
         input('按回车退出')

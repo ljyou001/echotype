@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QDesktopServices
 
 import config_manager
+from language import init_translation
 from logger import setup_logging
 from settings_dialog import SettingsDialog
 from tray_backend import TrayBackend
@@ -42,9 +43,10 @@ class TrayApp:
         self.app.setQuitOnLastWindowClosed(False)
         config_manager.ensure_directories()
         self.config = config_manager.load_config()
+        init_translation(self.config)
         self.logger = setup_logging(config_manager.LOG_DIR, self.config.get('log_level', 'INFO'))
         self._apply_log_level()
-        self.logger.info('CapsWriter 托盘客户端启动')
+        self.logger.info(_('EchoType tray client started'))
 
         self.signals = TraySignals()
         self.signals.statusChanged.connect(self._handle_status)
@@ -59,14 +61,14 @@ class TrayApp:
         ]
         icon_path = next((p for p in icon_candidates if p.exists()), None)
         if icon_path is None:
-            self.logger.warning('未找到托盘图标文件，使用默认图标')
+            self.logger.warning(_('Tray icon file not found, using default icon'))
             self.base_icon = self.app.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
         else:
             self.base_icon = QIcon(str(icon_path))
         self.status_icons = build_status_icons(self.base_icon)
 
         self.tray_icon = QSystemTrayIcon(self.status_icons.get(TrayStatus.STARTING, self.base_icon))
-        self.tray_icon.setToolTip('CapsWriter Tray 客户端')
+        self.tray_icon.setToolTip(_('EchoType Tray Client'))
         self._tray_activation_pending = False
 
         self.menu = QMenu()
@@ -98,14 +100,14 @@ class TrayApp:
 
     # region menu -------------------------------------------------
     def _build_menu(self) -> None:
-        self.action_toggle = self.menu.addAction('启动监听', self._toggle_listening)
+        self.action_toggle = self.menu.addAction(_('Start Listening'), self._toggle_listening)
         self.menu.addSeparator()
 
-        mode_menu = self.menu.addMenu('监听模式')
+        mode_menu = self.menu.addMenu(_('Listening Mode'))
         self.mode_group = QActionGroup(self.menu)
         self.mode_group.setExclusive(True)
-        self.mode_hold = QAction('按住说话', self.menu, checkable=True)
-        self.mode_click = QAction('点击开始/停止', self.menu, checkable=True)
+        self.mode_hold = QAction(_('Push-to-talk'), self.menu, checkable=True)
+        self.mode_click = QAction(_('Click to start/stop'), self.menu, checkable=True)
         self.mode_group.addAction(self.mode_hold)
         self.mode_group.addAction(self.mode_click)
         self.mode_hold.triggered.connect(lambda checked: checked and self._set_hold_mode(True))
@@ -113,12 +115,12 @@ class TrayApp:
         mode_menu.addAction(self.mode_hold)
         mode_menu.addAction(self.mode_click)
 
-        lang_menu = self.menu.addMenu('输出语言')
+        lang_menu = self.menu.addMenu(_('Output Language'))
         self.lang_group = QActionGroup(self.menu)
         self.lang_group.setExclusive(True)
-        self.lang_zh = QAction('中文', self.menu, checkable=True)
-        self.lang_en = QAction('English', self.menu, checkable=True)
-        self.lang_ja = QAction('日本語', self.menu, checkable=True)
+        self.lang_zh = QAction(_('Chinese'), self.menu, checkable=True)
+        self.lang_en = QAction(_('English'), self.menu, checkable=True)
+        self.lang_ja = QAction(_('Japanese'), self.menu, checkable=True)
         self.lang_group.addAction(self.lang_zh)
         self.lang_group.addAction(self.lang_en)
         self.lang_group.addAction(self.lang_ja)
@@ -129,14 +131,14 @@ class TrayApp:
         lang_menu.addAction(self.lang_en)
         lang_menu.addAction(self.lang_ja)
 
-        self.menu.addAction('设置监听按键…', self._open_hotkey_dialog)
-        self.menu.addAction('打开设置…', self._open_settings)
+        self.menu.addAction(_('Set Hotkey...'), self._open_hotkey_dialog)
+        self.menu.addAction(_('Open Settings...'), self._open_settings)
         self.menu.addSeparator()
 
-        self.menu.addAction('查看日志…', self._open_logs)
+        self.menu.addAction(_('View Logs...'), self._open_logs)
         self.menu.addSeparator()
 
-        self.menu.addAction('退出', self._quit)
+        self.menu.addAction(_('Quit'), self._quit)
         self._sync_mode_actions()
         self._sync_language_actions()
         self._update_toggle_action()
@@ -209,7 +211,7 @@ class TrayApp:
         self._update_toggle_action()
 
     def _update_toggle_action(self) -> None:
-        self.action_toggle.setText('停止监听' if self._listening else '启动监听')
+        self.action_toggle.setText(_('Stop Listening') if self._listening else _('Start Listening'))
 
     def _sync_mode_actions(self) -> None:
         hold_mode = bool(self.config.get('hold_mode', True))
@@ -290,6 +292,8 @@ class TrayApp:
         """应用配置变更"""
         restart_required = self._config_requires_restart(self.config, new_config)
         auto_changed = self.config.get('auto_startup') != new_config.get('auto_startup')
+        lang_changed = self.config.get('language') != new_config.get('language')
+
         self.config = new_config
         config_manager.save_config(self.config)  # 保存配置
         self.backend.update_config(self.config)
@@ -301,6 +305,13 @@ class TrayApp:
             QTimer.singleShot(100, self._do_restart_listening)
         self._sync_mode_actions()
         self._sync_language_actions()
+
+        if lang_changed:
+            QMessageBox.information(
+                None, 
+                _('Language Changed'), 
+                _('The language has been changed. Please restart the application for the changes to take effect.')
+            )
     
     def _do_restart_listening(self) -> None:
         """延迟重启监听"""
@@ -356,7 +367,7 @@ class TrayApp:
             self._package_dir.parent,
             self._package_dir.parent / 'server',
         ]
-        names = ['CapsWriterServer.exe', 'start_server.py']
+        names = ['EchoTypeServer.exe', 'start_server.py']
         seen = set()
         for directory in search_dirs:
             for name in names:
@@ -494,13 +505,13 @@ class TrayApp:
         elif mapped in {TrayStatus.READY, TrayStatus.RECORDING, TrayStatus.CONNECTING, TrayStatus.STARTING}:
             self._listening = True
         if status == 'error' and detail_text:
-            self._show_notification('发生错误', detail_text, force=True)
+            self._show_notification(_('An error occurred'), detail_text, force=True)
         if status in {'connection_failed', 'connection_lost'}:
-            self.logger.warning('连接问题: %s', detail_text)
+            self.logger.warning('Connection issue: %s', detail_text)
             # 如果是本地模型且开启了自动启动，尝试启动服务器
             if self.config.get('model_source', 'local') == 'local' and self.config.get('auto_start_server', True):
                 if not self._check_server_running() and not self._server_process:
-                    self.logger.info('检测到连接失败，尝试自动启动服务器...')
+                    self.logger.info(_('Connection failed, attempting to auto-start server...'))
                     self._auto_launch_server()
         self._update_toggle_action()
 
@@ -524,13 +535,13 @@ class TrayApp:
             return
         self.tray_icon.showMessage(title, message, self.tray_icon.icon(), 5000)
 
-    def _compose_tooltip(self, status: TrayStatus, detail: str) -> str:
+    def _compose_tooltip(self, status: TrayStatus, detail: str) -> None:
         status_text = status_label(status)
         if detail:
             status_text = f"{status_text} · {detail}"
-        mode_text = '按住说话' if self.config.get('hold_mode', True) else '点击说话'
+        mode_text = _('Push-to-talk') if self.config.get('hold_mode', True) else _('Click to talk')
         shortcut = self.config.get('shortcut', 'caps lock')
-        return f"CapsWriter Tray\n状态：{status_text}\n快捷键：{shortcut} ({mode_text})"
+        return f"EchoType Tray\n{_('Status')}：{status_text}\n{_('Shortcut')}：{shortcut} ({mode_text})"
 
     def _map_status(self, status: str) -> TrayStatus:
         mapping = {
@@ -569,4 +580,3 @@ class TrayApp:
 
     def run(self) -> int:
         return self.app.exec()
-

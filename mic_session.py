@@ -55,7 +55,7 @@ class MicSession:
             raise
 
         bond_shortcut()
-        self._recv_task = asyncio.create_task(self._recv_loop(), name='capswriter-recv')
+        self._recv_task = asyncio.create_task(self._recv_loop(), name='echotype-recv')
 
     async def stop(self) -> None:
         if self._stopped:

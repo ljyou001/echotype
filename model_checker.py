@@ -21,4 +21,4 @@ def check_local_models() -> bool:
 
 def get_model_download_url() -> str:
     """获取模型下载地址"""
-    return 'https://github.com/HaujetZhao/CapsWriter-Offline/releases/tag/v0.3'
+    return 'https://github.com/ljyou001/echotype/releases/'
