@@ -36,9 +36,9 @@ class ServerMonitorThread(QThread):
         while self._running:
             try:
                 with socket.create_connection((self.addr, self.port), timeout=1):
-                    self.status_changed.emit('running', '服务器运行中')
+                    self.status_changed.emit('running', _('Server is running'))
             except (socket.timeout, ConnectionRefusedError, OSError):
-                self.status_changed.emit('stopped', '服务器未运行')
+                self.status_changed.emit('stopped', _('Server is not running'))
             time.sleep(2)
 
     def stop(self):
@@ -53,7 +53,7 @@ class ServerManagerUI(QDialog):
         self.server_process: Optional[subprocess.Popen] = None
         self.monitor_thread: Optional[ServerMonitorThread] = None
         
-        self.setWindowTitle('EchoType 服务器管理')
+        self.setWindowTitle(_('EchoType Server Manager'))
         self._set_window_icon()
         self.resize(700, 500)
         self._setup_ui()
@@ -78,8 +78,8 @@ class ServerManagerUI(QDialog):
         control_layout = QVBoxLayout(control_tab)
         
         status_layout = QHBoxLayout()
-        status_layout.addWidget(QLabel('服务器状态:'))
-        self.status_label = QLabel('检测中...')
+        status_layout.addWidget(QLabel(_('Server Status:')))
+        self.status_label = QLabel(_('Checking...'))
         self.status_label.setStyleSheet('font-weight: bold; padding: 5px;')
         status_layout.addWidget(self.status_label)
         status_layout.addStretch()
@@ -88,13 +88,13 @@ class ServerManagerUI(QDialog):
         self.progress_text = QTextEdit()
         self.progress_text.setReadOnly(True)
         self.progress_text.setMaximumHeight(150)
-        control_layout.addWidget(QLabel('加载进度:'))
+        control_layout.addWidget(QLabel(_('Loading Progress:')))
         control_layout.addWidget(self.progress_text)
         
         btn_layout = QHBoxLayout()
-        self.btn_start = QPushButton('启动服务器')
-        self.btn_stop = QPushButton('停止服务器')
-        self.btn_restart = QPushButton('重启服务器')
+        self.btn_start = QPushButton(_('Start Server'))
+        self.btn_stop = QPushButton(_('Stop Server'))
+        self.btn_restart = QPushButton(_('Restart Server'))
         
         self.btn_start.clicked.connect(self._start_server)
         self.btn_stop.clicked.connect(self._stop_server)
@@ -107,7 +107,7 @@ class ServerManagerUI(QDialog):
         control_layout.addLayout(btn_layout)
         
         control_layout.addStretch()
-        tabs.addTab(control_tab, '服务器控制')
+        tabs.addTab(control_tab, _('Server Control'))
         
         # 日志标签页
         log_tab = QWidget()
@@ -117,19 +117,19 @@ class ServerManagerUI(QDialog):
         log_layout.addWidget(self.log_text)
         
         log_btn_layout = QHBoxLayout()
-        btn_clear_log = QPushButton('清空日志')
+        btn_clear_log = QPushButton(_('Clear Log'))
         btn_clear_log.clicked.connect(self.log_text.clear)
         log_btn_layout.addStretch()
         log_btn_layout.addWidget(btn_clear_log)
         log_layout.addLayout(log_btn_layout)
         
-        tabs.addTab(log_tab, '运行日志')
+        tabs.addTab(log_tab, _('Log'))
         
         layout.addWidget(tabs)
         
         close_layout = QHBoxLayout()
         close_layout.addStretch()
-        btn_close = QPushButton('关闭')
+        btn_close = QPushButton(_('Close'))
         btn_close.clicked.connect(self.accept)
         close_layout.addWidget(btn_close)
         layout.addLayout(close_layout)
@@ -143,11 +143,11 @@ class ServerManagerUI(QDialog):
 
     def _on_status_changed(self, status: str, message: str):
         if status == 'running':
-            self.status_label.setText('● 运行中')
+            self.status_label.setText(_('● Running'))
             self.status_label.setStyleSheet('color: green; font-weight: bold; padding: 5px;')
             self._update_button_states('running')
         else:
-            self.status_label.setText('○ 未运行')
+            self.status_label.setText(_('○ Not Running'))
             self.status_label.setStyleSheet('color: red; font-weight: bold; padding: 5px;')
             self._update_button_states('stopped')
 
@@ -321,6 +321,16 @@ class ServerManagerUI(QDialog):
 
 
 def main():
+    # Setup path to import from parent directory
+    import sys
+    from pathlib import Path
+    project_root = Path(__file__).resolve().parent.parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    
+    from language import init_translation
+    init_translation({'language': 'auto'})
+
     app = QApplication(sys.argv)
     dialog = ServerManagerUI()
     dialog.show()

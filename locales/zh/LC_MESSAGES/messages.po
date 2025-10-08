@@ -284,3 +284,37 @@ msgstr "连接已断开"
 
 msgid "Listening stopped"
 msgstr "监听已停止"
+
+#* Server Manager UI
+msgid "EchoType Server Manager"
+msgstr "EchoType 服务器管理"
+
+msgid "Loading Progress:"
+msgstr "加载进度："
+
+msgid "Start Server"
+msgstr "启动服务器"
+
+msgid "Stop Server"
+msgstr "停止服务器"
+
+msgid "Restart Server"
+msgstr "重启服务器"
+
+msgid "Server Control"
+msgstr "服务器控制"
+
+msgid "Log"
+msgstr "日志"
+
+msgid "Clear Log"
+msgstr "清空日志"
+
+msgid "Close"
+msgstr "关闭"
+
+msgid "Server is running"
+msgstr "服务器运行中"
+
+msgid "Server is not running"
+msgstr "服务器未运行"

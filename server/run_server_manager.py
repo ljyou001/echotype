@@ -1,11 +1,14 @@
-#!/usr/bin/env python
-# coding: utf-8
+import sys
+from pathlib import Path
 
-"""
-服务器管理UI启动脚本
-可以独立运行，用于管理本地模型服务器
-"""
+# Add project root to path to allow importing 'language' module
+project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(project_root))
 
 if __name__ == '__main__':
-    from server_manager_ui import main
+    from language import init_translation
+    # For the server UI, we'll always auto-detect the language
+    init_translation({'language': 'auto'})
+
+    from server.server_manager_ui import main
     main()
