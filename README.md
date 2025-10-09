@@ -188,88 +188,67 @@ pythonw run_tray.py
 
 To package the project into standalone executables, [PyInstaller](https://pyinstaller.org/) is recommended.
 
-**Step 1: Install Dependencies**
+### Prerequisites
 
-```shell
-pip install pyinstaller psutil
-```
-*(`psutil` is required by the Server Manager UI to find and manage server processes.)*
+1. **Setup Virtual Environment:**
+   ```bash
+   python -m venv .venv
+   .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
 
-**Step 2: Generate .spec Files**
+2. **Install PyInstaller:**
+   ```bash
+   pip install pyinstaller
+   ```
 
-Run the following commands from the project root to generate configuration files for each executable:
+### Build Process
 
-1.  **Client App:**
-    ```shell
-    pyinstaller --name EchoType --windowed --icon=assets/icon.ico run_tray.py
-    ```
+**Step 1: Build All Components**
 
-2.  **Server Backend:**
-    ```shell
-    pyinstaller --name EchoTypeServer server/start_server.py
-    ```
+```bash
+# Build client
+call .venv\Scripts\pyinstaller.exe EchoType.spec
 
-3.  **Server Manager UI:**
-    ```shell
-    pyinstaller --name EchoTypeServerManager --windowed --icon=server/assets/icon.ico server/server_manager_ui.py
-    ```
+# Build server
+call .venv\Scripts\pyinstaller.exe EchoTypeServer.spec
 
-**Step 3: Modify .spec Files**
-
-Edit the generated `.spec` files to include necessary data files by modifying the `datas` list.
-
-1.  **Edit `EchoType.spec`**:
-    Add `assets`, `locales`, and `hotwords` directories.
-    ```python
-    datas=[('assets', 'assets', 'DATA'), ('locales', 'locales', 'DATA'), ('hotwords', 'hotwords', 'DATA')]
-    ```
-
-2.  **Edit `EchoTypeServer.spec`**:
-    Add the `models` directory.
-    ```python
-    datas=[('server/models', 'models', 'DATA')]
-    ```
-
-3.  **Edit `EchoTypeServerManager.spec`**:
-    Add the server assets icon directory.
-    ```python
-    datas=[('server/assets', 'assets', 'DATA')]
-    ```
-
-**Step 4: Build the Executables**
-
-Run PyInstaller with the modified spec files:
-
-```shell
-pyinstaller EchoType.spec
-pyinstaller EchoTypeServer.spec
-pyinstaller EchoTypeServerManager.spec
+# Build server manager
+call .venv\Scripts\pyinstaller.exe EchoTypeServerManager.spec
 ```
 
-**Step 5: Consolidate Files**
+**Step 2: Merge Distribution**
 
-After packaging, the `dist` directory will contain three folders. You need to merge their contents into a single directory for distribution.
+```bash
+call .venv\Scripts\python.exe build_package_en.py
+```
 
-1.  Create a final distribution folder (e.g., `EchoType_v1.0`).
-2.  Copy the **entire contents** of `dist/EchoType` into `EchoType_v1.0`.
-3.  Copy the executable `dist/EchoTypeServer/EchoTypeServer.exe` into `EchoType_v1.0`.
-4.  Copy the executable `dist/EchoTypeServerManager/EchoTypeServerManager.exe` into `EchoType_v1.0`.
-5.  Copy the `models` folder from `dist/EchoTypeServer` into `EchoType_v1.0`.
+**Step 3: Test Package**
 
-Your final distribution folder should look like this:
+```bash
+call .venv\Scripts\python.exe test_package.py
+```
+
+### Final Package Structure
 
 ```
-EchoType_v1.0/
+EchoType_Release/
 ├── EchoType.exe              (Main client app)
 ├── EchoTypeServer.exe        (Backend server)
 ├── EchoTypeServerManager.exe (Server Manager UI)
-├── assets/
-├── hotwords/
-├── locales/
-├── models/
-└── (and many other .dll and dependency files)
+└── _internal/
+    ├── assets/               (UI resources)
+    ├── hotwords/             (Custom vocabulary)
+    ├── locales/              (Translations)
+    ├── models/               (AI models)
+    └── (all dependencies)
 ```
-This folder is now a self-contained, distributable package.
+
+### Notes
+
+- The `.spec` files are pre-configured with correct paths and dependencies
+- `build_package.py` automatically merges all three `dist` folders
+- See [PACKAGING_GUIDE.md](PACKAGING_GUIDE.md) for troubleshooting
 
 </details>
 
@@ -283,6 +262,6 @@ This folder is now a self-contained, distributable package.
   
   ---
   
-  Made with ❤️ by EchoType Team
+  Made with ❤️ by ljyou001
   
 </div>
