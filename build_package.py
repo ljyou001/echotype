@@ -5,6 +5,7 @@ EchoType 自动打包脚本
 
 import shutil
 import sys
+import time
 from pathlib import Path
 
 
@@ -16,7 +17,7 @@ def merge_dist_folders():
     
     # 检查 dist 目录
     if not dist_dir.exists():
-        print("❌ dist 目录不存在，请先运行 pyinstaller")
+        print("[X] dist directory does not exist, please run pyinstaller first")
         return False
     
     # 三个组件的 dist 目录
@@ -34,21 +35,33 @@ def merge_dist_folders():
         missing.append("EchoTypeServerManager")
     
     if missing:
-        print(f"❌ 缺少以下组件的 dist 目录: {', '.join(missing)}")
-        print("请先运行对应的 pyinstaller 命令")
+        print(f"[X] Missing dist directories: {', '.join(missing)}")
+        print("Please run corresponding pyinstaller commands first")
         return False
     
     # 创建发布目录
     release_dir = dist_dir / "EchoType_Release"
     if release_dir.exists():
-        print(f"🗑️  删除旧的发布目录: {release_dir}")
-        shutil.rmtree(release_dir)
+        print(f"[*] Removing old release directory: {release_dir}")
+        # 尝试删除，如果失败则重试
+        for attempt in range(3):
+            try:
+                shutil.rmtree(release_dir)
+                break
+            except PermissionError as e:
+                if attempt < 2:
+                    print(f"[!] Permission denied, retrying in 2 seconds... (attempt {attempt + 1}/3)")
+                    time.sleep(2)
+                else:
+                    print(f"[X] Failed to remove directory after 3 attempts")
+                    print(f"[!] Please close any programs using files in {release_dir}")
+                    return False
     
-    print(f"📦 创建发布目录: {release_dir}")
+    print(f"[*] Creating release directory: {release_dir}")
     release_dir.mkdir(parents=True)
     
     # 1. 复制 EchoType 的所有内容作为基础
-    print("📋 复制客户端文件...")
+    print("[*] Copying client files...")
     for item in client_dist.iterdir():
         if item.is_file():
             shutil.copy2(item, release_dir / item.name)
@@ -56,13 +69,13 @@ def merge_dist_folders():
             shutil.copytree(item, release_dir / item.name)
     
     # 2. 复制 EchoTypeServer.exe
-    print("📋 复制服务器可执行文件...")
+    print("[*] Copying server executable...")
     server_exe = server_dist / "EchoTypeServer.exe"
     if server_exe.exists():
         shutil.copy2(server_exe, release_dir / "EchoTypeServer.exe")
     
     # 3. 复制 EchoTypeServerManager.exe
-    print("📋 复制服务器管理器可执行文件...")
+    print("[*] Copying server manager executable...")
     manager_exe = manager_dist / "EchoTypeServerManager.exe"
     if manager_exe.exists():
         shutil.copy2(manager_exe, release_dir / "EchoTypeServerManager.exe")
@@ -71,7 +84,7 @@ def merge_dist_folders():
     release_internal = release_dir / "_internal"
     
     # 合并 Server 的 _internal
-    print("📋 合并服务器依赖...")
+    print("[*] Merging server dependencies...")
     server_internal = server_dist / "_internal"
     if server_internal.exists():
         for item in server_internal.iterdir():
@@ -93,7 +106,7 @@ def merge_dist_folders():
                                 shutil.copy2(sub_item, dest_file)
     
     # 合并 ServerManager 的 _internal
-    print("📋 合并服务器管理器依赖...")
+    print("[*] Merging server manager dependencies...")
     manager_internal = manager_dist / "_internal"
     if manager_internal.exists():
         for item in manager_internal.iterdir():
@@ -114,14 +127,14 @@ def merge_dist_folders():
                             if not dest_file.exists():
                                 shutil.copy2(sub_item, dest_file)
     
-    print("\n✅ 打包完成！")
-    print(f"📁 发布目录: {release_dir}")
-    print(f"📊 目录大小: {get_dir_size(release_dir):.2f} MB")
-    print("\n包含文件:")
-    print("  ✓ EchoType.exe")
-    print("  ✓ EchoTypeServer.exe")
-    print("  ✓ EchoTypeServerManager.exe")
-    print("  ✓ _internal/ (所有依赖)")
+    print("\n[OK] Package completed!")
+    print(f"[*] Release directory: {release_dir}")
+    print(f"[*] Directory size: {get_dir_size(release_dir):.2f} MB")
+    print("\nIncluded files:")
+    print("  [+] EchoType.exe")
+    print("  [+] EchoTypeServer.exe")
+    print("  [+] EchoTypeServerManager.exe")
+    print("  [+] _internal/ (all dependencies)")
     
     return True
 
