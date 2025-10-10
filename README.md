@@ -92,7 +92,7 @@
 |------|-------------|
 | **Operating System** | Windows 10/11 (64-bit) |
 | **Memory** | Minimum 4GB RAM |
-| **Storage** | At least 500MB available space |
+| **Storage** | At least 2GB available space |
 | **Audio Device** | Supported microphone device |
 | **Network** | No internet connection required |
 
