@@ -33,25 +33,25 @@ def stream_close(signum, frame):
 def stream_reopen():
     if not threading.main_thread().is_alive():
         return
-    print('重启音频流')
+    print('Restarting audio stream')
 
-    # 关闭旧流
+    # It is necessary to completely reload PortAudio to update the device list
     if Cosmic.stream is not None:
         Cosmic.stream.close()
 
-    # 重载 PortAudio，更新设备列表
+    # Reload PortAudio to update the device list
     sd._terminate()
     sd._ffi.dlclose(sd._lib)
     sd._lib = sd._ffi.dlopen(sd._libname)
     sd._initialize()
 
-    # 打开新流
+    # Re-open the stream after a short delay
     time.sleep(0.1)
     Cosmic.stream = stream_open()
 
 
 def stream_open():
-    # 显示录音所用的音频设备
+    """Open an audio input stream."""
     channels = 1
     preferred = getattr(Config, 'audio_input_device', '') or None
     device_param = None
@@ -63,15 +63,15 @@ def stream_open():
     try:
         device_info = sd.query_devices(device=device_param, kind='input')
         channels = min(2, device_info['max_input_channels'])
-        console.print(f"使用音频设备：[italic]{device_info['name']}，声道数：{channels}", end='\n\n')
+        console.print(f"Using audio device: [italic]{device_info['name']}, Channels: {channels}", end='\n\n')
     except UnicodeDecodeError:
-        console.print("由于编码问题，暂时无法获得麦克风设备名字", end='\n\n', style='bright_red')
+        console.print("Could not get microphone device name due to encoding issues", end='\n\n', style='bright_red')
     except sd.PortAudioError:
-        console.print("没有找到麦克风设备", end='\n\n', style='bright_red')
-        input('按回车键退出'); sys.exit()
+        console.print("No microphone device found", end='\n\n', style='bright_red')
+        input('Press Enter to exit'); sys.exit()
     except Exception as exc:
-        console.print(f'初始化音频设备失败: {exc}', style='bright_red')
-        input('按回车键退出'); sys.exit()
+        console.print(f'Failed to initialize audio device: {exc}', style='bright_red')
+        input('Press Enter to exit'); sys.exit()
 
     stream = sd.InputStream(
         samplerate=48000,

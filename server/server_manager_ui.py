@@ -170,19 +170,24 @@ class ServerManagerUI(QDialog):
 
     def _start_server(self):
         if not self.server_entry or not self.server_entry.exists():
-            self._append_log('[错误] 未找到服务器启动文件')
+            self._append_log(_('[Error] Server startup file not found'))
             return
-        
+
+        # Disable buttons to prevent concurrent actions
+        self.btn_start.setEnabled(False)
+        self.btn_stop.setEnabled(False)
+        self.btn_restart.setEnabled(False)
+
         self.progress_text.clear()
-        self._append_log(f'[启动] 正在启动服务器: {self.server_entry.name}')
-        self._append_progress('正在启动服务器...')
-        
+        self._append_log(_('[Info] Starting server: {}').format(self.server_entry.name))
+        self._append_progress(_('Starting server...'))
+
         progress_file = self.server_dir / 'progress.json'
         try:
             progress_file.unlink(missing_ok=True)
         except Exception:
             pass
-        
+
         try:
             if self.server_entry.suffix.lower() == '.exe':
                 self.server_process = subprocess.Popen(
@@ -196,23 +201,25 @@ class ServerManagerUI(QDialog):
                     cwd=str(self.server_dir),
                     creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
                 )
-            
-            self._append_log('[启动] 服务器进程已启动')
+
+            self._append_log(_('[Info] Server process started'))
             QTimer.singleShot(500, lambda: self._monitor_progress(progress_file))
-            
+
         except Exception as e:
-            self._append_log(f'[错误] 启动失败: {e}')
-            self._append_progress(f'启动失败: {e}')
+            self._append_log(_('[Error] Failed to start server: {}').format(e))
+            self._append_progress(_('Failed to start: {}').format(e))
+            # Restore button states on immediate failure
+            self._update_button_states('stopped')
 
     def _monitor_progress(self, progress_file: Path, timeout: float = 30.0):
         deadline = time.monotonic() + timeout
         seen = set()
-        
+
         def check():
             if time.monotonic() > deadline:
-                self._append_progress('加载超时')
+                self._append_progress(_('Loading timeout'))
                 return
-            
+
             if progress_file.exists():
                 try:
                     data = json.loads(progress_file.read_text(encoding='utf-8') or '[]')
@@ -225,15 +232,15 @@ class ServerManagerUI(QDialog):
                                 seen.add(key)
                                 msg = f'{stage}: {status}'
                                 self._append_progress(msg)
-                                self._append_log(f'[加载] {msg}')
+                                self._append_log(_('[Loading] {}').format(msg))
                                 if stage == 'loaded' and status == 'done':
-                                    self._append_log('[完成] 模型加载完成')
+                                    self._append_log(_('[Done] Model loading complete'))
                                     return
                 except Exception:
                     pass
-            
+
             QTimer.singleShot(500, check)
-        
+
         check()
 
     def _find_server_processes(self):
@@ -251,7 +258,7 @@ class ServerManagerUI(QDialog):
         return processes
 
     def _stop_server(self):
-        self._append_log('[停止] 正在停止服务器...')
+        self._append_log(_('[Info] Stopping server...'))
         stopped = False
         
         # 先尝试停止UI启动的进程
@@ -259,15 +266,15 @@ class ServerManagerUI(QDialog):
             try:
                 self.server_process.terminate()
                 self.server_process.wait(timeout=5)
-                self._append_log('[停止] 服务器已停止')
+                self._append_log(_('[Info] Server stopped'))
                 stopped = True
             except subprocess.TimeoutExpired:
-                self._append_log('[停止] 强制终止服务器...')
+                self._append_log(_('[Info] Force killing server...'))
                 self.server_process.kill()
-                self._append_log('[停止] 服务器已强制终止')
+                self._append_log(_('[Info] Server killed'))
                 stopped = True
             except Exception as e:
-                self._append_log(f'[错误] 停止失败: {e}')
+                self._append_log(_('[Error] Failed to stop server: {}').format(e))
             finally:
                 self.server_process = None
         
@@ -277,7 +284,7 @@ class ServerManagerUI(QDialog):
             if processes:
                 for proc in processes:
                     try:
-                        self._append_log(f'[停止] 终止进程 PID={proc.pid}')
+                        self._append_log(_('[Info] Terminating process PID={}').format(proc.pid))
                         proc.terminate()
                         proc.wait(timeout=5)
                         stopped = True
@@ -288,17 +295,17 @@ class ServerManagerUI(QDialog):
                         except Exception:
                             pass
                 if stopped:
-                    self._append_log('[停止] 所有服务器进程已停止')
+                    self._append_log(_('[Info] All server processes stopped'))
             elif not stopped:
-                self._append_log('[警告] 未找到运行中的服务器进程')
+                self._append_log(_('[Warning] No running server process found'))
         except ImportError:
             if not stopped:
-                self._append_log('[警告] 需要安装psutil来查找服务器进程: pip install psutil')
+                self._append_log(_('[Warning] psutil not found, cannot find server process. Please run: pip install psutil'))
         except Exception as e:
-            self._append_log(f'[错误] 查找进程失败: {e}')
+            self._append_log(_('[Error] Failed to find process: {}').format(e))
 
     def _restart_server(self):
-        self._append_log('[重启] 正在重启服务器...')
+        self._append_log(_('[Info] Restarting server...'))
         self._stop_server()
         time.sleep(1)
         self._start_server()

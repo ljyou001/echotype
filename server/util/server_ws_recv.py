@@ -9,7 +9,7 @@ from util.server_cosmic import console, Cosmic
 from util.server_classes import Task, Result
 from util.my_status import Status
 
-status_mic = Status('正在接收音频', spinner='point')
+status_mic = Status('Receiving audio', spinner='point')
 
 
 class Cache:
@@ -48,11 +48,10 @@ async def message_handler(websocket, message, cache: Cache):
 
     if not is_final:
         # 打印消息
-        if source == 'mic':
-            status_mic.start()
-        if source == 'file' and is_start:
-            console.print('正在接收音频文件...')
-
+            if source == 'mic':
+                status_mic.start()
+            if source == 'file' and is_start:
+                console.print('Receiving audio file...')
         # 若缓冲已达到分段长度，将片段作为任务提交
         while len(cache.chunks) / 4 / 16000 >= seg_threshold:
             data = cache.chunks[:4 * 16000 * (seg_duration + seg_overlap)]
@@ -68,11 +67,10 @@ async def message_handler(websocket, message, cache: Cache):
 
     elif is_final:
         # 打印消息
-        if source == 'mic':
-            status_mic.stop()
-        elif source == 'file':
-            print(f'音频文件接收完毕，时长 {cache.frame_num / 16000 / 4:.2f}s')
-
+            if source == 'mic':
+                status_mic.stop()
+            elif source == 'file':
+                print(f'Audio file received, duration {cache.frame_num / 16000 / 4:.2f}s')
         # 客户端说片段结束，将缓冲区音频识别
         task = Task(source=message['source'],
                     data=cache.chunks[0:], offset=cache.offset,
@@ -96,7 +94,7 @@ async def ws_recv(websocket):
     sockets_id = Cosmic.sockets_id
     sockets[str(websocket.id)] = websocket
     sockets_id.append(str(websocket.id))
-    console.print(f'接客了：{websocket}\n', style='yellow')
+    console.print(f'New connection: {websocket}\n', style='yellow')
 
     # 设定分段长度
     seg_duration = 15

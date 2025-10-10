@@ -19,7 +19,7 @@ async def recv_result():
         Cosmic.emit_status('connection_failed', None)
         return
     Cosmic.emit_status('connected', None)
-    console.print('[green]连接成功\n')
+    console.print('[green]Connection successful\n')
     try:
         while True:
             # 接收消息
@@ -50,16 +50,16 @@ async def recv_result():
                 write_md(text, message['time_start'], file_audio)
 
             # 控制台输出
-            console.print(f'    转录时延：{delay:.2f}s')
-            console.print(f'    识别结果：[green]{text}')
+            console.print(f'    Transcription delay: {delay:.2f}s')
+            console.print(f'    Recognition result: [green]{text}')
             console.line()
 
     except websockets.ConnectionClosedError:
         Cosmic.emit_status('connection_lost', 'connection closed unexpectedly')
-        console.print('[red]连接断开\n')
+        console.print('[red]Connection closed\n')
     except websockets.ConnectionClosedOK:
         Cosmic.emit_status('connection_lost', 'connection closed')
-        console.print('[red]连接断开\n')
+        console.print('[red]Connection closed\n')
     except Exception as e:
         Cosmic.emit_status('error', str(e))
         print(e)

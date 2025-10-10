@@ -11,7 +11,7 @@ from util.my_status import Status
 
 
 task = asyncio.Future()
-status = Status('开始录音', spinner='point')
+status = Status('Start recording', spinner='point')
 pool = ThreadPoolExecutor()
 pressed = False
 released = True
@@ -23,11 +23,11 @@ def _emit_status(state, detail=None):
 
 
 def shortcut_correct(e: keyboard.KeyboardEvent):
-    # 在我的 Windows 电脑上，left ctrl 和 right ctrl 的 keycode 都是一样的，
-    # keyboard 库按 keycode 判断触发
-    # 即便设置 right ctrl 触发，在按下 left ctrl 时也会触发
-    # 不过，虽然两个按键的 keycode 一样，但事件 e.name 是不一样的
-    # 在这里加一个判断，如果 e.name 不是我们期待的按键，就返回
+    # On my Windows machine, the keycodes for left ctrl and right ctrl are the same.
+    # The `keyboard` library triggers based on keycode.
+    # Even if right ctrl is set, left ctrl will also trigger the event.
+    # However, although the keycodes are the same, the event name `e.name` is different.
+    # Add a check here to return if `e.name` is not the key we expect.
     shortcut = Config.shortcut or ''
     key_expect = keyboard.normalize_name(shortcut) if shortcut else ''
     key_actual = keyboard.normalize_name(e.name) if e.name else ''
@@ -102,31 +102,32 @@ def count_down(e: Event):
 
 
 def manage_task(e: Event):
-    """
-    通过检测 e 是否在 threshold 时间内被触发，判断是单击，还是长按
-    进行下一步的动作
-    """
-
-    # 记录是否有任务
+    # By checking if e is triggered within the threshold time,
+    # we can determine if it's a single click or a long press.
+    #
+    # This function is only used in click mode.
+    # When the hotkey is pressed, this function is started in a sub-thread.
+    # It waits for a moment; if the hotkey is released during this time, e.is_set() becomes true.
+    # If the hotkey is not released, e.is_set() remains false.
     on = Cosmic.on
 
-    # 先运行任务
+    # If not recording, start recording
     if not on:
         launch_task()
 
-    # 及时松开按键了，是单击
+    # If the hotkey is released within the threshold time, it's a single click, so finish the task.
     if e.wait(timeout=Config.threshold * 0.8):
-        # 如果有任务在运行，就结束任务
+        # If it was recording before this action, finish it.
         if Cosmic.on and on:
             finish_task()
 
-    # 没有及时松开按键，是长按
+    # If the hotkey is held down, it's a long press. If it was not recording before, cancel the task.
     else:
-        # 就取消本栈启动的任务
+        # If it was not recording before, cancel the recording task.
         if not on:
             cancel_task()
 
-        # 长按，发送按键
+        # Simulate another key press to restore the original state of keys like CapsLock.
         keyboard.send(Config.shortcut)
 
 
@@ -144,56 +145,52 @@ def click_mode(e: keyboard.KeyboardEvent):
         event.set()
 
 
-
-# ======================长按模式==================================
+# ====================== Hold Mode ==================================
 
 
 def hold_mode(e: keyboard.KeyboardEvent):
-    """像对讲机一样，按下录音，松开停止"""
+    # Long press mode
     global task
 
     if e.event_type == 'down' and not Cosmic.on:
-        # 记录开始时间
+        # Press to start recording
         launch_task()
     elif e.event_type == 'up':
-        # 记录持续时间，并标识录音线程停止向队列放数据
+        # Release to stop recording
         duration = time.time() - Cosmic.on
 
-        # 取消或停止任务
+        # If the duration is less than the threshold, it's a short press, cancel the recording.
         if duration < Config.threshold:
             cancel_task()
         else:
             finish_task()
 
-            # 松开快捷键后，再按一次，恢复 CapsLock 或 Shift 等按键的状态
-            if Config.restore_key:
-                time.sleep(0.01)
-                keyboard.send(Config.shortcut)
+        # After releasing the hotkey, press it again to restore the state of keys like CapsLock or Shift.
+        if Config.restore_key:
+            time.sleep(0.01)
+            keyboard.send(Config.shortcut)
 
 
-
-
-
-# ==================== 绑定 handler ===============================
+# ==================== Bind Handlers ===============================
 
 
 def hold_handler(e: keyboard.KeyboardEvent) -> None:
+    # Handler for hold mode
 
-    # 验证按键名正确
     if not shortcut_correct(e):
         return
 
-    # 长按模式
+    # Call the specific handler for hold mode
     hold_mode(e)
 
 
 def click_handler(e: keyboard.KeyboardEvent) -> None:
+    # Handler for click mode
 
-    # 验证按键名正确
     if not shortcut_correct(e):
         return
 
-    # 单击模式
+    # Call the specific handler for click mode
     click_mode(e)
 
 

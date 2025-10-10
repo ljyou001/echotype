@@ -15,18 +15,17 @@ import uuid
 
 async def send_message(message):
     # 发送数据
-    if not Cosmic.websocket_is_open():
-        if message['is_final']:
-            Cosmic.audio_files.pop(message['task_id'], None)  # 使用pop的默认值，避免KeyError
-            console.print('    服务端未连接，无法发送\n')
-    else:
+        if not Cosmic.websocket_is_open():
+            if message['is_final']:
+                Cosmic.audio_files.pop(message['task_id'], None)  # Avoid KeyError by using pop with a default value
+            console.print('    Server not connected, cannot send\n')    else:
         try:
             await Cosmic.websocket.send(json.dumps(message))
         except websockets.ConnectionClosedError as e:
             if message['is_final']:
-                console.print(f'[red]连接中断了')
+                console.print(f'[red]Connection interrupted')
         except Exception as e:
-            print('出错了')
+            print('An error occurred')
             print(e)
 
 
@@ -91,12 +90,11 @@ async def send_audio():
                 task = asyncio.create_task(send_message(message))
             elif task['type'] ==  'finish':
                 # 完成写入本地文件
-                if Config.save_audio:
-                    finish_file(file)
-
-                console.print(f'任务标识：{task_id}')
-                console.print(f'    录音时长：{duration:.2f}s')
-
+                        if Config.save_audio:
+                            finish_file(file)
+                
+                        console.print(f'Task ID: {task_id}')
+                        console.print(f'    Recording duration: {duration:.2f}s')
                 # 告诉服务端音频片段结束了
                 message = {
                     'task_id': task_id,

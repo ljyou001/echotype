@@ -11,15 +11,14 @@ def check_model():
         if key.startswith('_'): continue
         if path.exists(): continue
         console.print(f'''
-    未能找到模型文件 
 
-    未找到：{path}
+            Not found: {path}
 
-    本服务端需要 paraformer-offline-zh 模型和 punc_ct-transformer_cn-en 模型，
-    请下载模型并解压到： {ModelPaths.model_dir} 
-    
-    直接下载链接： https://github.com/ljyou001/echotype/releases/download/v1.0-model/models.zip 
+            This server requires the paraformer-offline-zh model and the punc_ct-transformer_cn-en model.
+            Please download the models and extract them to: {ModelPaths.model_dir}
 
-        ''', style='bright_red')
-        input('按回车退出')
+            Direct download link: https://github.com/ljyou001/echotype/releases/download/v1.0-model/models.zip
+
+            ''', style='bright_red')
+        input('Press Enter to exit')
         sys.exit()

@@ -42,20 +42,20 @@ async def ws_send():
                 None,
             )
 
-            if not websocket:
-                continue
+        if not websocket:
+            continue
 
-            # 发送消息
-            await websocket.send(json.dumps(message))
+        # 将 message 发送给客户端
+        await websocket.send(json.dumps(message))
 
-            if result.source == 'mic':
-                console.print(f'识别结果：\n    [green]{result.text}')
-            elif result.source == 'file':
-                console.print(f'    转录进度：{result.duration:.2f}s', end='\r')
-                if result.is_final:
-                    console.print('\n    [green]转录完成')
+        if result.source == 'mic':
+            console.print(f'Recognition result:\n    [green]{result.text}')
+        elif result.source == 'file':
+            console.print(f'    Transcription progress: {result.duration:.2f}s', end='\r')
+            if result.is_final:
+                console.print('\n    [green]Transcription complete')
 
-        except Exception as e:
-            print(e)
+    except Exception as e:
+        print(e)
 
 

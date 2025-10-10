@@ -104,7 +104,7 @@ class TrayBackend:
         try:
             loop.run_until_complete(runner())
         except Exception:
-            self._logger.exception('后台线程运行异常')
+            self._logger.exception('Exception in background thread')
         finally:
             try:
                 loop.run_until_complete(loop.shutdown_asyncgens())

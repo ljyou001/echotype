@@ -16,14 +16,14 @@ from PySide6.QtWidgets import (
 class HotkeyDialog(QDialog):
     def __init__(self, parent=None, *, initial: str = '') -> None:
         super().__init__(parent)
-        self.setWindowTitle('设置快捷键')
+        self.setWindowTitle(_('Set Hotkey'))
         self.setFocusPolicy(Qt.StrongFocus)
 
         self._current_keys = self._split_hotkey(initial)
         self._active_keys: Set[str] = set()
         self._capture_buffer: List[str] = []
 
-        instructions = QLabel('按下新的快捷键，或点击下方按钮选择特殊按键。按 Backspace 清除，按 Esc 取消。')
+        instructions = QLabel(_('Press the new hotkey combination, or click the buttons below for special keys. Press Backspace to clear, Esc to cancel.'))
         instructions.setWordWrap(True)
 
         self._display_label = QLabel()
@@ -31,19 +31,19 @@ class HotkeyDialog(QDialog):
         self._display_label.setMinimumHeight(32)
         self._update_display(self._current_keys)
 
-        # 常用按键快捷按钮
-        quick_keys_label = QLabel('快速选择特殊按键:')
+        # Quick select buttons
+        quick_keys_label = QLabel(_('Quickly select special keys:'))
         quick_keys_row1 = QHBoxLayout()
         quick_keys_row2 = QHBoxLayout()
         quick_keys_row3 = QHBoxLayout()
-        
-        # 第一行: 修饰键
+
+        # Row 1: Modifiers
         quick_buttons_row1 = [
-            ('Caps Lock', 'caps lock'),
-            ('左Ctrl', 'left ctrl'),
-            ('右Ctrl', 'right ctrl'),
-            ('左Alt', 'left alt'),
-            ('右Alt', 'right alt'),
+            (_('Caps Lock'), 'caps lock'),
+            (_('Left Ctrl'), 'left ctrl'),
+            (_('Right Ctrl'), 'right ctrl'),
+            (_('Left Alt'), 'left alt'),
+            (_('Right Alt'), 'right alt'),
         ]
         
         for label, key in quick_buttons_row1:
@@ -52,38 +52,37 @@ class HotkeyDialog(QDialog):
             btn.clicked.connect(lambda checked, k=key: self._set_quick_key(k))
             quick_keys_row1.addWidget(btn)
         
-        # 第二行: 特殊功能键
-        quick_buttons_row2 = [
-            ('左Shift', 'left shift'),
-            ('右Shift', 'right shift'),
-            ('菜单键', 'menu'),
-            ('Scroll Lock', 'scroll lock'),
-            ('Pause', 'pause'),
-        ]
+                # Row 2: Special function keys
+                quick_buttons_row2 = [
+                    (_('Left Shift'), 'left shift'),
+                    (_('Right Shift'), 'right shift'),
+                    (_('Menu'), 'menu'),
+                    (_('Scroll Lock'), 'scroll lock'),
+                    (_('Pause'), 'pause'),
+                ]
         
-        for label, key in quick_buttons_row2:
-            btn = QPushButton(label)
-            btn.setMaximumWidth(100)
-            btn.clicked.connect(lambda checked, k=key: self._set_quick_key(k))
-            quick_keys_row2.addWidget(btn)
+                for label, key in quick_buttons_row2:
+                    btn = QPushButton(label)
+                    btn.setMaximumWidth(100)
+                    btn.clicked.connect(lambda checked, k=key: self._set_quick_key(k))
+                    quick_keys_row2.addWidget(btn)
         
-        # 第三行: F键和其他
-        quick_buttons_row3 = [
-            ('F1', 'f1'),
-            ('F2', 'f2'),
-            ('F4', 'f4'),
-            ('F12', 'f12'),
-            ('Print Screen', 'print screen'),
-        ]
+                # Row 3: F-keys and others
+                quick_buttons_row3 = [
+                    ('F1', 'f1'),
+                    ('F2', 'f2'),
+                    ('F4', 'f4'),
+                    ('F12', 'f12'),
+                    ('Print Screen', 'print screen'),
+                ]
         
-        for label, key in quick_buttons_row3:
-            btn = QPushButton(label)
-            btn.setMaximumWidth(100)
-            btn.clicked.connect(lambda checked, k=key: self._set_quick_key(k))
-            quick_keys_row3.addWidget(btn)
-
-        clear_button = QPushButton('清除')
-        clear_button.clicked.connect(self._clear_hotkey)
+                for label, key in quick_buttons_row3:
+                    btn = QPushButton(label)
+                    btn.setMaximumWidth(100)
+                    btn.clicked.connect(lambda checked, k=key: self._set_quick_key(k))
+                    quick_keys_row3.addWidget(btn)
+        
+                clear_button = QPushButton(_('Clear'))        clear_button.clicked.connect(self._clear_hotkey)
 
         button_row = QHBoxLayout()
         button_row.addStretch(1)
@@ -241,7 +240,7 @@ class HotkeyDialog(QDialog):
         self._update_display(self._current_keys)
 
     def _update_display(self, keys: List[str]) -> None:
-        self._display_label.setText(f'当前快捷键：{self._format_keys(keys)}')
+        self._display_label.setText(f'{_("Current hotkey:")} {self._format_keys(keys)}')
 
     @staticmethod
     def _split_hotkey(hotkey: str) -> List[str]:
@@ -253,7 +252,7 @@ class HotkeyDialog(QDialog):
     @staticmethod
     def _format_keys(keys: List[str]) -> str:
         if not keys:
-            return '未设置'
+            return _('Not Set')
         display = []
         for key in keys:
             display.append(' '.join(part.upper() if len(part) == 1 else part.capitalize() for part in key.split(' ')))

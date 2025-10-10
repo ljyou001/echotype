@@ -12,7 +12,7 @@ from util.empty_working_set import empty_current_working_set
 
 
 def disable_jieba_debug():
-    # 关闭 jieba 的 debug
+    # Disable jieba's debug output
     import jieba
     import logging
     jieba.setLogLevel(logging.INFO)
@@ -20,54 +20,54 @@ def disable_jieba_debug():
 
 def init_recognizer(queue_in: Queue, queue_out: Queue, sockets_id):
 
-    # Ctrl-C 退出
+    # Allow exit with Ctrl-C
     signal.signal(signal.SIGINT, lambda signum, frame: exit())
 
-    # 导入模块
-    with console.status("载入模块中…", spinner="bouncingBall", spinner_style="yellow"):
+    # Disable jieba debug output
+    with console.status(_("Loading modules..."), spinner="bouncingBall", spinner_style="yellow"):
         import sherpa_onnx
         from funasr_onnx import CT_Transformer
         disable_jieba_debug()
-    console.print('[green4]模块加载完成', end='\n\n')
+    console.print(_('[green4]Modules loaded'), end='\n\n')
     queue_out.put({'stage': 'modules', 'status': 'done'})
 
-    # 载入语音模型
-    console.print('[yellow]语音模型载入中', end='\r'); t1 = time.time()
+    # Load speech model
+    console.print(_('[yellow]Loading speech model...'), end='\r'); t1 = time.time()
     recognizer = sherpa_onnx.OfflineRecognizer.from_paraformer(
         **{key: value for key, value in ParaformerArgs.__dict__.items() if not key.startswith('_')}
     )
-    console.print(f'[green4]语音模型载入完成', end='\n\n')
+    console.print(_('[green4]Speech model loaded'), end='\n\n')
     queue_out.put({'stage': 'speech_model', 'status': 'done'})
 
-    # 载入标点模型
+    # Load punctuation model
     punc_model = None
     if Config.format_punc:
-        console.print('[yellow]标点模型载入中', end='\r')
+        console.print(_('[yellow]Loading punctuation model...'), end='\r')
         punc_model = CT_Transformer(ModelPaths.punc_model_dir, quantize=True)
-        console.print(f'[green4]标点模型载入完成', end='\n\n')
+        console.print(_('[green4]Punctuation model loaded'), end='\n\n')
         queue_out.put({'stage': 'punc_model', 'status': 'done'})
     else:
         queue_out.put({'stage': 'punc_model', 'status': 'skipped'})
 
-    console.print(f'模型加载耗时 {time.time() - t1 :.2f}s', end='\n\n')
+    console.print(_('Model loading took {:.2f}s').format(time.time() - t1), end='\n\n')
 
-    # 清空物理内存工作集
+    # Empty working set to reduce memory usage on Windows
     if system() == 'Windows':
         empty_current_working_set()
 
     queue_out.put({'stage': 'loaded', 'status': 'done'})
 
     while True:
-        # 从队列中获取任务消息
-        # 阻塞最多1秒，便于中断退出
+        # Get task message from the queue
+        # Block for a maximum of 1 second to allow for interruption
         try:
             task = queue_in.get(timeout=1)       
         except:
             continue
 
-        if task.socket_id not in sockets_id:    # 检查任务所属的连接是否存活
+        if task.socket_id not in sockets_id:    # Check if the connection for the task is alive
             continue
 
-        result = recognize(recognizer, punc_model, task)   # 执行识别
-        queue_out.put(result)      # 返回结果
+        result = recognize(recognizer, punc_model, task)   # Perform recognition
+        queue_out.put(result)      # Return result
 
