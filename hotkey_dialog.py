@@ -16,14 +16,14 @@ from PySide6.QtWidgets import (
 class HotkeyDialog(QDialog):
     def __init__(self, parent=None, *, initial: str = '') -> None:
         super().__init__(parent)
-        self.setWindowTitle('设置快捷键')
+        self.setWindowTitle(_('Set Hotkey'))
         self.setFocusPolicy(Qt.StrongFocus)
 
         self._current_keys = self._split_hotkey(initial)
         self._active_keys: Set[str] = set()
         self._capture_buffer: List[str] = []
 
-        instructions = QLabel('按下新的快捷键，或点击下方按钮选择特殊按键。按 Backspace 清除，按 Esc 取消。')
+        instructions = QLabel(_('Press a new hotkey, or click buttons below to select special keys. Press Backspace to clear, Esc to cancel.'))
         instructions.setWordWrap(True)
 
         self._display_label = QLabel()
@@ -31,19 +31,19 @@ class HotkeyDialog(QDialog):
         self._display_label.setMinimumHeight(32)
         self._update_display(self._current_keys)
 
-        # 常用按键快捷按钮
-        quick_keys_label = QLabel('快速选择特殊按键:')
+        # Quick key buttons
+        quick_keys_label = QLabel(_('Quick select special keys:'))
         quick_keys_row1 = QHBoxLayout()
         quick_keys_row2 = QHBoxLayout()
         quick_keys_row3 = QHBoxLayout()
         
-        # 第一行: 修饰键
+        # First row: Modifier keys
         quick_buttons_row1 = [
             ('Caps Lock', 'caps lock'),
-            ('左Ctrl', 'left ctrl'),
-            ('右Ctrl', 'right ctrl'),
-            ('左Alt', 'left alt'),
-            ('右Alt', 'right alt'),
+            (_('Left Ctrl'), 'left ctrl'),
+            (_('Right Ctrl'), 'right ctrl'),
+            (_('Left Alt'), 'left alt'),
+            (_('Right Alt'), 'right alt'),
         ]
         
         for label, key in quick_buttons_row1:
@@ -52,11 +52,11 @@ class HotkeyDialog(QDialog):
             btn.clicked.connect(lambda checked, k=key: self._set_quick_key(k))
             quick_keys_row1.addWidget(btn)
         
-        # 第二行: 特殊功能键
+        # Second row: Special function keys
         quick_buttons_row2 = [
-            ('左Shift', 'left shift'),
-            ('右Shift', 'right shift'),
-            ('菜单键', 'menu'),
+            (_('Left Shift'), 'left shift'),
+            (_('Right Shift'), 'right shift'),
+            (_('Menu Key'), 'menu'),
             ('Scroll Lock', 'scroll lock'),
             ('Pause', 'pause'),
         ]
@@ -67,7 +67,7 @@ class HotkeyDialog(QDialog):
             btn.clicked.connect(lambda checked, k=key: self._set_quick_key(k))
             quick_keys_row2.addWidget(btn)
         
-        # 第三行: F键和其他
+        # Third row: F keys and others
         quick_buttons_row3 = [
             ('F1', 'f1'),
             ('F2', 'f2'),
@@ -82,7 +82,7 @@ class HotkeyDialog(QDialog):
             btn.clicked.connect(lambda checked, k=key: self._set_quick_key(k))
             quick_keys_row3.addWidget(btn)
 
-        clear_button = QPushButton('清除')
+        clear_button = QPushButton(_('Clear'))
         clear_button.clicked.connect(self._clear_hotkey)
 
         button_row = QHBoxLayout()
@@ -126,7 +126,7 @@ class HotkeyDialog(QDialog):
             return
 
         name = self._event_to_key_name(event)
-        # 调试信息：打印键值
+        # Debug info: print key value
         if not name:
             print(f"Debug: Unrecognized key - Qt.Key={key}, VK={event.nativeVirtualKey()}, SC={event.nativeScanCode()}")
             event.ignore()
@@ -169,20 +169,20 @@ class HotkeyDialog(QDialog):
             0x5B: 'left windows',
             0x5C: 'right windows',
             0x14: 'caps lock',
-            0x5D: 'menu',  # 右键菜单键 (Context Menu)
+            0x5D: 'menu',  # Context Menu key
             0x91: 'scroll lock',  # VK_SCROLL (145)
         }
         scan_map = {
             29: 'left ctrl',
             157: 'right ctrl',
-            57373: 'right ctrl',  # 右Ctrl的扫描码
+            57373: 'right ctrl',  # Right Ctrl scan code
             42: 'left shift',
             54: 'right shift',
             56: 'left alt',
             312: 'right alt',
-            57400: 'right alt',  # 右Alt的扫描码
-            349: 'menu',  # 右键菜单键的扫描码
-            70: 'scroll lock',  # Scroll Lock的扫描码
+            57400: 'right alt',  # Right Alt scan code
+            349: 'menu',  # Context Menu key scan code
+            70: 'scroll lock',  # Scroll Lock scan code
         }
         if native_vk in vk_map:
             return vk_map[native_vk]
@@ -218,17 +218,17 @@ class HotkeyDialog(QDialog):
             Qt.Key_Right: 'right',
             Qt.Key_Up: 'up',
             Qt.Key_Down: 'down',
-            Qt.Key_Menu: 'menu',  # 右键菜单键
-            Qt.Key_ScrollLock: 'scroll lock',  # Scroll Lock
-            Qt.Key_NumLock: 'num lock',  # Num Lock
-            Qt.Key_CapsLock: 'caps lock',  # Caps Lock
-            Qt.Key_Pause: 'pause',  # Pause/Break
-            Qt.Key_Print: 'print screen',  # Print Screen
+            Qt.Key_Menu: 'menu',
+            Qt.Key_ScrollLock: 'scroll lock',
+            Qt.Key_NumLock: 'num lock',
+            Qt.Key_CapsLock: 'caps lock',
+            Qt.Key_Pause: 'pause',
+            Qt.Key_Print: 'print screen',
         }
         return special.get(key, '')
 
     def _set_quick_key(self, key: str) -> None:
-        """通过快捷按钮设置按键"""
+        """Set key through quick button"""
         self._current_keys = [key]
         self._capture_buffer.clear()
         self._active_keys.clear()
@@ -241,7 +241,7 @@ class HotkeyDialog(QDialog):
         self._update_display(self._current_keys)
 
     def _update_display(self, keys: List[str]) -> None:
-        self._display_label.setText(f'当前快捷键：{self._format_keys(keys)}')
+        self._display_label.setText(f'{_('Current Hotkey')}: {self._format_keys(keys)}')
 
     @staticmethod
     def _split_hotkey(hotkey: str) -> List[str]:
@@ -253,7 +253,7 @@ class HotkeyDialog(QDialog):
     @staticmethod
     def _format_keys(keys: List[str]) -> str:
         if not keys:
-            return '未设置'
+            return _('Not Set')
         display = []
         for key in keys:
             display.append(' '.join(part.upper() if len(part) == 1 else part.capitalize() for part in key.split(' ')))

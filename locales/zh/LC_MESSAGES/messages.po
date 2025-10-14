@@ -373,3 +373,40 @@ msgstr "启动服务器管理器失败"
 
 msgid "Server manager program not found."
 msgstr "未找到服务器管理程序。"
+
+#* Hotkey Dialog
+msgid "Set Hotkey"
+msgstr "设置快捷键"
+
+msgid "Press a new hotkey, or click buttons below to select special keys. Press Backspace to clear, Esc to cancel."
+msgstr "按下新的快捷键，或点击下方按钮选择特殊按键。按 Backspace 清除，按 Esc 取消。"
+
+msgid "Quick select special keys:"
+msgstr "快速选择特殊按键:"
+
+msgid "Left Ctrl"
+msgstr "左Ctrl"
+
+msgid "Right Ctrl"
+msgstr "右Ctrl"
+
+msgid "Left Alt"
+msgstr "左Alt"
+
+msgid "Right Alt"
+msgstr "右Alt"
+
+msgid "Left Shift"
+msgstr "左Shift"
+
+msgid "Right Shift"
+msgstr "右Shift"
+
+msgid "Menu Key"
+msgstr "菜单键"
+
+msgid "Clear"
+msgstr "清除"
+
+msgid "Current Hotkey"
+msgstr "当前快捷键"
