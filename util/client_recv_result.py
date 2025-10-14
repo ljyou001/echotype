@@ -19,47 +19,47 @@ async def recv_result():
         Cosmic.emit_status('connection_failed', None)
         return
     Cosmic.emit_status('connected', None)
-    console.print('[green]连接成功\n')
+    console.print('[green]Connected successfully\n')
     try:
         while True:
-            # 接收消息
+            # receive message
             message = await Cosmic.websocket.recv()
             message = json.loads(message)
             text = message['text']
             delay = message['time_complete'] - message['time_submit']
 
-            # 如果非最终结果，继续等待
+            # If not final result, continue waiting
             if not message['is_final']:
                 continue
 
-            # 消除末尾标点
+            # Remove trailing punctuation
             text = strip_punc(text)
 
-            # 热词替换
+            # Hotword substitution
             text = hot_sub(text)
 
-            # 打字
+            # Type result
             await type_result(text)
             Cosmic.emit_result(text, {'delay': delay, 'raw': message})
 
             if Config.save_audio:
-                # 重命名录音文件
+                # Rename audio file
                 file_audio = rename_audio(message['task_id'], text, message['time_start'])
 
-                # 记录写入 md 文件
+                # Write to md file
                 write_md(text, message['time_start'], file_audio)
 
-            # 控制台输出
-            console.print(f'    转录时延：{delay:.2f}s')
-            console.print(f'    识别结果：[green]{text}')
+            # Console output
+            console.print(f'    Transcription delay: {delay:.2f}s')
+            console.print(f'    Recognition result: [green]{text}')
             console.line()
 
     except websockets.ConnectionClosedError:
         Cosmic.emit_status('connection_lost', 'connection closed unexpectedly')
-        console.print('[red]连接断开\n')
+        console.print('[red]Connection closed\n')
     except websockets.ConnectionClosedOK:
         Cosmic.emit_status('connection_lost', 'connection closed')
-        console.print('[red]连接断开\n')
+        console.print('[red]Connection closed\n')
     except Exception as e:
         Cosmic.emit_status('error', str(e))
         print(e)

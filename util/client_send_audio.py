@@ -14,90 +14,90 @@ import uuid
 
 
 async def send_message(message):
-    # 发送数据
+    # Send data
     if not Cosmic.websocket_is_open():
         if message['is_final']:
-            Cosmic.audio_files.pop(message['task_id'], None)  # 使用pop的默认值，避免KeyError
-            console.print('    服务端未连接，无法发送\n')
+            Cosmic.audio_files.pop(message['task_id'], None)  # Use pop default value to avoid KeyError
+            console.print('    Server not connected, unable to send\n')
     else:
         try:
             await Cosmic.websocket.send(json.dumps(message))
         except websockets.ConnectionClosedError as e:
             if message['is_final']:
-                console.print(f'[red]连接中断了')
+                console.print(f'[red]Connection interrupted')
         except Exception as e:
-            print('出错了')
+            print('Error occurred')
             print(e)
 
 
 async def send_audio():
     try:
 
-        # 生成唯一任务 ID
+        # Generate unique task ID
         task_id = str(uuid.uuid1())
 
-        # 任务起始时间
+        # Task start time
         time_start = 0
 
-        # 音频数据临时存放处
+        # Temporary storage for audio data
         cache = []
         duration = 0
 
-        # 保存音频文件
+        # Save audio file
         file_path, file = '', None
 
-        # 开始取数据
+        # Start getting data
         # task: {'type', 'time', 'data'}
         while task := await Cosmic.queue_in.get():
             Cosmic.queue_in.task_done()
             if task['type'] == 'begin':
                 time_start = task['time']
             elif task['type'] == 'data':
-                # 在阈值之前积攒音频数据
+                # Accumulate audio data before threshold
                 if task['time'] - time_start < Config.threshold:
                     cache.append(task['data'])
                     continue
 
-                # 创建音频文件
+                # Create audio file
                 if Config.save_audio and not file_path:
                     file_path, file = create_file(task['data'].shape[1], time_start)
                     Cosmic.audio_files[task_id] = file_path
 
-                # 获取音频数据
+                # Get audio data
                 if cache:
                     data = np.concatenate(cache)
                     cache.clear()
                 else:
                     data = task['data']
 
-                # 保存音频至本地文件
+                # Save audio to local file
                 duration += len(data) / 48000
                 if Config.save_audio:
                     write_file(file, data)
 
-                # 发送音频数据用于识别
+                # Send audio data for recognition
                 message = {
-                    'task_id': task_id,             # 任务 ID
-                    'seg_duration': Config.mic_seg_duration,    # 分段长度
-                    'seg_overlap': Config.mic_seg_overlap,      # 分段重叠
-                    'is_final': False,              # 是否结束
-                    'time_start': time_start,       # 录音起始时间
-                    'time_frame': task['time'],     # 该帧时间
-                    'source': 'mic',                # 数据来源：从麦克风收到的数据
-                    'data': base64.b64encode(       # 数据
+                    'task_id': task_id,             # Task ID
+                    'seg_duration': Config.mic_seg_duration,    # Segment duration
+                    'seg_overlap': Config.mic_seg_overlap,      # Segment overlap
+                    'is_final': False,              # Is final
+                    'time_start': time_start,       # Recording start time
+                    'time_frame': task['time'],     # Frame time
+                    'source': 'mic',                # Data source: data from microphone
+                    'data': base64.b64encode(       # Data
                                 np.mean(data[::3], axis=1).tobytes()
                             ).decode('utf-8'),
                 }
                 task = asyncio.create_task(send_message(message))
             elif task['type'] ==  'finish':
-                # 完成写入本地文件
+                # Finish writing to local file
                 if Config.save_audio:
                     finish_file(file)
 
-                console.print(f'任务标识：{task_id}')
-                console.print(f'    录音时长：{duration:.2f}s')
+                console.print(f'Task ID: {task_id}')
+                console.print(f'    Recording duration: {duration:.2f}s')
 
-                # 告诉服务端音频片段结束了
+                # Tell server audio segment is finished
                 message = {
                     'task_id': task_id,
                     'seg_duration': 15,

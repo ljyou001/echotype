@@ -21,17 +21,17 @@ def create_file(channels: int, time_start: float) -> Tuple[Path, Union[Popen, Wa
     file_path = Path(file_path)
 
     if shutil.which('ffmpeg'):
-        # 用户已安装 ffmpeg，则输出到 mp3 文件
+        # User has ffmpeg installed, output to mp3 file
         file_path = file_path.with_suffix('.mp3')
-        # 构造ffmpeg命令行
+        # Construct ffmpeg command line
         ffmpeg_command = [
             'ffmpeg', '-y', 
             '-f', 'f32le', '-ar', '48000', '-ac', f'{channels}', '-i', '-',
             '-b:a', '192k', file_path,
         ]
-        # 执行ffmpeg命令行，得到 Popen
+        # Execute ffmpeg command line, get Popen
         file = Popen(ffmpeg_command, stdin=PIPE, stdout=DEVNULL, stderr=DEVNULL, creationflags=CREATE_NO_WINDOW)
-    else:                       # 用户未安装 ffmpeg，则输出为 wav 格式
+    else:                       # User doesn't have ffmpeg installed, output as wav format
         file_path = file_path.with_suffix('.wav')
         file = wave.open(str(file_path), 'w')
         file.setnchannels(channels)
