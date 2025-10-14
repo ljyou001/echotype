@@ -47,14 +47,14 @@ async def main():
 
     console.line(2)
     console.rule('[bold #d55252]EchoType Offline Server'); console.line()
-    console.print(f'项目地址：[cyan underline]https://github.com/ljyou001/echotype', end='\n\n')
-    console.print(f'当前基文件夹：[cyan underline]{BASE_DIR}', end='\n\n')
-    console.print(f'绑定的服务地址：[cyan underline]{Config.addr}:{Config.port}', end='\n\n')
+    console.print(f'Project URL: [cyan underline]https://github.com/ljyou001/echotype', end='\n\n')
+    console.print(f'Current base directory: [cyan underline]{BASE_DIR}', end='\n\n')
+    console.print(f'Bound service address: [cyan underline]{Config.addr}:{Config.port}', end='\n\n')
 
-    # 跨进程列表，用于保存 socket 的 id，用于让识别进程查看连接是否中断
+    # Cross-process list to store socket IDs for recognition process to check connection status
     Cosmic.sockets_id = Manager().list()
 
-    # 负责识别的子进程
+    # Recognition subprocess
     _reset_progress_file()
     recognize_process = Process(target=init_recognizer,
                                 args=(Cosmic.queue_in,
@@ -68,27 +68,27 @@ async def main():
             stage = flag.get("stage")
             status = flag.get("status")
             if stage and status:
-                console.print(f"[cyan]加载进度[/] -> {stage}: {status}")
+                console.print(f"[cyan]Loading progress[/] -> {stage}: {status}")
                 _append_progress({'stage': stage, 'status': status})
             if stage == "loaded" and status == "done":
                 break
             continue
         break
-    console.rule('[green3]模型加载完成，开始服务')
+    console.rule('[green3]Model loaded, starting service')
     console.line()
 
-    # 清空物理内存工作集
+    # Clear physical memory working set
     if system() == 'Windows':
         empty_current_working_set()
 
-    # 负责接收客户端数据的 coroutine
+    # Coroutine for receiving client data
     recv = websockets.serve(ws_recv,
                             Config.addr,
                             Config.port,
                             subprotocols=["binary"],
                             max_size=None)
 
-    # 负责发送结果的 coroutine
+    # Coroutine for sending results
     send = ws_send()
     await asyncio.gather(recv, send)
 
@@ -96,10 +96,10 @@ async def main():
 def init():
     try:
         asyncio.run(main())
-    except KeyboardInterrupt:           # Ctrl-C 停止
-        console.print('\n再见！')
-    except OSError as e:                # 端口占用
-        console.print(f'出错了：{e}', style='bright_red'); console.input('...')
+    except KeyboardInterrupt:           # Ctrl-C to stop
+        console.print('\nGoodbye!')
+    except OSError as e:                # Port occupied
+        console.print(f'Error occurred: {e}', style='bright_red'); console.input('...')
     except Exception as e:
         print(e)
     finally:

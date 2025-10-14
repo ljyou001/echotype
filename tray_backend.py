@@ -104,7 +104,7 @@ class TrayBackend:
         try:
             loop.run_until_complete(runner())
         except Exception:
-            self._logger.exception('后台线程运行异常')
+            self._logger.exception('Background thread exception')
         finally:
             try:
                 loop.run_until_complete(loop.shutdown_asyncgens())
@@ -119,23 +119,23 @@ class TrayBackend:
     # Callback bridges -------------------------------------------------
 
     def _handle_status(self, status: str, detail: Optional[str]) -> None:
-        self._logger.debug('状态更新: %s %s', status, detail or '')
+        self._logger.debug('Status update: %s %s', status, detail or '')
         try:
             self._on_status(status, detail)
         except Exception:
-            self._logger.exception('状态回调执行失败')
+            self._logger.exception('Status callback execution failed')
 
     def _handle_result(self, text: str, payload: Optional[Dict[str, Any]]) -> None:
         payload = payload or {}
-        self._logger.info('识别结果: %s', text)
+        self._logger.info('Recognition result: %s', text)
         try:
             self._on_result(text, payload)
         except Exception:
-            self._logger.exception('结果回调执行失败')
+            self._logger.exception('Result callback execution failed')
 
     def _handle_notification(self, title: str, message: Optional[str]) -> None:
-        self._logger.debug('通知: %s %s', title, message or '')
+        self._logger.debug('Notification: %s %s', title, message or '')
         try:
             self._on_notification(title, message)
         except Exception:
-            self._logger.exception('通知回调执行失败')
+            self._logger.exception('Notification callback execution failed')

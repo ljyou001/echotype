@@ -380,10 +380,10 @@ class SettingsDialog(QDialog):
             self.server_status_label.setStyleSheet('color: red; font-weight: bold;')
     
     def _start_status_monitor(self) -> None:
-        """启动服务器状态监控定时器"""
+        """Start server status monitoring timer"""
         self._status_timer = QTimer(self)
         self._status_timer.timeout.connect(self._check_server_status)
-        self._status_timer.start(2000)  # 每2秒检查一次
+        self._status_timer.start(2000)  # Check every 2 seconds
 
     def _update_model_ui_state(self) -> None:
         mode = self._current_model_source()
@@ -392,7 +392,7 @@ class SettingsDialog(QDialog):
         self.custom_group.setVisible(mode == 'custom')
         self.prebuilt_group.setVisible(mode == 'builtin')
         
-        # 根据模式启动/停止状态监控
+        # Start/stop status monitoring based on mode
         if hasattr(self, '_status_timer'):
             if is_local:
                 self._check_server_status()
@@ -442,7 +442,7 @@ class SettingsDialog(QDialog):
                 self.hotkey_label.setText(hotkey)
 
     def _handle_apply(self) -> None:
-        """应用设置但不关闭对话框"""
+        """Apply settings without closing dialog"""
         new_config = self._collect_config()
         self._config = new_config
         if self._on_apply:
@@ -517,7 +517,7 @@ class SettingsDialog(QDialog):
             except Exception as e:
                 QMessageBox.warning(self, _('Error'), f'{_("Failed to launch server manager")}: {e}')
         else:
-            QMessageBox.warning(self, _('Error',), _('Server manager program not found.'))
+            QMessageBox.warning(self, _('Error'), _('Server manager program not found.'))
 
     def _current_model_source(self) -> str:
         if self.model_option_local.isChecked():
@@ -530,7 +530,7 @@ class SettingsDialog(QDialog):
         return dict(self._config)
     
     def closeEvent(self, event):
-        """关闭对话框时停止定时器"""
+        """Stop timer when closing dialog"""
         if hasattr(self, '_status_timer'):
             self._status_timer.stop()
         event.accept()

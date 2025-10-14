@@ -1,12 +1,12 @@
-"""本地模型检测工具"""
+"""Local model detection tool"""
 from pathlib import Path
 
 
 def check_local_models() -> bool:
-    """检测本地模型是否存在
+    """Check if local models exist
     
     Returns:
-        bool: 如果所有必需的模型目录都存在则返回 True
+        bool: True if all required model directories exist
     """
     base_dir = Path(__file__).resolve().parent
     model_dir = base_dir / 'server' / 'models'
@@ -20,5 +20,5 @@ def check_local_models() -> bool:
 
 
 def get_model_download_url() -> str:
-    """获取模型下载地址"""
+    """Get model download URL"""
     return 'https://github.com/ljyou001/echotype/releases/download/v1.0-model/models.zip'

@@ -84,7 +84,7 @@ class TrayApp:
                 self.config['auto_startup'] = actual_auto
                 config_manager.save_config(self.config)
         except Exception:
-            self.logger.debug('自动启动状态检查失败', exc_info=True)
+            self.logger.debug('Auto-start status check failed', exc_info=True)
 
         self.backend = TrayBackend(
             self.config,
@@ -146,23 +146,23 @@ class TrayApp:
     # endregion -------------------------------------------------
 
     def _auto_start(self) -> None:
-        # 检查是否需要自动启动服务器
+        # Check if server needs to be auto-started
         if self.config.get('model_source', 'local') == 'local' and self.config.get('auto_start_server', True):
             if not self._check_server_running():
-                self.logger.info('服务器未运行，尝试自动启动...')
+                self.logger.info('Server not running, attempting auto-start...')
                 self._auto_launch_server()
         
         try:
             self.backend.start_listening()
             self._listening = True
         except Exception as exc:
-            self.logger.exception('启动监听失败')
-            self._show_notification('启动失败', str(exc), force=True)
+            self.logger.exception('Failed to start listening')
+            self._show_notification(_('Start Failed'), str(exc), force=True)
             self._listening = False
         self._update_toggle_action()
     
     def _check_server_running(self) -> bool:
-        """检查服务器是否运行"""
+        """Check if server is running"""
         addr = self.config.get('addr', '127.0.0.1')
         port = int(self.config.get('port', 6016))
         try:
@@ -172,10 +172,10 @@ class TrayApp:
             return False
     
     def _auto_launch_server(self) -> None:
-        """自动启动服务器（后台模式）"""
+        """Auto-start server (background mode)"""
         entry = self._resolve_server_entry()
         if entry is None:
-            self.logger.warning('未找到服务器启动文件')
+            self.logger.warning('Server startup file not found')
             return
         
         try:
@@ -191,10 +191,10 @@ class TrayApp:
                     cwd=str(entry.parent),
                     creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
                 )
-            self.logger.info('服务器已自动启动')
-            self._show_notification('服务器启动', '正在加载模型，请稍候...')
+            self.logger.info('Server auto-started successfully')
+            self._show_notification(_('Server Starting'), _('Loading models, please wait...'))
         except Exception as e:
-            self.logger.error(f'自动启动服务器失败: {e}')
+            self.logger.error(f'Failed to auto-start server: {e}')
 
     def _toggle_listening(self) -> None:
         if self._listening:
@@ -205,8 +205,8 @@ class TrayApp:
                 self.backend.start_listening()
                 self._listening = True
             except Exception as exc:
-                self.logger.exception('启动监听失败')
-                self._show_notification('启动失败', str(exc), force=True)
+                self.logger.exception('Failed to start listening')
+                self._show_notification(_('Start Failed'), str(exc), force=True)
                 self._listening = False
         self._update_toggle_action()
 
@@ -284,24 +284,24 @@ class TrayApp:
             self._settings_dialog = None
     
     def _apply_settings(self, new_config: Dict[str, Any]) -> None:
-        """应用设置（从应用按钮调用）"""
+        """Apply settings (called from Apply button)"""
         # 使用QTimer延迟执行，避免事件循环问题
         QTimer.singleShot(0, lambda: self._apply_config_changes(new_config))
     
     def _apply_config_changes(self, new_config: Dict[str, Any]) -> None:
-        """应用配置变更"""
+        """Apply configuration changes"""
         restart_required = self._config_requires_restart(self.config, new_config)
         auto_changed = self.config.get('auto_startup') != new_config.get('auto_startup')
         lang_changed = self.config.get('language') != new_config.get('language')
 
         self.config = new_config
-        config_manager.save_config(self.config)  # 保存配置
+        config_manager.save_config(self.config)  # Save configuration
         self.backend.update_config(self.config)
         self._apply_log_level()
         if auto_changed:
             self._apply_auto_startup(self.config.get('auto_startup', False))
         if restart_required:
-            # 延迟重启，避免事件循环冲突
+            # Delay restart to avoid event loop conflicts
             QTimer.singleShot(100, self._do_restart_listening)
         self._sync_mode_actions()
         self._sync_language_actions()
@@ -314,15 +314,15 @@ class TrayApp:
             )
     
     def _do_restart_listening(self) -> None:
-        """延迟重启监听"""
-        self.logger.info('准备重启监听服务...')
+        """Delayed restart of listening service"""
+        self.logger.info('Preparing to restart listening service...')
         try:
             self.backend.restart_listening()
             self._listening = True
             self._update_toggle_action()
-            self.logger.info('监听服务重启成功')
+            self.logger.info('Listening service restarted successfully')
         except Exception as e:
-            self.logger.error(f'重启监听失败: {e}')
+            self.logger.error(f'Failed to restart listening: {e}')
 
     def _config_requires_restart(self, old: Dict[str, Any], new: Dict[str, Any]) -> bool:
         restart_keys = {'shortcut', 'hold_mode', 'suppress', 'threshold', 'audio_input_device', 'model_source', 'model_name', 'model_api_url', 'model_api_key'}
@@ -387,16 +387,16 @@ class TrayApp:
                 raise RuntimeError(message)
         else:
             if success:
-                QMessageBox.information(None, '模型启动', message)
+                QMessageBox.information(None, _('Model Started'), message)
             else:
-                QMessageBox.warning(None, '启动失败', message)
+                QMessageBox.warning(None, _('Start Failed'), message)
         return success
 
     def _launch_server_process(self, return_progress: bool = False) -> Tuple[bool, str, List[Dict[str, str]]]:
         entry = self._resolve_server_entry()
         if entry is None:
-            message = '未找到 server 启动入口'
-            self._show_notification('模型启动失败', message, force=True)
+            message = _('Server startup entry not found')
+            self._show_notification(_('Model Start Failed'), message, force=True)
             return False, message, []
         progress: List[Dict[str, str]] = []
         progress_file = self._package_dir / 'server' / 'progress.json'
@@ -406,7 +406,7 @@ class TrayApp:
             pass
         ready = False
         try:
-            self._show_notification('模型加载中', f'正在启动 {entry.name}…', force=True)
+            self._show_notification(_('Loading Model'), f'{_('Starting')} {entry.name}...', force=True)
             if entry.suffix.lower() == '.exe':
                 self._server_process = subprocess.Popen([str(entry)], cwd=str(entry.parent))
             else:
@@ -417,7 +417,7 @@ class TrayApp:
                     label = stage.get('stage')
                     status = stage.get('status')
                     if label and status:
-                        self._show_notification('模型加载中', f'{label}: {status}', force=True)
+                        self._show_notification(_('Loading Model'), f'{label}: {status}', force=True)
                     if stage.get('stage') == 'loaded' and stage.get('status') == 'done':
                         ready = True
                         break
@@ -429,16 +429,16 @@ class TrayApp:
             else:
                 ready = True
         except Exception as exc:
-            message = str(exc) or '模型启动失败'
-            self._show_notification('模型启动失败', message, force=True)
+            message = str(exc) or _('Model start failed')
+            self._show_notification(_('Model Start Failed'), message, force=True)
             return False, message, progress
         else:
             if return_progress and not ready:
-                message = '模型启动超时，请查看日志或稍后重试。'
-                self._show_notification('模型启动失败', message, force=True)
+                message = _('Model start timeout, please check logs or try again later.')
+                self._show_notification(_('Model Start Failed'), message, force=True)
                 return False, message, progress
-            message = '模型服务已启动，请稍候等待初始化完成。'
-            self._show_notification('模型加载完成', message)
+            message = _('Model service started, please wait for initialization to complete.')
+            self._show_notification(_('Model Loaded'), message)
             return True, message, progress
 
     def _wait_for_server_ready(self, progress_file: Path, timeout: float = 30.0):
@@ -511,7 +511,7 @@ class TrayApp:
             # 如果是本地模型且开启了自动启动，尝试启动服务器
             if self.config.get('model_source', 'local') == 'local' and self.config.get('auto_start_server', True):
                 if not self._check_server_running() and not self._server_process:
-                    self.logger.info(_('Connection failed, attempting to auto-start server...'))
+                    self.logger.info('Connection failed, attempting to auto-start server...')
                     self._auto_launch_server()
         self._update_toggle_action()
 
@@ -520,7 +520,7 @@ class TrayApp:
         if not text:
             return
         if self.config.get('notify_on_result') and self.config.get('show_notifications', True):
-            self._show_notification('识别完成', text)
+            self._show_notification(_('Recognition Complete'), text)
 
     @Slot(str, object)
     def _handle_notification(self, title: str, message: object) -> None:
@@ -564,8 +564,8 @@ class TrayApp:
             else:
                 disable_auto_startup()
         except Exception as exc:
-            self.logger.warning('自动启动配置失败: %s', exc)
-            self._show_notification('自动启动配置失败', str(exc), force=True)
+            self.logger.warning('Auto-startup configuration failed: %s', exc)
+            self._show_notification(_('Auto-startup Configuration Failed'), str(exc), force=True)
 
     def _list_audio_devices(self) -> List[Tuple[str, str]]:
         devices: List[Tuple[str, str]] = []
@@ -575,7 +575,7 @@ class TrayApp:
                     name = f"{device['name']} (#{index})"
                     devices.append((name, str(index)))
         except Exception as exc:
-            self.logger.warning('无法获取音频设备: %s', exc)
+            self.logger.warning('Unable to get audio devices: %s', exc)
         return devices
 
     def run(self) -> int:

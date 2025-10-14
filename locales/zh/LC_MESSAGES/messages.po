@@ -318,3 +318,58 @@ msgstr "服务器运行中"
 
 msgid "Server is not running"
 msgstr "服务器未运行"
+
+#* Notification Messages
+msgid "Start Failed"
+msgstr "启动失败"
+
+msgid "Failed to start listening"
+msgstr "启动监听失败"
+
+msgid "Server Starting"
+msgstr "服务器启动中"
+
+msgid "Loading models, please wait..."
+msgstr "正在加载模型，请稍候..."
+
+msgid "Recognition Complete"
+msgstr "识别完成"
+
+msgid "Auto-startup Configuration Failed"
+msgstr "自动启动配置失败"
+
+msgid "Model Started"
+msgstr "模型已启动"
+
+msgid "Model Start Failed"
+msgstr "模型启动失败"
+
+msgid "Server startup entry not found"
+msgstr "未找到服务器启动入口"
+
+msgid "Loading Model"
+msgstr "模型加载中"
+
+msgid "Starting"
+msgstr "正在启动"
+
+msgid "Model start failed"
+msgstr "模型启动失败"
+
+msgid "Model start timeout, please check logs or try again later."
+msgstr "模型启动超时，请查看日志或稍后重试。"
+
+msgid "Model Loaded"
+msgstr "模型加载完成"
+
+msgid "Model service started, please wait for initialization to complete."
+msgstr "模型服务已启动，请稍候等待初始化完成。"
+
+msgid "Error"
+msgstr "错误"
+
+msgid "Failed to launch server manager"
+msgstr "启动服务器管理器失败"
+
+msgid "Server manager program not found."
+msgstr "未找到服务器管理程序。"
