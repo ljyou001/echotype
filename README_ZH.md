@@ -168,7 +168,10 @@ python -m venv .venv
 .venv\Scripts\activate
 
 # 2. 安装依赖
-pip install -r requirements.txt
+pip install -r requirements-simple.txt
+pip install --find-links https://k2-fsa.github.io/sherpa/onnx/install/python.html sherpa-onnx
+pip install funasr-onnx==0.2.5
+pip install kaldi-native-fbank
 ```
 
 ### 开发模式下运行

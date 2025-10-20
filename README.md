@@ -194,7 +194,10 @@ To package the project into standalone executables, [PyInstaller](https://pyinst
    ```bash
    python -m venv .venv
    .venv\Scripts\activate
-   pip install -r requirements.txt
+   pip install -r requirements-simple.txt
+   pip install --find-links https://k2-fsa.github.io/sherpa/onnx/install/python.html sherpa-onnx
+   pip install funasr-onnx==0.2.5
+   pip install kaldi-native-fbank
    ```
 
 2. **Install PyInstaller:**
