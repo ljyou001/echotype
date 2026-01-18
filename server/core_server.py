@@ -41,6 +41,8 @@ def _append_progress(update: dict) -> None:
         pass
 
 async def main():
+    # Initialize queues first (must be done in main process on macOS)
+    Cosmic.init_queues()
 
     # 检查模型文件
     check_model()
@@ -94,6 +96,13 @@ async def main():
 
 
 def init():
+    # Fix multiprocessing for macOS PyInstaller
+    import multiprocessing
+    try:
+        multiprocessing.set_start_method('spawn', force=True)
+    except RuntimeError:
+        pass
+    
     try:
         asyncio.run(main())
     except KeyboardInterrupt:           # Ctrl-C to stop
@@ -103,10 +112,13 @@ def init():
     except Exception as e:
         print(e)
     finally:
-        Cosmic.queue_out.put(None)
+        if Cosmic.queue_out:
+            Cosmic.queue_out.put(None)
         sys.exit(0)
-        # os._exit(0)
      
         
 if __name__ == "__main__":
+    # Protect multiprocessing entry point
+    import multiprocessing
+    multiprocessing.freeze_support()
     init()

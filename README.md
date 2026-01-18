@@ -7,7 +7,7 @@
   **🎤 快速 · 免费 · 离线的语音输入工具**
   
   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-  [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](#)
+  [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey.svg)](#)
   <!-- [![Release](https://img.shields.io/github/v/release/ljyou001/echotype.svg)](https://github.com/ljyou001/echotype/releases) -->
   
   **Languages / 语言**: [English](README.md) | [中文](README_ZH.md)
@@ -20,7 +20,7 @@
 
 ## 📖 Project Overview
 
-**EchoType / 声笔** is an intelligent voice input tool designed specifically for Windows, enabling you to quickly convert speech to text input. Built upon and optimized from the [CapsWriter-Offline](https://github.com/HaujetZhao/CapsWriter-Offline) project, it provides a completely offline voice recognition experience.
+**EchoType / 声笔** is an intelligent voice input tool for Windows and macOS, enabling you to quickly convert speech to text input. Built upon and optimized from the [CapsWriter-Offline](https://github.com/HaujetZhao/CapsWriter-Offline) project, it provides a completely offline voice recognition experience.
 
 ### 🎯 Core Advantages
 - **🔒 Privacy & Security**: Completely offline processing, no data upload
@@ -90,7 +90,7 @@
 
 | Item | Requirement |
 |------|-------------|
-| **Operating System** | Windows 10/11 (64-bit) |
+| **Operating System** | Windows 10/11 (64-bit) or macOS 10.14+ |
 | **Memory** | Minimum 4GB RAM |
 | **Storage** | At least 2GB available space |
 | **Audio Device** | Supported microphone device |
@@ -123,6 +123,18 @@
 2. Go to "Hotword Management" tab
 3. Add frequently used professional vocabulary
 4. Save settings and restart program
+</details>
+
+<details>
+<summary><strong>❓ How to run on macOS?</strong></summary>
+
+See [docs/MACOS_SETUP.md](docs/MACOS_SETUP.md) for detailed instructions.
+
+Key points:
+1. Install dependencies: `pip install -r requirements-macos.txt`
+2. Grant accessibility permissions in System Settings
+3. Run: `python run_tray.py`
+4. macOS uses `pynput` library for hotkey support
 </details>
 
 <details>
@@ -251,7 +263,18 @@ EchoType_Release/
 
 - The `.spec` files are pre-configured with correct paths and dependencies
 - `build_package.py` automatically merges all three `dist` folders
-- See [PACKAGING_GUIDE.md](PACKAGING_GUIDE.md) for troubleshooting
+- See [docs/PACKAGING_GUIDE.md](docs/PACKAGING_GUIDE.md) for troubleshooting
+- For macOS packaging, see [docs/MACOS_SETUP.md](docs/MACOS_SETUP.md)
+
+**Note: macOS packaging is still under development. Please use development mode for now:**
+
+```bash
+# Double-click to run
+open start_echotype.command
+
+# Or run in terminal
+bash start_echotype.command
+```
 
 </details>
 

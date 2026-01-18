@@ -1,5 +1,5 @@
 from client_config import ClientConfig as Config
-import keyboard
+from util.keyboard_wrapper import send, write
 import pyclip
 import platform
 import asyncio
@@ -21,12 +21,9 @@ async def type_result(text):
 
         # 粘贴结果
         if platform.system() == 'Darwin':
-            keyboard.press(55)
-            keyboard.press(9)
-            keyboard.release(55)
-            keyboard.release(9)
+            send('cmd+v')
         else:
-            keyboard.send('ctrl + v')
+            send('ctrl+v')
 
         # 还原剪贴板
         if Config.restore_clip:
@@ -35,4 +32,4 @@ async def type_result(text):
 
     # 模拟打印
     else:
-        keyboard.write(text)
+        write(text)

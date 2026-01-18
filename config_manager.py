@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import platform
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
@@ -13,6 +14,8 @@ CONFIG_DIR = APPDATA / "EchoType"
 CONFIG_PATH = CONFIG_DIR / "client.json"
 LOG_DIR = LOCALAPPDATA / "EchoType" / "logs"
 
+_IS_MACOS = platform.system() == 'Darwin'
+
 _EXTRA_DEFAULTS = {
     "auto_startup": False,
     "show_notifications": True,
@@ -23,6 +26,8 @@ _EXTRA_DEFAULTS = {
     "reconnect_interval": 5,
     "minimize_to_tray": True,
     "language": "auto",
+    "auto_start_server": True,
+    "shortcut": "right option" if _IS_MACOS else "right ctrl",  # macOS-friendly default
 }
 
 

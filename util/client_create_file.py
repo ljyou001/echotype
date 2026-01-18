@@ -1,12 +1,19 @@
 import wave 
 import shutil 
-from subprocess import Popen, PIPE, DEVNULL, CREATE_NO_WINDOW
+import sys
+from subprocess import Popen, PIPE, DEVNULL
 from typing import Union, Tuple
 from pathlib import Path
 import time
 from os import makedirs
 from wave import Wave_write
 import tempfile
+
+# CREATE_NO_WINDOW is Windows-only
+if sys.platform == 'win32':
+    from subprocess import CREATE_NO_WINDOW
+else:
+    CREATE_NO_WINDOW = 0
 
 
 def create_file(channels: int, time_start: float) -> Tuple[Path, Union[Popen, Wave_write]]:

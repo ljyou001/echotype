@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import logging
 import time
+import platform
 from typing import Optional
 
 import websockets
@@ -13,6 +14,8 @@ from util.client_hot_update import observe_hot, update_hot_all
 from util.client_recv_result import recv_result
 from util.client_shortcut_handler import bond_shortcut, unbond_shortcut
 from util.client_stream import stream_open
+
+_IS_MACOS = platform.system() == 'Darwin'
 
 
 class MicSession:
@@ -42,10 +45,13 @@ class MicSession:
         Cosmic.on = False
 
         update_hot_all()
-        try:
-            self._observer = observe_hot()
-        except Exception:
-            self._logger.exception('Failed to start hot-word observer')
+        
+        # Only start observer if not already running
+        if self._observer is None:
+            try:
+                self._observer = observe_hot()
+            except Exception:
+                self._logger.exception('Failed to start hot-word observer')
 
         try:
             Cosmic.stream = stream_open()
@@ -53,7 +59,7 @@ class MicSession:
             self._logger.exception('Unable to open audio stream')
             Cosmic.emit_status('error', str(exc))
             raise
-
+        
         bond_shortcut()
         self._recv_task = asyncio.create_task(self._recv_loop(), name='echotype-recv')
 
@@ -99,8 +105,8 @@ class MicSession:
     async def _cleanup_partial(self) -> None:
         with contextlib.suppress(Exception):
             unbond_shortcut()
-        # Add a delay to give the OS time to release the hook
-        time.sleep(0.5)
+        # Add delay to ensure OS releases keyboard hook
+        await asyncio.sleep(0.5)
         if Cosmic.stream is not None:
             with contextlib.suppress(Exception):
                 Cosmic.stream.close()
@@ -109,9 +115,14 @@ class MicSession:
     async def _cleanup(self) -> None:
         await self._cleanup_partial()
         if self._observer is not None:
-            self._observer.stop()
-            await asyncio.to_thread(self._observer.join, timeout=2)
-            self._observer = None
+            try:
+                self._observer.stop()
+                self._observer.unschedule_all()  # Unschedule all watches before joining
+                await asyncio.to_thread(self._observer.join, timeout=2)
+            except Exception:
+                self._logger.debug('Error stopping observer', exc_info=True)
+            finally:
+                self._observer = None
         if Cosmic.websocket is not None:
             with contextlib.suppress(Exception):
                 await Cosmic.websocket.close()

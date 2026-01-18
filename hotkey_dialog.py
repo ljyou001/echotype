@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+import platform
 from typing import List, Set
 
 from PySide6.QtCore import Qt
@@ -11,6 +13,8 @@ from PySide6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
+
+_IS_MACOS = platform.system() == 'Darwin'
 
 
 class HotkeyDialog(QDialog):
@@ -31,20 +35,63 @@ class HotkeyDialog(QDialog):
         self._display_label.setMinimumHeight(32)
         self._update_display(self._current_keys)
 
-        # Quick key buttons
+        # Quick key buttons - platform specific
         quick_keys_label = QLabel(_('Quick select special keys:'))
         quick_keys_row1 = QHBoxLayout()
         quick_keys_row2 = QHBoxLayout()
         quick_keys_row3 = QHBoxLayout()
         
-        # First row: Modifier keys
-        quick_buttons_row1 = [
-            ('Caps Lock', 'caps lock'),
-            (_('Left Ctrl'), 'left ctrl'),
-            (_('Right Ctrl'), 'right ctrl'),
-            (_('Left Alt'), 'left alt'),
-            (_('Right Alt'), 'right alt'),
-        ]
+        if _IS_MACOS:
+            # macOS modifier keys
+            quick_buttons_row1 = [
+                (_('Right Option'), 'right option'),
+                (_('Left Option'), 'left option'),
+                (_('Right Control'), 'right control'),
+                (_('Left Control'), 'left control'),
+                (_('Right Command'), 'right cmd'),
+            ]
+            
+            quick_buttons_row2 = [
+                (_('Right Control'), 'right control'),
+                (_('Left Shift'), 'left shift'),
+                (_('Right Shift'), 'right shift'),
+                ('Caps Lock', 'caps lock'),
+                ('Fn', 'fn'),
+            ]
+            
+            # macOS function keys and combinations
+            quick_buttons_row3 = [
+                (_('Right Cmd+O'), 'right cmd+o'),
+                (_('Right Cmd+K'), 'right cmd+k'),
+                (_('Ctrl+Space'), 'control+space'),
+                (_('Option+Space'), 'option+space'),
+                (_('Cmd+Shift+A'), 'cmd+shift+a'),
+            ]
+        else:
+            # Windows modifier keys
+            quick_buttons_row1 = [
+                ('Caps Lock', 'caps lock'),
+                (_('Left Ctrl'), 'left ctrl'),
+                (_('Right Ctrl'), 'right ctrl'),
+                (_('Left Alt'), 'left alt'),
+                (_('Right Alt'), 'right alt'),
+            ]
+            
+            quick_buttons_row2 = [
+                (_('Left Shift'), 'left shift'),
+                (_('Right Shift'), 'right shift'),
+                (_('Menu Key'), 'menu'),
+                ('Scroll Lock', 'scroll lock'),
+                ('Pause', 'pause'),
+            ]
+            
+            quick_buttons_row3 = [
+                ('F1', 'f1'),
+                ('F2', 'f2'),
+                ('F4', 'f4'),
+                ('F12', 'f12'),
+                ('Print Screen', 'print screen'),
+            ]
         
         for label, key in quick_buttons_row1:
             btn = QPushButton(label)
@@ -52,29 +99,11 @@ class HotkeyDialog(QDialog):
             btn.clicked.connect(lambda checked, k=key: self._set_quick_key(k))
             quick_keys_row1.addWidget(btn)
         
-        # Second row: Special function keys
-        quick_buttons_row2 = [
-            (_('Left Shift'), 'left shift'),
-            (_('Right Shift'), 'right shift'),
-            (_('Menu Key'), 'menu'),
-            ('Scroll Lock', 'scroll lock'),
-            ('Pause', 'pause'),
-        ]
-        
         for label, key in quick_buttons_row2:
             btn = QPushButton(label)
             btn.setMaximumWidth(100)
             btn.clicked.connect(lambda checked, k=key: self._set_quick_key(k))
             quick_keys_row2.addWidget(btn)
-        
-        # Third row: F keys and others
-        quick_buttons_row3 = [
-            ('F1', 'f1'),
-            ('F2', 'f2'),
-            ('F4', 'f4'),
-            ('F12', 'f12'),
-            ('Print Screen', 'print screen'),
-        ]
         
         for label, key in quick_buttons_row3:
             btn = QPushButton(label)
@@ -126,9 +155,7 @@ class HotkeyDialog(QDialog):
             return
 
         name = self._event_to_key_name(event)
-        # Debug info: print key value
         if not name:
-            print(f"Debug: Unrecognized key - Qt.Key={key}, VK={event.nativeVirtualKey()}, SC={event.nativeScanCode()}")
             event.ignore()
             return
         if name not in self._active_keys:
@@ -155,11 +182,63 @@ class HotkeyDialog(QDialog):
         event.accept()
 
     def _event_to_key_name(self, event) -> str:
+        key = event.key()
+        
+        if _IS_MACOS:
+            return self._event_to_key_name_macos(event, key)
+        else:
+            return self._event_to_key_name_windows(event, key)
+    
+    def _event_to_key_name_macos(self, event, key) -> str:
+        """macOS key mapping"""
+        # macOS modifier keys
+        if key == Qt.Key_Control:
+            return 'control'
+        if key == Qt.Key_Meta:  # Command key
+            return 'cmd'
+        if key == Qt.Key_Alt:  # Option key
+            return 'option'
+        if key == Qt.Key_Shift:
+            return 'shift'
+        if key == Qt.Key_CapsLock:
+            return 'caps lock'
+        
+        # Function keys
+        if Qt.Key_F1 <= key <= Qt.Key_F35:
+            return f'f{key - Qt.Key_F1 + 1}'
+        
+        # Special keys
+        special = {
+            Qt.Key_Space: 'space',
+            Qt.Key_Tab: 'tab',
+            Qt.Key_Return: 'return',
+            Qt.Key_Enter: 'enter',
+            Qt.Key_Escape: 'esc',
+            Qt.Key_Delete: 'delete',
+            Qt.Key_Backspace: 'backspace',
+            Qt.Key_Left: 'left',
+            Qt.Key_Right: 'right',
+            Qt.Key_Up: 'up',
+            Qt.Key_Down: 'down',
+        }
+        
+        if key in special:
+            return special[key]
+        
+        # Regular character keys
+        text = event.text()
+        if text and text.isprintable():
+            return text.lower()
+        
+        return ''
+    
+    def _event_to_key_name_windows(self, event, key) -> str:
+        """Windows key mapping"""
         native_vk = event.nativeVirtualKey()
         native_sc = event.nativeScanCode()
         vk_map = {
-            0x11: 'ctrl',  # VK_CONTROL (17)
-            0x12: 'alt',   # VK_MENU (18)
+            0x11: 'ctrl',
+            0x12: 'alt',
             0xA2: 'left ctrl',
             0xA3: 'right ctrl',
             0xA4: 'left alt',
@@ -169,27 +248,26 @@ class HotkeyDialog(QDialog):
             0x5B: 'left windows',
             0x5C: 'right windows',
             0x14: 'caps lock',
-            0x5D: 'menu',  # Context Menu key
-            0x91: 'scroll lock',  # VK_SCROLL (145)
+            0x5D: 'menu',
+            0x91: 'scroll lock',
         }
         scan_map = {
             29: 'left ctrl',
             157: 'right ctrl',
-            57373: 'right ctrl',  # Right Ctrl scan code
+            57373: 'right ctrl',
             42: 'left shift',
             54: 'right shift',
             56: 'left alt',
             312: 'right alt',
-            57400: 'right alt',  # Right Alt scan code
-            349: 'menu',  # Context Menu key scan code
-            70: 'scroll lock',  # Scroll Lock scan code
+            57400: 'right alt',
+            349: 'menu',
+            70: 'scroll lock',
         }
         if native_vk in vk_map:
             return vk_map[native_vk]
         if native_sc in scan_map:
             return scan_map[native_sc]
 
-        key = event.key()
         if key == Qt.Key_Escape:
             return 'esc'
         if key in (Qt.Key_Backspace, Qt.Key_Delete):
@@ -229,7 +307,11 @@ class HotkeyDialog(QDialog):
 
     def _set_quick_key(self, key: str) -> None:
         """Set key through quick button"""
-        self._current_keys = [key]
+        # Handle combination keys like 'cmd+o'
+        if '+' in key:
+            self._current_keys = key.split('+')
+        else:
+            self._current_keys = [key]
         self._capture_buffer.clear()
         self._active_keys.clear()
         self._update_display(self._current_keys)
@@ -241,7 +323,7 @@ class HotkeyDialog(QDialog):
         self._update_display(self._current_keys)
 
     def _update_display(self, keys: List[str]) -> None:
-        self._display_label.setText(f'{_('Current Hotkey')}: {self._format_keys(keys)}')
+        self._display_label.setText(f"{_('Current Hotkey')}: {self._format_keys(keys)}")
 
     @staticmethod
     def _split_hotkey(hotkey: str) -> List[str]:
@@ -254,10 +336,29 @@ class HotkeyDialog(QDialog):
     def _format_keys(keys: List[str]) -> str:
         if not keys:
             return _('Not Set')
-        display = []
-        for key in keys:
-            display.append(' '.join(part.upper() if len(part) == 1 else part.capitalize() for part in key.split(' ')))
-        return ' + '.join(display)
+        
+        if _IS_MACOS:
+            # macOS uses symbols
+            display = []
+            for key in keys:
+                key_lower = key.lower()
+                if key_lower in ['cmd', 'command']:
+                    display.append('⌘')
+                elif key_lower in ['option', 'alt']:
+                    display.append('⌥')
+                elif key_lower in ['control', 'ctrl']:
+                    display.append('⌃')
+                elif key_lower == 'shift':
+                    display.append('⇧')
+                else:
+                    display.append(key.upper() if len(key) == 1 else key.capitalize())
+            return ''.join(display)
+        else:
+            # Windows uses text
+            display = []
+            for key in keys:
+                display.append(' '.join(part.upper() if len(part) == 1 else part.capitalize() for part in key.split(' ')))
+            return ' + '.join(display)
 
     def selected_hotkey(self) -> str:
         return '+'.join(self._current_keys)
