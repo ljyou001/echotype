@@ -35,12 +35,22 @@ class HotkeyManager {
   private uiohookStarted = false;
   private keyState: Map<string, boolean> = new Map();
   private hotkeyCallback: ((action: string, keyDown: boolean) => void) | null = null;
+  
+  // Quick action timing
+  private keyDownTimestamp: number = 0;
+  private longPressTimer: NodeJS.Timeout | null = null;
+  private mainWindow: any = null; // Will be set from main.ts
 
   constructor(settings_path?: string) {
     this.settingsPath = settings_path ?? path.join(os.homedir(), ".echotype", "settings.json");
     globalHotkeyManager = this;
     this.loadSettings();
     this.setupUiohookListeners();
+  }
+  
+  setMainWindow(window: any): void {
+    this.mainWindow = window;
+    console.log('[HotkeyManager] mainWindow set:', window ? 'OK' : 'NULL');
   }
 
   private setupUiohookListeners(): void {
@@ -73,6 +83,21 @@ class HotkeyManager {
           if (isDown) {
             if (this.keyState.get(stateKey)) return; // prevent repeat
             this.keyState.set(stateKey, true);
+            
+            // Record key down timestamp for duration detection
+            this.keyDownTimestamp = Date.now();
+            
+            // Get recording mode
+            const recordingMode = this.getAppSetting('recordingMode') || 'toggle';
+            
+            // Toggle mode: set long press timer for quick action
+            if (recordingMode === 'toggle') {
+              this.longPressTimer = setTimeout(() => {
+                console.log(`[Hotkey] Long press detected (>500ms), triggering quick action`);
+                this.triggerQuickAction();
+              }, 500);
+            }
+            
             console.log(`[Hotkey] Key DOWN (uiohook): ${config.accelerator} (code: ${keycode}) -> ${config.action}`);
             this.triggerCallback(config.action, true);
           } else {
@@ -80,6 +105,24 @@ class HotkeyManager {
             // This avoids triggering UP twice for combos like RAlt+L (L release and Alt release)
             const wasDown = this.keyState.get(stateKey);
             this.keyState.set(stateKey, false);
+            
+            // Calculate key press duration
+            const duration = Date.now() - this.keyDownTimestamp;
+            
+            // Clear long press timer if exists
+            if (this.longPressTimer) {
+              clearTimeout(this.longPressTimer);
+              this.longPressTimer = null;
+            }
+            
+            // Get recording mode
+            const recordingMode = this.getAppSetting('recordingMode') || 'toggle';
+            
+            // Push-to-Talk mode: light tap triggers quick action
+            if (recordingMode === 'push-to-talk' && duration < 100) {
+              console.log(`[Hotkey] Light tap detected (<100ms), triggering quick action`);
+              this.triggerQuickAction();
+            }
             
             // Only trigger on down->up state transition, with debounce to avoid duplicates
             if (wasDown) {
@@ -104,6 +147,16 @@ class HotkeyManager {
   private triggerCallback(action: string, keyDown: boolean): void {
     if (this.hotkeyCallback) {
       this.hotkeyCallback(action, keyDown);
+    }
+  }
+  
+  private triggerQuickAction(): void {
+    console.log('[Hotkey] Triggering quick action - will send event to main window');
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      // Send event to main window to trigger quick action window creation
+      this.mainWindow.webContents.send('trigger-quick-action-window');
+    } else {
+      console.warn('[Hotkey] Cannot trigger quick action: mainWindow not available');
     }
   }
 

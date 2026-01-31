@@ -71,9 +71,7 @@ class BackendManager:
                     overrides["streaming_default"] = self._str_to_bool(settings["streaming_enabled"])
                 if "qwen_backend" in settings:
                     overrides["qwen_backend"] = settings["qwen_backend"]
-                if "qwen_use_forced_aligner" in settings:
-                    overrides["qwen_use_forced_aligner"] = self._str_to_bool(settings["qwen_use_forced_aligner"])
-                
+
                 if overrides:
                     self._config = self._config.with_overrides(overrides)
                     self._logger.info("Applied user settings from model config: %s", overrides)
@@ -146,10 +144,6 @@ class BackendManager:
             overrides["qwen_backend"] = payload["qwen_backend"]
         if payload.get("qwen_model_path"):
             overrides["qwen_model_path"] = payload["qwen_model_path"]
-        if payload.get("qwen_forced_aligner_path"):
-            overrides["qwen_forced_aligner_path"] = payload["qwen_forced_aligner_path"]
-        if payload.get("qwen_use_forced_aligner") is not None:
-            overrides["qwen_use_forced_aligner"] = payload["qwen_use_forced_aligner"]
 
         new_config = self._config.with_overrides(overrides)
         model_id = new_config.model_id
@@ -210,9 +204,6 @@ class BackendManager:
                 if name.startswith("Qwen3-ASR"):
                     entry["family"] = "qwen3"
                     entry["kind"] = "asr"
-                elif name.startswith("Qwen3-ForcedAligner"):
-                    entry["family"] = "qwen3"
-                    entry["kind"] = "forced_aligner"
                 elif name.startswith("paraformer"):
                     entry["family"] = "sherpa_onnx"
                     entry["kind"] = "asr"
@@ -392,7 +383,6 @@ class BackendManager:
                 "streaming_default": config.streaming_default,
                 "deployment_mode": config.deployment_mode,
                 "qwen_backend": config.qwen_backend,
-                "qwen_use_forced_aligner": config.qwen_use_forced_aligner,
             }
             
             with runtime_config_path.open("w", encoding="utf-8") as f:
@@ -419,9 +409,7 @@ class BackendManager:
                 settings["streaming_enabled"] = str(payload["streaming_enabled"]).lower()
             if payload.get("qwen_backend"):
                 settings["qwen_backend"] = payload["qwen_backend"]
-            if payload.get("qwen_use_forced_aligner") is not None:
-                settings["qwen_use_forced_aligner"] = str(payload["qwen_use_forced_aligner"]).lower()
-            
+
             if settings:
                 config_updates = {"user_settings": settings}
                 self._save_model_config(model_id, config_updates)

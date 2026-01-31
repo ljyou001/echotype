@@ -8,6 +8,8 @@ import { ModelsPage } from "./components/ModelsPage";
 import { IntegrationsPage } from "./components/IntegrationsPage";
 import { SettingsPage } from "./components/SettingsPage";
 import { DebugPage } from "./components/DebugPage";
+import { QuickActionModal } from "./components/QuickActionModal";
+import { QuickActionWindow } from "./components/QuickActionWindow";
 import { getWebSocketManager, getRecordingManager } from "./services/managers";
 import { MessageRouter } from "./services/messages";
 import { AudioProcessor } from "./services/audio";
@@ -21,6 +23,13 @@ export default function App() {
   const { t } = useTranslation();
   const [activePage, setActivePage] = useState<PageKey>("home");
 
+  // Check if this is the quick action window
+  const isQuickActionWindow = window.location.hash === '#/quick-action';
+
+  // If this is quick action window, render only that
+  if (isQuickActionWindow) {
+    return <QuickActionWindow />;
+  }
   // Initialize logger (execute only once)
   React.useEffect(() => {
     initLogger();
@@ -47,6 +56,9 @@ export default function App() {
   const setSelectedInputId = useAppStore((state) => state.setSelectedInputId);
   const setLastLog = useAppStore((state) => state.setLastLog);
   const initializeSettings = useAppStore((state) => state.initializeSettings);
+  const initializeIntegrations = useAppStore((state) => state.initializeIntegrations);
+  const setLastTranscribedText = useAppStore((state) => state.setLastTranscribedText);
+  const setShowQuickActionModal = useAppStore((state) => state.setShowQuickActionModal);
 
   // ===== Initialize WebSocket & Settings =====
   useEffect(() => {
@@ -74,6 +86,7 @@ export default function App() {
           
           // Initialize settings after catalog is loaded
           await initializeSettings();
+          await initializeIntegrations();
           const appLanguage = useAppStore.getState().appLanguage ?? "system";
           i18n.changeLanguage(resolveAppLanguage(appLanguage));
         } else {
@@ -93,6 +106,40 @@ export default function App() {
     });
 
     return cleanup;
+  }, []);
+
+  // ===== Quick Action Modal Handler =====
+  useEffect(() => {
+    console.log('[App] Setting up Quick Action handler');
+    
+    // Listen for trigger event from hotkey manager
+    const triggerHandler = () => {
+      console.log('[App] Received trigger-quick-action-window event from hotkey');
+      
+      // Get current state
+      const state = useAppStore.getState();
+      const text = state.lastTranscribedText || state.finalText || '';
+      const instances = state.integrationInstances || [];
+      
+      console.log('[App] Notifying main process to create window');
+      console.log('[App] Text:', text);
+      console.log('[App] Instances:', instances.length);
+      
+      // Send to main process via IPC
+      window.electron?.ipcRenderer?.send?.('create-quick-action-window', {
+        text,
+        instances
+      });
+    };
+    
+    // Register listener
+    window.electron?.ipcRenderer?.on?.('trigger-quick-action-window', triggerHandler);
+    
+    console.log('[App] Quick Action trigger handler registered');
+
+    return () => {
+      window.electron?.ipcRenderer?.removeListener?.('trigger-quick-action-window', triggerHandler);
+    };
   }, []);
 
   // ===== Audio device management =====
@@ -420,6 +467,7 @@ export default function App() {
         onPageChange={setActivePage}
       />
       <main className="main-content">{renderPage()}</main>
+      <QuickActionModal />
     </div>
   );
 }

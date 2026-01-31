@@ -52,30 +52,6 @@ MODEL_TEMPLATES = {
             "default": "auto",
         },
     },
-    "Qwen3-ForcedAligner-0.6B": {
-        "model": {
-            "id": "Qwen3-ForcedAligner-0.6B",
-            "family": "qwen3",
-            "kind": "forced_aligner",
-            "version": "0.6.0",
-            "description": "Optional forced aligner for generating word-level timestamps",
-        },
-        "capabilities": {
-            "supports_device_selection": "true",
-            "supports_language_selection": "false",
-            "supports_backend_selection": "false",
-            "supports_streaming": "false",
-            "supports_punctuation": "false",
-            "supports_timestamps": "true",
-        },
-        "defaults": {
-            "device": "auto",
-        },
-        "devices": {
-            "available": "cpu, cuda",
-            "default": "auto",
-        },
-    },
     "paraformer-offline-zh": {
         "model": {
             "id": "paraformer-offline-zh",

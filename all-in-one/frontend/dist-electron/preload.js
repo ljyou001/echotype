@@ -1,5 +1,18 @@
 import { contextBridge, ipcRenderer } from "electron";
 const api = {
+    // Expose ipcRenderer for direct event handling
+    electron: {
+        ipcRenderer: {
+            send: (channel, ...args) => ipcRenderer.send(channel, ...args),
+            on: (channel, listener) => {
+                ipcRenderer.on(channel, listener);
+                return () => ipcRenderer.removeListener(channel, listener);
+            },
+            removeListener: (channel, listener) => {
+                ipcRenderer.removeListener(channel, listener);
+            }
+        }
+    },
     onHotkey: (handler) => {
         const listener = (_event, payload) => handler(payload);
         ipcRenderer.on("hotkey", listener);
@@ -50,7 +63,23 @@ const api = {
     },
     setTrayStatus: (status) => {
         ipcRenderer.send("tray-status", status);
+    },
+    // Integration system
+    getIntegrationsConfig: () => {
+        return ipcRenderer.invoke("integrations-get-config");
+    },
+    saveIntegrationsConfig: (instances, defaultIntegrationId) => {
+        return ipcRenderer.invoke("integrations-save-config", instances, defaultIntegrationId);
+    },
+    onShowQuickAction: (handler) => {
+        const listener = () => handler();
+        ipcRenderer.on("show-quick-action", listener);
+        return () => ipcRenderer.removeListener("show-quick-action", listener);
+    },
+    closeQuickActionWindow: () => {
+        ipcRenderer.invoke("close-quick-action-window");
     }
 };
 contextBridge.exposeInMainWorld("echotype", api);
+contextBridge.exposeInMainWorld("electron", api.electron);
 //# sourceMappingURL=preload.js.map

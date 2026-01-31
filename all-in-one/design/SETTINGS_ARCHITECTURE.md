@@ -54,7 +54,6 @@ device = cuda
 language = Chinese
 streaming_enabled = true
 qwen_backend = transformers
-qwen_use_forced_aligner = false
 ```
 
 ### 管理方式
@@ -266,7 +265,6 @@ device = cuda
 language = Chinese
 streaming_enabled = true
 qwen_backend = transformers
-qwen_use_forced_aligner = false
 ```
 
 ---
@@ -367,7 +365,6 @@ cp -r ~/.echotype/models/Qwen3-ASR-0.6B /path/to/new/machine/.echotype/models/
 - `device_preference`: 设备偏好 (cpu/cuda/auto)
 - `streaming_default`: Streaming 默认开关
 - `qwen_backend`: Qwen 的 backend 选择
-- `qwen_use_forced_aligner`: 是否使用 forced aligner
 
 ### 管理方式
 - **由后端自动管理**: `BackendManager._save_runtime_config()`
@@ -385,8 +382,7 @@ cp -r ~/.echotype/models/Qwen3-ASR-0.6B /path/to/new/machine/.echotype/models/
   "backend": "qwen3",
   "device_preference": "cuda",
   "streaming_default": true,
-  "qwen_backend": "transformers",
-  "qwen_use_forced_aligner": false
+  "qwen_backend": "transformers"
 }
 ```
 

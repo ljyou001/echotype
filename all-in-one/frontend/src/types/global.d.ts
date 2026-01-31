@@ -18,6 +18,10 @@ declare global {
       typeText?: (text: string) => Promise<void>;
       readCatalog?: () => Promise<any>;
       setTrayStatus?: (status: "loading" | "error" | "ready" | "recording") => void;
+      // Integration system
+      getIntegrationsConfig?: () => Promise<{ instances: any[]; defaultIntegrationId: string | null }>;
+      saveIntegrationsConfig?: (instances: any[], defaultIntegrationId: string | null) => Promise<void>;
+      onShowQuickAction?: (handler: () => void) => (() => void) | undefined;
     };
   }
 }

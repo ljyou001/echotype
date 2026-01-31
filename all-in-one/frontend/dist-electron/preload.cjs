@@ -2,6 +2,19 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const api = {
+    // Expose ipcRenderer for direct event handling
+    electron: {
+        ipcRenderer: {
+            send: (channel, ...args) => electron_1.ipcRenderer.send(channel, ...args),
+            on: (channel, listener) => {
+                electron_1.ipcRenderer.on(channel, listener);
+                return () => electron_1.ipcRenderer.removeListener(channel, listener);
+            },
+            removeListener: (channel, listener) => {
+                electron_1.ipcRenderer.removeListener(channel, listener);
+            }
+        }
+    },
     onHotkey: (handler) => {
         const listener = (_event, payload) => handler(payload);
         electron_1.ipcRenderer.on("hotkey", listener);
@@ -52,7 +65,23 @@ const api = {
     },
     setTrayStatus: (status) => {
         electron_1.ipcRenderer.send("tray-status", status);
+    },
+    // Integration system
+    getIntegrationsConfig: () => {
+        return electron_1.ipcRenderer.invoke("integrations-get-config");
+    },
+    saveIntegrationsConfig: (instances, defaultIntegrationId) => {
+        return electron_1.ipcRenderer.invoke("integrations-save-config", instances, defaultIntegrationId);
+    },
+    onShowQuickAction: (handler) => {
+        const listener = () => handler();
+        electron_1.ipcRenderer.on("show-quick-action", listener);
+        return () => electron_1.ipcRenderer.removeListener("show-quick-action", listener);
+    },
+    closeQuickActionWindow: () => {
+        electron_1.ipcRenderer.invoke("close-quick-action-window");
     }
 };
 electron_1.contextBridge.exposeInMainWorld("echotype", api);
+electron_1.contextBridge.exposeInMainWorld("electron", api.electron);
 //# sourceMappingURL=preload.js.map

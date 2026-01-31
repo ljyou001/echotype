@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { IntegrationInstance } from "../services/integrations/types";
 
 export type BackendStatus =
   | "loading"
@@ -169,6 +170,12 @@ type AppState = {
   recordingMode: "push-to-talk" | "toggle"; // Push-to-talk mode vs toggle mode
   _userHasSetRecordingMode: boolean; // Prevent initializeSettings from overwriting user's recent choice
 
+  // Quick Action Integrations
+  lastTranscribedText: string;                    // Last transcribed text
+  showQuickActionModal: boolean;                  // Show quick action window
+  integrationInstances: IntegrationInstance[];    // Configured integration instances
+  defaultIntegrationId: string | null;            // Default integration instance ID
+
   // Actions
   setConnectionState: (state: ConnectionState) => void;
   setBackendStatus: (status: BackendStatus) => void;
@@ -202,9 +209,20 @@ type AppState = {
   setAppLanguage: (lang: "system" | "en" | "zh") => void;
   setRecordingMode: (mode: "push-to-talk" | "toggle") => void;
   initializeSettings: () => Promise<void>;
+  
+  // Quick Action Integration Actions
+  setLastTranscribedText: (text: string) => void;
+  setShowQuickActionModal: (show: boolean) => void;
+  addIntegrationInstance: (instance: IntegrationInstance) => void;
+  removeIntegrationInstance: (instanceId: string) => void;
+  updateIntegrationInstance: (instanceId: string, updates: Partial<IntegrationInstance>) => void;
+  reorderIntegrationInstances: (instanceIds: string[]) => void;
+  setDefaultIntegration: (instanceId: string) => void;
+  toggleIntegrationInstance: (instanceId: string, enabled: boolean) => void;
+  initializeIntegrations: () => Promise<void>;
 };
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   // Initial state
   connectionState: "connecting",
   backendStatus: "loading",
@@ -233,6 +251,12 @@ export const useAppStore = create<AppState>((set) => ({
   appLanguage: "system",
   recordingMode: "toggle", // Default to toggle mode (push-to-talk requires native keyUp support)
   _userHasSetRecordingMode: false,
+  
+  // Quick Action Integrations
+  lastTranscribedText: '',
+  showQuickActionModal: false,
+  integrationInstances: [],
+  defaultIntegrationId: null,
 
   // Actions
   setConnectionState: (state) => set({ connectionState: state }),
@@ -374,5 +398,98 @@ export const useAppStore = create<AppState>((set) => ({
     }
     if (appLanguage !== undefined) set({ appLanguage });
     else set({ appLanguage: "system" });
+  },
+  
+  // Quick Action Integration Actions
+  setLastTranscribedText: (text) => set({ lastTranscribedText: text }),
+  
+  setShowQuickActionModal: (show) => set({ showQuickActionModal: show }),
+  
+  addIntegrationInstance: (instance) => {
+    const newInstances = [...get().integrationInstances, instance];
+    set({ integrationInstances: newInstances });
+    window.echotype?.saveIntegrationsConfig?.(newInstances, get().defaultIntegrationId);
+  },
+  
+  removeIntegrationInstance: (instanceId) => {
+    const newInstances = get().integrationInstances.filter(i => i.instanceId !== instanceId);
+    const newDefaultId = get().defaultIntegrationId === instanceId ? null : get().defaultIntegrationId;
+    set({
+      integrationInstances: newInstances,
+      defaultIntegrationId: newDefaultId
+    });
+    window.echotype?.saveIntegrationsConfig?.(newInstances, newDefaultId);
+  },
+  
+  updateIntegrationInstance: (instanceId, updates) => {
+    const newInstances = get().integrationInstances.map(i =>
+      i.instanceId === instanceId ? { ...i, ...updates } : i
+    );
+    set({ integrationInstances: newInstances });
+    window.echotype?.saveIntegrationsConfig?.(newInstances, get().defaultIntegrationId);
+  },
+  
+  reorderIntegrationInstances: (instanceIds) => {
+    const instanceMap = new Map(
+      get().integrationInstances.map(i => [i.instanceId, i])
+    );
+    const reordered = instanceIds
+      .map(id => instanceMap.get(id))
+      .filter(Boolean)
+      .map((instance, index) => ({ ...instance!, order: index }));
+    
+    set({ integrationInstances: reordered });
+    window.echotype?.saveIntegrationsConfig?.(reordered, get().defaultIntegrationId);
+  },
+  
+  setDefaultIntegration: (instanceId) => {
+    const newInstances = get().integrationInstances.map(i => ({
+      ...i,
+      isDefault: i.instanceId === instanceId
+    }));
+    set({
+      integrationInstances: newInstances,
+      defaultIntegrationId: instanceId
+    });
+    window.echotype?.saveIntegrationsConfig?.(newInstances, instanceId);
+  },
+  
+  toggleIntegrationInstance: (instanceId, enabled) => {
+    const newInstances = get().integrationInstances.map(i =>
+      i.instanceId === instanceId ? { ...i, enabled } : i
+    );
+    set({ integrationInstances: newInstances });
+    window.echotype?.saveIntegrationsConfig?.(newInstances, get().defaultIntegrationId);
+  },
+  
+  initializeIntegrations: async () => {
+    const config = await window.echotype?.getIntegrationsConfig?.();
+    if (config) {
+      set({
+        integrationInstances: config.instances || [],
+        defaultIntegrationId: config.defaultIntegrationId || null
+      });
+    } else {
+      // First run: create default Google Search integration
+      const defaultInstance: IntegrationInstance = {
+        instanceId: crypto.randomUUID(),
+        pluginId: 'google-search',
+        name: 'Google Search',
+        icon: '🔍',
+        order: 0,
+        enabled: true,
+        isDefault: true,
+        config: {},
+        outputMode: 'clipboard' // Default to clipboard
+      };
+      
+      set({
+        integrationInstances: [defaultInstance],
+        defaultIntegrationId: defaultInstance.instanceId
+      });
+      
+      // Save to file
+      await window.echotype?.saveIntegrationsConfig?.([defaultInstance], defaultInstance.instanceId);
+    }
   }
 }));

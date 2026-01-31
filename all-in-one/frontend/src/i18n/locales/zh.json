@@ -85,7 +85,11 @@
       "pushToTalkPrefix": "按住 ",
       "pushToTalkSuffix": " 进行语音输入",
       "togglePrefix": "按 ",
-      "toggleSuffix": " 开始输入，再按一次停止"
+      "toggleSuffix": " 开始输入，再按一次停止",
+      "integrationShortPressPrefix": "轻点一下 ",
+      "integrationShortPressSuffix": " 打开整合工具",
+      "integrationLongPressPrefix": "长按 ",
+      "integrationLongPressSuffix": " 打开整合工具"
     }
   },
   "history": {
@@ -144,7 +148,51 @@
   "integrations": {
     "title": "整合",
     "description": "基于插件的搜索和自动化工作流。",
+    "myIntegrations": "我的整合",
+    "addIntegration": "添加整合",
+    "emptyState": "尚未添加任何整合。点击「添加整合」开始。",
+    "availablePlugins": "可用插件",
     "comingSoon": "即将推出",
+    "quickAction": {
+      "title": "快速操作",
+      "lastText": "上次识别的文本",
+      "noText": "暂无文本",
+      "hint": "按 Enter 使用默认操作"
+    },
+    "outputMode": {
+      "clipboard": "复制到剪贴板",
+      "direct": "直接输入",
+      "both": "两者都用（剪贴板 + 直接输入）"
+    },
+    "actions": {
+      "enable": "启用",
+      "disable": "禁用",
+      "setDefault": "设为默认",
+      "configure": "配置",
+      "remove": "移除",
+      "enabled": "已启用"
+    },
+    "categories": {
+      "search": "搜索引擎",
+      "ai": "AI 助手",
+      "translation": "翻译服务",
+      "custom": "自定义"
+    },
+    "dialog": {
+      "addTitle": "添加整合",
+      "configureTitle": "配置",
+      "selectPlugin": "选择插件",
+      "instanceName": "实例名称",
+      "icon": "图标",
+      "outputMode": "输出方式",
+      "outputModeDescSupported": "选择如何将文本发送到此服务。直接输入使用 URL 参数或 API。",
+      "outputModeDescUnsupported": "此服务不支持直接输入。文本将复制到剪贴板，需要手动粘贴。",
+      "cancel": "取消",
+      "add": "添加",
+      "save": "保存",
+      "confirmRemove": "确定要移除此整合吗？",
+      "manualPasteRequired": "⚠️ 需要手动粘贴"
+    },
     "items": {
       "clawbot": {
         "name": "Clawbot",

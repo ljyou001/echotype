@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import HotkeyManager from "./hotkey-manager.js";
+import { createQuickActionWindow, closeQuickActionWindow } from "./quick-action-window.js";
 import os from "node:os";
 import robot from "@hurdlegroup/robotjs";
 import sharp from "sharp";
@@ -76,13 +77,36 @@ function resolvePythonPath() {
     }
     return "python";
 }
+function resolveBackendCommand() {
+    if (app.isPackaged) {
+        const exeName = process.platform === "win32" ? "echotype-backend.exe" : "echotype-backend";
+        const backendPath = path.join(process.resourcesPath, "backend", exeName);
+        return { command: backendPath, args: [] };
+    }
+    const python = resolvePythonPath();
+    return { command: python, args: ["-m", "backend"] };
+}
 function resolveBackendCwd() {
+    if (app.isPackaged) {
+        return process.resourcesPath;
+    }
     return process.env.ECHOTYPE_BACKEND_CWD ?? getWorkspaceRoot();
 }
+function resolveModelsDir() {
+    if (app.isPackaged) {
+        return path.join(process.resourcesPath, "models");
+    }
+    return null;
+}
 function resolveBackendArgs() {
-    const args = ["-m", "backend", "--host", BACKEND_HOST, "--port", String(BACKEND_PORT)];
+    const { args: baseArgs } = resolveBackendCommand();
+    const args = [...baseArgs, "--host", BACKEND_HOST, "--port", String(BACKEND_PORT)];
     if (DEFAULT_BACKEND) {
         args.push("--backend", DEFAULT_BACKEND);
+    }
+    const modelsDir = resolveModelsDir();
+    if (modelsDir) {
+        args.push("--models-dir", modelsDir);
     }
     if (process.env.ECHOTYPE_BACKEND_ARGS) {
         args.push(...process.env.ECHOTYPE_BACKEND_ARGS.split(" "));
@@ -148,14 +172,14 @@ function startBackend() {
         console.log("Backend already running");
         return;
     }
-    const python = resolvePythonPath();
+    const { command } = resolveBackendCommand();
     const cwd = resolveBackendCwd();
     const args = resolveBackendArgs();
     console.log("Starting backend:");
-    console.log("  Python:", python);
+    console.log("  Command:", command);
     console.log("  CWD:", cwd);
     console.log("  Args:", args);
-    backendProcess = spawn(python, args, {
+    backendProcess = spawn(command, args, {
         cwd,
         env: {
             ...process.env,
@@ -238,6 +262,14 @@ function createWindow() {
     mainWindow.on("closed", () => {
         mainWindow = null;
     });
+    // Set mainWindow reference in hotkeyManager for quick action support
+    if (hotkeyManager) {
+        console.log('[Main] Setting mainWindow in hotkeyManager (from createWindow)');
+        hotkeyManager.setMainWindow(mainWindow);
+    }
+    else {
+        console.log('[Main] hotkeyManager not yet initialized (will be set in registerHotkeys)');
+    }
 }
 function toggleWindow() {
     if (!mainWindow) {
@@ -281,6 +313,14 @@ function registerHotkeys() {
     // Use Electron userData path, config in AppData/Roaming/<app>/settings.json after packaging
     const settingsPath = path.join(app.getPath("userData"), "settings.json");
     hotkeyManager = new HotkeyManager(settingsPath);
+    // Set mainWindow reference for quick action support
+    if (mainWindow) {
+        console.log('[Main] Setting mainWindow in hotkeyManager');
+        hotkeyManager.setMainWindow(mainWindow);
+    }
+    else {
+        console.warn('[Main] mainWindow is null when registering hotkeys!');
+    }
     hotkeyManager.registerAll((action, keyDown) => {
         console.log("Hotkey triggered:", action, "keyDown:", keyDown);
         if (action === "toggle_recording") {
@@ -410,6 +450,60 @@ ipcMain.handle("read-catalog", async () => {
         console.error("[Catalog] Failed to read catalog:", error);
         return null;
     }
+});
+// Integration system IPC handlers
+ipcMain.handle("integrations-get-config", async () => {
+    try {
+        const configPath = path.join(os.homedir(), ".echotype", "integrations.json");
+        if (fs.existsSync(configPath)) {
+            const data = fs.readFileSync(configPath, "utf-8");
+            const config = JSON.parse(data);
+            console.log(`[Integrations] Loaded config with ${config.instances?.length ?? 0} instances`);
+            return config;
+        }
+        else {
+            console.log("[Integrations] No config file found, returning empty config");
+            return { instances: [], defaultIntegrationId: null };
+        }
+    }
+    catch (error) {
+        console.error("[Integrations] Failed to read config:", error);
+        return { instances: [], defaultIntegrationId: null };
+    }
+});
+ipcMain.handle("integrations-save-config", async (_event, instances, defaultIntegrationId) => {
+    try {
+        const configDir = path.join(os.homedir(), ".echotype");
+        const configPath = path.join(configDir, "integrations.json");
+        // Ensure directory exists
+        if (!fs.existsSync(configDir)) {
+            fs.mkdirSync(configDir, { recursive: true });
+        }
+        const config = {
+            instances,
+            defaultIntegrationId
+        };
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
+        console.log(`[Integrations] Saved config with ${instances.length} instances`);
+    }
+    catch (error) {
+        console.error("[Integrations] Failed to save config:", error);
+    }
+});
+// Quick Action Window IPC handler
+ipcMain.on("create-quick-action-window", (_event, data) => {
+    try {
+        console.log("[Main] Received create-quick-action-window event");
+        console.log("[Main] Text:", data.text);
+        console.log("[Main] Instances count:", data.instances.length);
+        createQuickActionWindow(data.text, data.instances);
+    }
+    catch (error) {
+        console.error("[Main] Failed to create quick action window:", error);
+    }
+});
+ipcMain.handle("close-quick-action-window", () => {
+    closeQuickActionWindow();
 });
 app.whenReady().then(async () => {
     initFrontendLog();

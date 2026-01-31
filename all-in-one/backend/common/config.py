@@ -57,8 +57,6 @@ class BackendConfig:
 
     qwen_backend: str = "transformers"
     qwen_model_path: Optional[str] = None
-    qwen_forced_aligner_path: Optional[str] = None
-    qwen_use_forced_aligner: bool = False
     qwen_max_new_tokens: int = 256
     qwen_max_inference_batch_size: int = 8
     qwen_gpu_memory_utilization: float = 0.7
@@ -77,8 +75,6 @@ class BackendConfig:
             payload["models_dir"] = Path(models_dir)
         if "allow_gpu" in payload:
             payload["allow_gpu"] = _parse_bool(payload["allow_gpu"])
-        if "qwen_use_forced_aligner" in payload:
-            payload["qwen_use_forced_aligner"] = _parse_bool(payload["qwen_use_forced_aligner"])
         return cls(**payload)
 
     def with_overrides(self, overrides: Dict[str, Any]) -> "BackendConfig":

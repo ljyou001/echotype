@@ -16,8 +16,7 @@ Write-Host ""
 $models = @(
     "paraformer-offline-zh",
     "punc_ct-transformer_cn-en",
-    "Qwen3-ASR-0.6B",
-    "Qwen3-ForcedAligner-0.6B"
+    "Qwen3-ASR-0.6B"
 )
 
 $userModelsDir = "$env:USERPROFILE\.echotype\models"

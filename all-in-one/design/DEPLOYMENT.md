@@ -27,7 +27,7 @@ Each model has a `config.ini` file with the following structure:
 [model]
 id = model-name
 family = backend-family
-kind = asr|punctuation|forced_aligner
+kind = asr|punctuation
 description = User-friendly description
 
 [capabilities]
@@ -46,7 +46,6 @@ default = auto
 [settings]
 # Model-specific settings
 backend = transformers
-use_forced_aligner = false
 ```
 
 ## Development Setup

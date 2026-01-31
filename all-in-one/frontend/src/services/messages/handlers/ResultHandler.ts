@@ -15,6 +15,12 @@ export function handleResult(payload: ResultMessage): void {
         
         store.setFinalText(text);
         store.setPartialText("");
+        
+        // Save to lastTranscribedText for Quick Action
+        if (text) {
+            store.setLastTranscribedText(text);
+            console.log("[ResultHandler] Saved to lastTranscribedText for Quick Action:", text);
+        }
 
         // Add to history
         store.addHistoryEntry({

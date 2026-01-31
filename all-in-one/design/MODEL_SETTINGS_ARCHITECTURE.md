@@ -20,7 +20,6 @@
 - ✅ Device selection (CPU/GPU)
 - ✅ Language selection (Chinese, English, Japanese, Korean)
 - ✅ Backend selection (transformers/vllm)
-- ✅ Forced aligner (optional)
 
 ## Proposed Architecture
 
@@ -93,7 +92,6 @@ default = auto
 
 [settings]
 backend = transformers
-use_forced_aligner = false
 ```
 
 ### 3. Backend Loading Process
@@ -309,7 +307,6 @@ ipcMain.handle("restart-backend", async () => {
 - `models/paraformer-offline-zh/config.ini` - CPU only, no language selection
 - `models/Qwen3-ASR-0.6B/config.ini` - CPU/GPU, 30 languages, transformers only
 - `models/punc_ct-transformer_cn-en/config.ini` - Auxiliary model
-- `models/Qwen3-ForcedAligner-0.6B/config.ini` - Auxiliary model
 
 **IMPORTANT:** Config files must be copied to `~/.echotype/models/` directory:
 ```powershell
@@ -317,7 +314,6 @@ ipcMain.handle("restart-backend", async () => {
 copy models\paraformer-offline-zh\config.ini $env:USERPROFILE\.echotype\models\paraformer-offline-zh\config.ini
 copy models\punc_ct-transformer_cn-en\config.ini $env:USERPROFILE\.echotype\models\punc_ct-transformer_cn-en\config.ini
 copy models\Qwen3-ASR-0.6B\config.ini $env:USERPROFILE\.echotype\models\Qwen3-ASR-0.6B\config.ini
-copy models\Qwen3-ForcedAligner-0.6B\config.ini $env:USERPROFILE\.echotype\models\Qwen3-ForcedAligner-0.6B\config.ini
 ```
 
 **2. Updated Backend**
@@ -475,7 +471,7 @@ This is already implemented in `frontend/electron/main.ts` via IPC.
 **自动化脚本：**
 ```powershell
 # sync_configs.ps1 - 同步config文件到用户目录
-$models = @("paraformer-offline-zh", "punc_ct-transformer_cn-en", "Qwen3-ASR-0.6B", "Qwen3-ForcedAligner-0.6B")
+$models = @("paraformer-offline-zh", "punc_ct-transformer_cn-en", "Qwen3-ASR-0.6B")
 foreach ($model in $models) {
     $src = "models\$model\config.ini"
     $dst = "$env:USERPROFILE\.echotype\models\$model\config.ini"

@@ -1,9 +1,4 @@
-# Quick verification - Run from project root
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$projectRoot = Split-Path -Parent $scriptDir
-
-Push-Location $projectRoot
-
+# Quick verification
 $files = @{
     "recorder.ts" = "frontend\src\audio\recorder.ts"
     "RecordingManager.ts" = "frontend\src\services\managers\RecordingManager.ts"
@@ -51,7 +46,7 @@ if ($content -like "*isProcessingHotkeyRef*") {
 
 # Check adapter.py
 $content = Get-Content $files["adapter.py"] -Raw
-if ($content -match "samples\.size\s*==\s*0") {
+if ($content -like "*samples.size == 0*") {
     Write-Host "OK adapter.py: checks empty samples" -ForegroundColor Green
 } else {
     Write-Host "FAIL adapter.py: missing empty check" -ForegroundColor Red
@@ -64,8 +59,5 @@ if ($allGood) {
     Write-Host "Ready to test. Run: cd frontend; npm run dev" -ForegroundColor Yellow
 } else {
     Write-Host "FAIL: Some fixes are missing!" -ForegroundColor Red
-    Pop-Location
     exit 1
 }
-
-Pop-Location

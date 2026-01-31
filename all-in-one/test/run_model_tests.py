@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import argparse
 import json
@@ -86,7 +86,6 @@ def run_qwen(model_dir: Path, files: List[Path], device: str) -> Dict[str, objec
         model_id="Qwen3-ASR-0.6B",
         device_preference=device,
         qwen_backend="transformers",
-        qwen_use_forced_aligner=False,
     )
     adapter = Qwen3Adapter(config)
     adapter.load()

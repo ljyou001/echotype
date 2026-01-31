@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import HotkeyManager from "./hotkey-manager.js";
+import { createQuickActionWindow, closeQuickActionWindow } from "./quick-action-window.js";
 import os from "node:os";
 import robot from "@hurdlegroup/robotjs";
 import sharp from "sharp";
@@ -37,26 +38,26 @@ function initFrontendLog(): string | null {
     console.log("=" + "=".repeat(79));
     return null;
   }
-  
+
   const logDir = path.join(os.homedir(), ".echotype", "logs");
   fs.mkdirSync(logDir, { recursive: true });
-  
+
   const timestamp = new Date().toISOString().replace(/[:\.]/g, "-").slice(0, -5);
   const logFile = path.join(logDir, `frontend_${timestamp}.log`);
-  
+
   frontendLogFile = logFile;
   frontendLogStream = fs.createWriteStream(logFile, { flags: 'a', encoding: 'utf-8' });
-  
+
   console.log("=" + "=".repeat(79));
   console.log("EchoType Frontend Starting");
   console.log("Frontend log file:", logFile);
   console.log("=" + "=".repeat(79));
-  
+
   writeFrontendLog("=" + "=".repeat(79));
   writeFrontendLog("EchoType Frontend Starting");
   writeFrontendLog(`Log file: ${logFile}`);
   writeFrontendLog("=" + "=".repeat(79));
-  
+
   return logFile;
 }
 
@@ -93,15 +94,44 @@ function resolvePythonPath(): string {
   return "python";
 }
 
+function resolveBackendCommand(): { command: string; args: string[] } {
+  if (app.isPackaged) {
+    const exeName = process.platform === "win32" ? "echotype-backend.exe" : "echotype-backend";
+    const backendPath = path.join(process.resourcesPath, "backend", exeName);
+    return { command: backendPath, args: [] };
+  }
+
+  const python = resolvePythonPath();
+  return { command: python, args: ["-m", "backend"] };
+}
+
 function resolveBackendCwd(): string {
+  if (app.isPackaged) {
+    return process.resourcesPath;
+  }
   return process.env.ECHOTYPE_BACKEND_CWD ?? getWorkspaceRoot();
 }
 
+function resolveModelsDir(): string | null {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, "models");
+  }
+  return null;
+}
+
 function resolveBackendArgs(): string[] {
-  const args: string[] = ["-m", "backend", "--host", BACKEND_HOST, "--port", String(BACKEND_PORT)];
+  const { args: baseArgs } = resolveBackendCommand();
+  const args: string[] = [...baseArgs, "--host", BACKEND_HOST, "--port", String(BACKEND_PORT)];
+
   if (DEFAULT_BACKEND) {
     args.push("--backend", DEFAULT_BACKEND);
   }
+
+  const modelsDir = resolveModelsDir();
+  if (modelsDir) {
+    args.push("--models-dir", modelsDir);
+  }
+
   if (process.env.ECHOTYPE_BACKEND_ARGS) {
     args.push(...process.env.ECHOTYPE_BACKEND_ARGS.split(" "));
   }
@@ -171,16 +201,16 @@ function startBackend(): void {
     console.log("Backend already running");
     return;
   }
-  const python = resolvePythonPath();
+  const { command } = resolveBackendCommand();
   const cwd = resolveBackendCwd();
   const args = resolveBackendArgs();
 
   console.log("Starting backend:");
-  console.log("  Python:", python);
+  console.log("  Command:", command);
   console.log("  CWD:", cwd);
   console.log("  Args:", args);
 
-  backendProcess = spawn(python, args, {
+  backendProcess = spawn(command, args, {
     cwd,
     env: {
       ...process.env,
@@ -275,6 +305,14 @@ function createWindow(): void {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+
+  // Set mainWindow reference in hotkeyManager for quick action support
+  if (hotkeyManager) {
+    console.log('[Main] Setting mainWindow in hotkeyManager (from createWindow)');
+    hotkeyManager.setMainWindow(mainWindow);
+  } else {
+    console.log('[Main] hotkeyManager not yet initialized (will be set in registerHotkeys)');
+  }
 }
 
 function toggleWindow(): void {
@@ -320,6 +358,15 @@ function registerHotkeys(): void {
   // Use Electron userData path, config in AppData/Roaming/<app>/settings.json after packaging
   const settingsPath = path.join(app.getPath("userData"), "settings.json");
   hotkeyManager = new HotkeyManager(settingsPath);
+
+  // Set mainWindow reference for quick action support
+  if (mainWindow) {
+    console.log('[Main] Setting mainWindow in hotkeyManager');
+    hotkeyManager.setMainWindow(mainWindow);
+  } else {
+    console.warn('[Main] mainWindow is null when registering hotkeys!');
+  }
+
   hotkeyManager.registerAll((action: string, keyDown: boolean) => {
     console.log("Hotkey triggered:", action, "keyDown:", keyDown);
     if (action === "toggle_recording") {
@@ -410,28 +457,28 @@ ipcMain.handle("frontend-log", (_event, level: string, message: string) => {
 ipcMain.handle("type-text", async (_event, text: string) => {
   try {
     console.log(`[Typing] Typing text: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
-    
+
     // Brief delay to ensure target window is ready
     await new Promise(resolve => setTimeout(resolve, 50));
-    
+
     // Use clipboard method for Chinese support
     // 1. Save current clipboard content
     const previousClipboard = clipboard.readText();
-    
+
     // 2. Write text to clipboard
     clipboard.writeText(text);
-    
+
     // 3. Simulate Ctrl+V to paste
     robot.keyTap('v', ['control']);
-    
+
     // 4. Wait a bit for paste to complete
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     // 5. Restore previous clipboard content
     if (previousClipboard) {
       clipboard.writeText(previousClipboard);
     }
-    
+
     console.log(`[Typing] Successfully typed ${text.length} characters`);
   } catch (error) {
     console.error("[Typing] Failed to type text:", error);
@@ -449,9 +496,9 @@ ipcMain.handle("read-catalog", async () => {
     // Read catalog from project directory (static metadata)
     const workspaceRoot = getWorkspaceRoot();
     const catalogPath = path.join(workspaceRoot, "backend", "models_catalog.json");
-    
+
     console.log(`[Catalog] Reading catalog from: ${catalogPath}`);
-    
+
     if (fs.existsSync(catalogPath)) {
       const data = fs.readFileSync(catalogPath, "utf-8");
       const catalog = JSON.parse(data);
@@ -465,6 +512,65 @@ ipcMain.handle("read-catalog", async () => {
     console.error("[Catalog] Failed to read catalog:", error);
     return null;
   }
+});
+
+// Integration system IPC handlers
+ipcMain.handle("integrations-get-config", async () => {
+  try {
+    const configPath = path.join(os.homedir(), ".echotype", "integrations.json");
+
+    if (fs.existsSync(configPath)) {
+      const data = fs.readFileSync(configPath, "utf-8");
+      const config = JSON.parse(data);
+      console.log(`[Integrations] Loaded config with ${config.instances?.length ?? 0} instances`);
+      return config;
+    } else {
+      console.log("[Integrations] No config file found, returning empty config");
+      return { instances: [], defaultIntegrationId: null };
+    }
+  } catch (error) {
+    console.error("[Integrations] Failed to read config:", error);
+    return { instances: [], defaultIntegrationId: null };
+  }
+});
+
+ipcMain.handle("integrations-save-config", async (_event, instances: any[], defaultIntegrationId: string | null) => {
+  try {
+    const configDir = path.join(os.homedir(), ".echotype");
+    const configPath = path.join(configDir, "integrations.json");
+
+    // Ensure directory exists
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+
+    const config = {
+      instances,
+      defaultIntegrationId
+    };
+
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
+    console.log(`[Integrations] Saved config with ${instances.length} instances`);
+  } catch (error) {
+    console.error("[Integrations] Failed to save config:", error);
+  }
+});
+
+// Quick Action Window IPC handler
+ipcMain.on("create-quick-action-window", (_event, data: { text: string; instances: any[] }) => {
+  try {
+    console.log("[Main] Received create-quick-action-window event");
+    console.log("[Main] Text:", data.text);
+    console.log("[Main] Instances count:", data.instances.length);
+    
+    createQuickActionWindow(data.text, data.instances);
+  } catch (error) {
+    console.error("[Main] Failed to create quick action window:", error);
+  }
+});
+
+ipcMain.handle("close-quick-action-window", () => {
+  closeQuickActionWindow();
 });
 
 app.whenReady().then(async () => {

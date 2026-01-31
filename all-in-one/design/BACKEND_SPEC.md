@@ -1,4 +1,4 @@
-﻿# All-in-One Backend Specification
+# All-in-One Backend Specification
 
 ## Goal
 Build a standalone local recognition backend that can run independently from the existing server/client codebase. The backend must:
@@ -119,8 +119,6 @@ Key fields:
 - `runtime_mode`: `in_process` | `external` (controls adapter isolation).
 - `qwen_backend`: `transformers` (default) or `vllm`.
 - `qwen_model_path`: explicit path for Qwen3 ASR model (optional).
-- `qwen_forced_aligner_path`: explicit path for Qwen3 forced aligner (optional).
-- `qwen_use_forced_aligner`: enable timestamps for Qwen3 (offline only).
 - `qwen_streaming_chunk_sec`: streaming throttle window in seconds.
 - `qwen_streaming_min_sec`: minimum chunk size for dynamic streaming.
 - `qwen_streaming_max_sec`: maximum chunk size for dynamic streaming.
@@ -150,7 +148,6 @@ See `all-in-one/design/README.md` for the full protocol spec. The backend must:
 - For `qwen3` backend:
   - Use `qwen-asr` runtime (`transformers` by default, `vllm` optional).
   - No `text_format/chinese_itn` post-processing by default.
-  - Timestamps require the forced aligner model (offline only).
   - Adapter exposes the same `RecognitionTask` → `RecognitionResult` contract.
 
 ## Backend Architecture (A Plan)

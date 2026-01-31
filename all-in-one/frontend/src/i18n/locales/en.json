@@ -85,7 +85,11 @@
       "pushToTalkPrefix": "Press ",
       "pushToTalkSuffix": " to voice input",
       "togglePrefix": "Press ",
-      "toggleSuffix": " to start input; press again to stop"
+      "toggleSuffix": " to start input; press again to stop",
+      "integrationShortPressPrefix": "Tap ",
+      "integrationShortPressSuffix": " to open integration tool",
+      "integrationLongPressPrefix": "Long press ",
+      "integrationLongPressSuffix": " to open integration tool"
     }
   },
   "history": {
@@ -144,7 +148,51 @@
   "integrations": {
     "title": "Integrations",
     "description": "Plugin-based workflows for search and automation.",
+    "myIntegrations": "My Integrations",
+    "addIntegration": "Add Integration",
+    "emptyState": "No integrations added yet. Click \"Add Integration\" to get started.",
+    "availablePlugins": "Available Plugins",
     "comingSoon": "Coming soon",
+    "quickAction": {
+      "title": "Quick Action",
+      "lastText": "Last transcribed text",
+      "noText": "No text available",
+      "hint": "Press Enter for default"
+    },
+    "outputMode": {
+      "clipboard": "Copy to Clipboard",
+      "direct": "Direct Input",
+      "both": "Both (Clipboard + Direct)"
+    },
+    "actions": {
+      "enable": "Enable",
+      "disable": "Disable",
+      "setDefault": "Set Default",
+      "configure": "Configure",
+      "remove": "Remove",
+      "enabled": "Enabled"
+    },
+    "categories": {
+      "search": "Search Engines",
+      "ai": "AI Assistants",
+      "translation": "Translation Services",
+      "custom": "Custom"
+    },
+    "dialog": {
+      "addTitle": "Add Integration",
+      "configureTitle": "Configure",
+      "selectPlugin": "Select Plugin",
+      "instanceName": "Instance Name",
+      "icon": "Icon",
+      "outputMode": "Output Mode",
+      "outputModeDescSupported": "Choose how to send text to this service. Direct input uses URL parameters or API.",
+      "outputModeDescUnsupported": "This service doesn't support direct input. Text will be copied to clipboard for manual pasting.",
+      "cancel": "Cancel",
+      "add": "Add",
+      "save": "Save",
+      "confirmRemove": "Are you sure you want to remove this integration?",
+      "manualPasteRequired": "⚠️ Manual paste required"
+    },
     "items": {
       "clawbot": {
         "name": "Clawbot",

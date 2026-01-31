@@ -116,8 +116,6 @@ def main() -> None:
                     overrides["device_preference"] = value.strip()
                 elif key == "qwen_backend":
                     overrides["qwen_backend"] = value.strip()
-                elif key == "qwen_use_forced_aligner":
-                    overrides["qwen_use_forced_aligner"] = value.strip().lower() in ("true", "yes", "1", "on")
             if overrides:
                 config = config.with_overrides(overrides)
 

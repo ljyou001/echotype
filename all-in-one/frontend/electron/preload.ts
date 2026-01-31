@@ -1,6 +1,19 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 const api = {
+  // Expose ipcRenderer for direct event handling
+  electron: {
+    ipcRenderer: {
+      send: (channel: string, ...args: any[]) => ipcRenderer.send(channel, ...args),
+      on: (channel: string, listener: (...args: any[]) => void) => {
+        ipcRenderer.on(channel, listener);
+        return () => ipcRenderer.removeListener(channel, listener);
+      },
+      removeListener: (channel: string, listener: (...args: any[]) => void) => {
+        ipcRenderer.removeListener(channel, listener);
+      }
+    }
+  },
   onHotkey: (handler: (payload: { action: string }) => void) => {
     const listener = (_event: any, payload: any) => handler(payload);
     ipcRenderer.on("hotkey", listener);
@@ -51,7 +64,23 @@ const api = {
   },
   setTrayStatus: (status: "loading" | "error" | "ready" | "recording") => {
     ipcRenderer.send("tray-status", status);
+  },
+  // Integration system
+  getIntegrationsConfig: (): Promise<{ instances: any[]; defaultIntegrationId: string | null }> => {
+    return ipcRenderer.invoke("integrations-get-config");
+  },
+  saveIntegrationsConfig: (instances: any[], defaultIntegrationId: string | null): Promise<void> => {
+    return ipcRenderer.invoke("integrations-save-config", instances, defaultIntegrationId);
+  },
+  onShowQuickAction: (handler: () => void) => {
+    const listener = () => handler();
+    ipcRenderer.on("show-quick-action", listener);
+    return () => ipcRenderer.removeListener("show-quick-action", listener);
+  },
+  closeQuickActionWindow: () => {
+    ipcRenderer.invoke("close-quick-action-window");
   }
 };
 
 contextBridge.exposeInMainWorld("echotype", api);
+contextBridge.exposeInMainWorld("electron", api.electron);

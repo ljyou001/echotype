@@ -14,7 +14,7 @@ Display all models but distinguish between ASR and auxiliary models:
 
 ```typescript
 const isASR = entry.kind === "asr";
-const isAuxiliary = !isASR; // punctuation, forced_aligner, etc.
+const isAuxiliary = !isASR; // punctuation, etc.
 
 // ASR models are clickable and switchable
 // Auxiliary models are shown but not clickable
@@ -28,7 +28,6 @@ const isAuxiliary = !isASR; // punctuation, forced_aligner, etc.
 ### Model Types
 - `asr` - Automatic Speech Recognition models (clickable, switchable)
 - `punctuation` - Punctuation models (shown with "Auxiliary Model" badge)
-- `forced_aligner` - Timestamp alignment models (shown with "Auxiliary Model" badge)
 
 ### Visual Indicators
 

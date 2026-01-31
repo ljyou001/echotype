@@ -128,6 +128,23 @@ export function HomePage({ onNavigate, onRestartBackend }: HomePageProps) {
                 </>
               )}
             </p>
+            {!isCapturing && (
+              <p className="status-card-hint">
+                {recordingMode === "push-to-talk" ? (
+                  <>
+                    {t("home.voiceHint.integrationShortPressPrefix")}
+                    <kbd>{hotkeyDisplay}</kbd>
+                    {t("home.voiceHint.integrationShortPressSuffix")}
+                  </>
+                ) : (
+                  <>
+                    {t("home.voiceHint.integrationLongPressPrefix")}
+                    <kbd>{hotkeyDisplay}</kbd>
+                    {t("home.voiceHint.integrationLongPressSuffix")}
+                  </>
+                )}
+              </p>
+            )}
           </div>
         </div>
       )}

@@ -13,6 +13,9 @@
     "ico-to-png": "node scripts/ico-to-png.cjs"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^9.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@hurdlegroup/robotjs": "^0.12.3",
     "i18next": "^25.8.0",
     "react": "^18.3.1",
@@ -31,9 +34,44 @@
     "concurrently": "^9.1.0",
     "cross-env": "^7.0.3",
     "electron": "^31.6.0",
+    "electron-builder": "^24.13.3",
     "sharp-ico": "^0.1.5",
     "typescript": "^5.8.2",
     "vite": "^5.4.11",
     "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.echotype.app",
+    "productName": "EchoType",
+    "directories": {
+      "output": "dist-package"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../dist/echotype-backend.exe",
+        "to": "backend/echotype-backend.exe"
+      },
+      {
+        "from": "../models",
+        "to": "models"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.png"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "assets/icon.png"
+    }
   }
 }

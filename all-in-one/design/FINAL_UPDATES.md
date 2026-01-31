@@ -19,7 +19,7 @@
 - Not clickable
 - Show note: "Used automatically with ASR models"
 - No settings button
-- Examples: punc_ct-transformer_cn-en, Qwen3-ForcedAligner-0.6B
+- Examples: punc_ct-transformer_cn-en
 
 **Benefits:**
 - Users understand which models are switchable

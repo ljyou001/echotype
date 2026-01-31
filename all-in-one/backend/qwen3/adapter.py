@@ -36,7 +36,6 @@ class Qwen3Adapter:
         self._capabilities: Dict[str, object] = {}
         self._model = None
         self._backend_kind = "transformers"
-        self._use_forced_aligner = False
         self._states: Dict[str, QwenTaskState] = {}
 
     @property
@@ -56,8 +55,6 @@ class Qwen3Adapter:
 
         devices, default_device = self._resolve_devices()
         model_path = self._resolve_model_path()
-        forced_aligner_path = self._resolve_forced_aligner_path()
-        self._use_forced_aligner = bool(self._config.qwen_use_forced_aligner and forced_aligner_path)
 
         self._backend_kind = (self._config.qwen_backend or "transformers").lower()
         self._logger.info("Loading Qwen3 ASR model (%s)", self._backend_kind)
@@ -79,14 +76,12 @@ class Qwen3Adapter:
                 device_map=device_map,
                 max_inference_batch_size=self._config.qwen_max_inference_batch_size,
                 max_new_tokens=self._config.qwen_max_new_tokens,
-                forced_aligner=str(forced_aligner_path) if self._use_forced_aligner else None,
-                forced_aligner_kwargs={"max_inference_batch_size": 1} if self._use_forced_aligner else None,
             )
 
         self._progress_callback("speech_model", "done")
         self._progress_callback("loaded", "done")
 
-        supports_timestamps = bool(self._use_forced_aligner and self._backend_kind != "vllm")
+        supports_timestamps = False
         self._capabilities = {
             "backend": "qwen3",
             "model_id": Path(model_path).name if model_path else self._config.model_id or "Qwen3-ASR",
@@ -126,7 +121,7 @@ class Qwen3Adapter:
 
         audio = np.frombuffer(state.buffer, dtype=np.float32)
         language = self._normalize_language(task.lang)
-        return_time_stamps = bool(self._use_forced_aligner and task.is_final and self._backend_kind != "vllm")
+        return_time_stamps = False
 
         if not task.is_final:
             if not self._should_transcribe_streaming(state, len(audio), state.sample_rate):
@@ -291,14 +286,6 @@ class Qwen3Adapter:
         if candidate.exists():
             return str(candidate)
         return model_id
-
-    def _resolve_forced_aligner_path(self) -> Optional[str]:
-        if self._config.qwen_forced_aligner_path:
-            return self._config.qwen_forced_aligner_path
-        candidate = Path(self._config.models_dir) / "Qwen3-ForcedAligner-0.6B"
-        if candidate.exists():
-            return str(candidate)
-        return None
 
     def _normalize_language(self, lang: Optional[str]) -> Optional[str]:
         if not lang:
