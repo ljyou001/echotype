@@ -29,7 +29,7 @@ Create `config.ini` in each model directory:
 
 ```
 models/
-├── paraformer-offline-zh/
+├── paraformer-offline/
 │   ├── config.ini          # Model-specific settings
 │   ├── model.int8.onnx
 │   └── tokens.txt
@@ -44,10 +44,10 @@ models/
 
 ### 2. Config File Format
 
-**paraformer-offline-zh/config.ini:**
+**paraformer-offline/config.ini:**
 ```ini
 [model]
-id = paraformer-offline-zh
+id = paraformer-offline
 family = sherpa_onnx
 kind = asr
 description = Quick and high performance, requires low resources. Best for real-time dictation with good accuracy.
@@ -304,14 +304,14 @@ ipcMain.handle("restart-backend", async () => {
 ### ✅ Completed
 
 **1. Created Config Files**
-- `models/paraformer-offline-zh/config.ini` - CPU only, no language selection
+- `models/paraformer-offline/config.ini` - CPU only, no language selection
 - `models/Qwen3-ASR-0.6B/config.ini` - CPU/GPU, 30 languages, transformers only
 - `models/punc_ct-transformer_cn-en/config.ini` - Auxiliary model
 
 **IMPORTANT:** Config files must be copied to `~/.echotype/models/` directory:
 ```powershell
 # Copy all config files to user directory
-copy models\paraformer-offline-zh\config.ini $env:USERPROFILE\.echotype\models\paraformer-offline-zh\config.ini
+copy models\paraformer-offline\config.ini $env:USERPROFILE\.echotype\models\paraformer-offline\config.ini
 copy models\punc_ct-transformer_cn-en\config.ini $env:USERPROFILE\.echotype\models\punc_ct-transformer_cn-en\config.ini
 copy models\Qwen3-ASR-0.6B\config.ini $env:USERPROFILE\.echotype\models\Qwen3-ASR-0.6B\config.ini
 ```
@@ -471,7 +471,7 @@ This is already implemented in `frontend/electron/main.ts` via IPC.
 **自动化脚本：**
 ```powershell
 # sync_configs.ps1 - 同步config文件到用户目录
-$models = @("paraformer-offline-zh", "punc_ct-transformer_cn-en", "Qwen3-ASR-0.6B")
+$models = @("paraformer-offline", "punc_ct-transformer_cn-en", "Qwen3-ASR-0.6B")
 foreach ($model in $models) {
     $src = "models\$model\config.ini"
     $dst = "$env:USERPROFILE\.echotype\models\$model\config.ini"

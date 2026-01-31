@@ -58,7 +58,7 @@ npm run dev
 
 ## 支持的模型
 
-### Paraformer (paraformer-offline-zh)
+### Paraformer (paraformer-offline)
 - 快速高效，资源占用低
 - 支持中英文
 - 仅CPU

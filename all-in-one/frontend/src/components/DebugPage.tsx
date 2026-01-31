@@ -8,6 +8,7 @@ export function DebugPage() {
   const models = useAppStore((state) => state.models);
   const activeModelId = useAppStore((state) => state.activeModelId);
   const backendStatus = useAppStore((state) => state.backendStatus);
+  const lastLog = useAppStore((state) => state.lastLog);
   
   const [hotkeyDebug, setHotkeyDebug] = useState<string[]>([]);
   const [isRecordingHotkey, setIsRecordingHotkey] = useState(false);
@@ -85,6 +86,18 @@ export function DebugPage() {
       </header>
 
       <div className="debug-sections">
+        {/* Model Log Section */}
+        <section className="debug-section">
+          <h2>{t("debug.modelLog.title")}</h2>
+          <div className="debug-model-log">
+            {lastLog ? (
+              <pre className="debug-model-log-content">{lastLog}</pre>
+            ) : (
+              <p className="debug-hint">{t("debug.modelLog.empty")}</p>
+            )}
+          </div>
+        </section>
+
         {/* Models Debug Section */}
         <section className="debug-section">
           <h2>Models Catalog</h2>

@@ -169,6 +169,8 @@ type AppState = {
   appLanguage: "system" | "en" | "zh"; // App UI language: follow system / English / Chinese
   recordingMode: "push-to-talk" | "toggle"; // Push-to-talk mode vs toggle mode
   _userHasSetRecordingMode: boolean; // Prevent initializeSettings from overwriting user's recent choice
+  outputDirectInput: boolean; // Output via direct input (typing)
+  outputClipboard: boolean; // Output via clipboard
 
   // Quick Action Integrations
   lastTranscribedText: string;                    // Last transcribed text
@@ -209,6 +211,8 @@ type AppState = {
   setAppLanguage: (lang: "system" | "en" | "zh") => void;
   setRecordingMode: (mode: "push-to-talk" | "toggle") => void;
   initializeSettings: () => Promise<void>;
+  setOutputDirectInput: (enabled: boolean) => void;
+  setOutputClipboard: (enabled: boolean) => void;
   
   // Quick Action Integration Actions
   setLastTranscribedText: (text: string) => void;
@@ -251,6 +255,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   appLanguage: "system",
   recordingMode: "toggle", // Default to toggle mode (push-to-talk requires native keyUp support)
   _userHasSetRecordingMode: false,
+  outputDirectInput: true, // Default: direct input enabled
+  outputClipboard: false, // Default: clipboard disabled
   
   // Quick Action Integrations
   lastTranscribedText: '',
@@ -333,10 +339,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ recordingMode: mode, _userHasSetRecordingMode: true });
     window.echotype?.updateSetting?.("recordingMode", mode);
   },
+  setOutputDirectInput: (enabled) => {
+    set({ outputDirectInput: enabled });
+    window.echotype?.updateSetting?.("outputDirectInput", enabled);
+  },
+  setOutputClipboard: (enabled) => {
+    set({ outputClipboard: enabled });
+    window.echotype?.updateSetting?.("outputClipboard", enabled);
+  },
   initializeSettings: async () => {
     const recordingMode = await window.echotype?.getSetting?.("recordingMode");
     const appLanguage = await window.echotype?.getSetting?.("appLanguage");
     const lastActiveModelId = await window.echotype?.getSetting?.("lastActiveModelId");
+    const outputDirectInput = await window.echotype?.getSetting?.("outputDirectInput");
+    const outputClipboard = await window.echotype?.getSetting?.("outputClipboard");
     const state = useAppStore.getState();
 
     // Load per-model settings for all models
@@ -398,6 +414,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     if (appLanguage !== undefined) set({ appLanguage });
     else set({ appLanguage: "system" });
+    
+    // Load output settings with proper defaults
+    if (outputDirectInput !== undefined) {
+      set({ outputDirectInput });
+    } else {
+      // First time: set default to true and save it
+      set({ outputDirectInput: true });
+      window.echotype?.updateSetting?.("outputDirectInput", true);
+    }
+    
+    if (outputClipboard !== undefined) {
+      set({ outputClipboard });
+    } else {
+      // First time: set default to false and save it
+      set({ outputClipboard: false });
+      window.echotype?.updateSetting?.("outputClipboard", false);
+    }
   },
   
   // Quick Action Integration Actions

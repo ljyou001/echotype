@@ -52,9 +52,9 @@ MODEL_TEMPLATES = {
             "default": "auto",
         },
     },
-    "paraformer-offline-zh": {
+    "paraformer-offline": {
         "model": {
-            "id": "paraformer-offline-zh",
+            "id": "paraformer-offline",
             "family": "sherpa_onnx",
             "kind": "asr",
             "version": "1.0.0",

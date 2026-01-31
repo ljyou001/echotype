@@ -44,7 +44,7 @@ npm run start
 
 ### 1. 选择模型
 - 打开应用后，点击左侧"Models"
-- 选择一个模型（如paraformer-offline-zh）
+- 选择一个模型（如 paraformer-offline）
 - 等待模型加载完成
 
 ### 2. 配置热键

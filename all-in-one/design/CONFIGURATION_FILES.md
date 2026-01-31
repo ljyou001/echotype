@@ -36,10 +36,10 @@ EchoType 的所有配置文件统一存储在用户主目录下的 `.echotype` �
   "app": {
     "recordingMode": "toggle",
     "appLanguage": "en",
-    "lastActiveModelId": "paraformer-offline-zh",
-    "modelStreaming_paraformer-offline-zh": true,
-    "modelDevice_paraformer-offline-zh": "cpu",
-    "modelLanguage_paraformer-offline-zh": "zh",
+    "lastActiveModelId": "paraformer-offline",
+    "modelStreaming_paraformer-offline": true,
+    "modelDevice_paraformer-offline": "cpu",
+    "modelLanguage_paraformer-offline": "zh",
     "modelBackend_Qwen3-ASR-0.6B": "transformers"
   }
 }
@@ -139,7 +139,7 @@ EchoType 的所有配置文件统一存储在用户主目录下的 `.echotype` �
 **日志格式**:
 ```
 2026-01-31T12:34:56.789Z | [INFO] Application started
-2026-01-31T12:34:57.123Z | [DEBUG] Loading model: paraformer-offline-zh
+2026-01-31T12:34:57.123Z | [DEBUG] Loading model: paraformer-offline
 2026-01-31T12:34:58.456Z | [ERROR] Failed to load model: CUDA not available
 ```
 

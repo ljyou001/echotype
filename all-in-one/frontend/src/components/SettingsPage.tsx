@@ -76,12 +76,15 @@ export function SettingsPage() {
   const inputDevices = useAppStore((state) => state.inputDevices);
   const selectedInputId = useAppStore((state) => state.selectedInputId);
   const recordingMode = useAppStore((state) => state.recordingMode);
-  const lastLog = useAppStore((state) => state.lastLog);
+  const outputDirectInput = useAppStore((state) => state.outputDirectInput);
+  const outputClipboard = useAppStore((state) => state.outputClipboard);
 
   const setSelectedInputId = useAppStore((state) => state.setSelectedInputId);
   const setRecordingMode = useAppStore((state) => state.setRecordingMode);
   const appLanguage = useAppStore((state) => state.appLanguage);
   const setAppLanguage = useAppStore((state) => state.setAppLanguage);
+  const setOutputDirectInput = useAppStore((state) => state.setOutputDirectInput);
+  const setOutputClipboard = useAppStore((state) => state.setOutputClipboard);
 
   const [recordingHotkey, setRecordingHotkey] = useState(() => {
     const isMac = typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -233,16 +236,29 @@ export function SettingsPage() {
           <h3>{t("settings.output.title")}</h3>
           <div className="settings-item">
             <label>
-              <input type="radio" name="output" defaultChecked />
+              <input 
+                type="checkbox" 
+                checked={outputDirectInput}
+                onChange={(e) => setOutputDirectInput(e.target.checked)}
+              />
               {t("settings.output.directInput")}
             </label>
           </div>
           <div className="settings-item">
             <label>
-              <input type="radio" name="output" />
+              <input 
+                type="checkbox" 
+                checked={outputClipboard}
+                onChange={(e) => setOutputClipboard(e.target.checked)}
+              />
               {t("settings.output.clipboard")}
             </label>
           </div>
+          {!outputDirectInput && !outputClipboard && (
+            <p style={{ fontSize: "13px", color: "#e53935", marginTop: "8px" }}>
+              {t("settings.output.atLeastOne")}
+            </p>
+          )}
         </div>
 
         <div className="settings-card">
@@ -261,13 +277,6 @@ export function SettingsPage() {
           </div>
         </div>
       </div>
-
-      {lastLog && (
-        <div className="settings-log">
-          <h3>{t("settings.log.title")}</h3>
-          <p>{lastLog}</p>
-        </div>
-      )}
     </div>
   );
 }

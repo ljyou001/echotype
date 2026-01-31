@@ -50,7 +50,7 @@ Models are defined in `backend/models_catalog.json`:
 ```json
 [
   {
-    "id": "paraformer-offline-zh",
+    "id": "paraformer-offline",
     "family": "sherpa_onnx",
     "kind": "asr",
     "source": "builtin",

@@ -29,12 +29,28 @@ export function handleResult(payload: ResultMessage): void {
             text: text
         });
 
-        // Type output to active window
-        if (text && window.echotype?.typeText) {
-            console.log("[ResultHandler] Typing text to active window:", text);
-            window.echotype.typeText(text).catch((error) => {
-                console.error("[ResultHandler] Failed to type text:", error);
-            });
+        // Output based on settings
+        if (text) {
+            const outputDirectInput = store.outputDirectInput;
+            const outputClipboard = store.outputClipboard;
+            
+            console.log("[ResultHandler] Output settings - Direct:", outputDirectInput, "Clipboard:", outputClipboard);
+            
+            // Clipboard (do this first, before typing which might change focus)
+            if (outputClipboard && window.echotype?.copyToClipboard) {
+                console.log("[ResultHandler] Copying text to clipboard:", text.substring(0, 50));
+                window.echotype.copyToClipboard(text).catch((error) => {
+                    console.error("[ResultHandler] Failed to copy to clipboard:", error);
+                });
+            }
+            
+            // Direct input (typing)
+            if (outputDirectInput && window.echotype?.typeText) {
+                console.log("[ResultHandler] Typing text to active window:", text.substring(0, 50));
+                window.echotype.typeText(text).catch((error) => {
+                    console.error("[ResultHandler] Failed to type text:", error);
+                });
+            }
         }
     } else {
         store.setPartialText(payload.text ?? "");

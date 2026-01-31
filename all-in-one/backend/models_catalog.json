@@ -4,16 +4,16 @@
   "last_updated": "2026-01-31",
   "models": [
     {
-      "id": "paraformer-offline-zh",
-      "name": "Paraformer Offline (Chinese)",
+      "id": "paraformer-offline",
+      "name": "Paraformer Offline (Chinese/English)",
       "family": "sherpa_onnx",
       "kind": "asr",
       "version": "1.0.0",
       "source": "builtin",
-      "description": "Quick and high performance, requires low resources. Best for Chinese language. Supports offline recognition.",
+      "description": "Quick and high performance, requires low resources. Supports Chinese and English. Supports offline recognition.",
       "capabilities": {
         "supports_device_selection": true,
-        "supports_language_selection": false,
+        "supports_language_selection": true,
         "supports_backend_selection": false,
         "supports_streaming": false,
         "supports_punctuation": true,
@@ -34,13 +34,15 @@
         "cpu"
       ],
       "languages": [
-        "Chinese"
+        "Chinese",
+        "English"
       ],
       "sample_rates": [
         16000
       ],
       "tags": [
         "chinese",
+        "english",
         "fast",
         "lightweight",
         "offline"

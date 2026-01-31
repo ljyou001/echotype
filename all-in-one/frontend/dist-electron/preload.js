@@ -78,6 +78,9 @@ const api = {
     },
     closeQuickActionWindow: () => {
         ipcRenderer.invoke("close-quick-action-window");
+    },
+    copyToClipboard: (text) => {
+        return ipcRenderer.invoke("copy-to-clipboard", text);
     }
 };
 contextBridge.exposeInMainWorld("echotype", api);

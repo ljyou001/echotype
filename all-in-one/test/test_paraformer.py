@@ -87,7 +87,7 @@ def main():
     # 3) 加载模型（Paraformer + 标点）
     config = BackendConfig(
         backend="sherpa_onnx",
-        model_id="paraformer-offline-zh",
+        model_id="paraformer-offline",
         models_dir=Path.home() / ".echotype" / "models",
         enable_punctuation=True,
     )

@@ -273,11 +273,16 @@ function AddIntegrationDialog({ onClose }: { onClose: () => void }) {
               {plugins.map(plugin => (
                 <option key={plugin.id} value={plugin.id}>
                   {plugin.icon} {plugin.name}
-                  {!plugin.supportsDirectInput ? ` ${t('integrations.dialog.manualPasteRequired')}` : ''}
                 </option>
               ))}
             </select>
           </div>
+
+          {selectedPlugin && !selectedPlugin.supportsDirectInput && (
+            <p className="form-hint form-hint-warning">
+              {t('integrations.dialog.manualPasteRequired')}
+            </p>
+          )}
 
           {selectedPlugin && (
             <>

@@ -41,7 +41,7 @@ def test_paraformer():
     # 创建配置
     config = BackendConfig(
         backend='sherpa_onnx',
-        model_id='paraformer-offline-zh',
+        model_id='paraformer-offline',
         models_dir=Path.home() / '.echotype' / 'models',
         enable_punctuation=True,
         format_numbers=True,

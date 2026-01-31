@@ -63,7 +63,7 @@ def run_sherpa(model_dir: Path, files: List[Path]) -> Dict[str, object]:
     config = BackendConfig(
         backend="sherpa_onnx",
         models_dir=model_dir,
-        model_id="paraformer-offline-zh",
+        model_id="paraformer-offline",
     )
     adapter = SherpaOnnxAdapter(config)
     adapter.load()

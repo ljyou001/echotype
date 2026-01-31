@@ -80,6 +80,9 @@ const api = {
     },
     closeQuickActionWindow: () => {
         electron_1.ipcRenderer.invoke("close-quick-action-window");
+    },
+    copyToClipboard: (text) => {
+        return electron_1.ipcRenderer.invoke("copy-to-clipboard", text);
     }
 };
 electron_1.contextBridge.exposeInMainWorld("echotype", api);

@@ -287,7 +287,7 @@ class BackendManager:
         self._logger.warning("Catalog file not found, using fallback")
         return [
             {
-                "id": "paraformer-offline-zh",
+                "id": "paraformer-offline",
                 "name": "Paraformer Offline (Chinese)",
                 "family": "sherpa_onnx",
                 "kind": "asr",

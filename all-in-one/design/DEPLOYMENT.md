@@ -57,7 +57,7 @@ Create `config.ini` in the project's `models/<model_id>/` directory:
 ```powershell
 # Example structure
 models/
-├── paraformer-offline-zh/
+├── paraformer-offline/
 │   ├── config.ini          # Create this
 │   ├── model.int8.onnx
 │   └── tokens.txt
@@ -93,8 +93,8 @@ copy models\<model_id>\config.ini $env:USERPROFILE\.echotype\models\<model_id>\c
 
 Check backend logs:
 ```
-INFO | Loaded config for model paraformer-offline-zh: {...}
-INFO | Added config to catalog entry: paraformer-offline-zh
+INFO | Loaded config for model paraformer-offline: {...}
+INFO | Added config to catalog entry: paraformer-offline
 ```
 
 Check frontend:

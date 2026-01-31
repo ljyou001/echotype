@@ -257,7 +257,8 @@
     "output": {
       "title": "输出方式",
       "directInput": "直接输入",
-      "clipboard": "复制到剪贴板"
+      "clipboard": "复制到剪贴板",
+      "atLeastOne": "⚠️ 至少需要启用一种输出方式"
     },
     "textProcessing": {
       "title": "文本处理",
@@ -316,6 +317,10 @@
     "empty": "（空）"
   },
   "debug": {
-    "modelStatus": "模型状态"
+    "modelStatus": "模型状态",
+    "modelLog": {
+      "title": "模型日志",
+      "empty": "暂无模型日志，后端运行后会在此显示最新一条日志。"
+    }
   }
 }

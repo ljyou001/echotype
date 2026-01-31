@@ -79,6 +79,9 @@ const api = {
   },
   closeQuickActionWindow: () => {
     ipcRenderer.invoke("close-quick-action-window");
+  },
+  copyToClipboard: (text: string): Promise<void> => {
+    return ipcRenderer.invoke("copy-to-clipboard", text);
   }
 };
 

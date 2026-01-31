@@ -107,7 +107,7 @@ class SherpaOnnxAdapter:
             "supports_punctuation": bool(self._punc_model),
             "supports_timestamps": True,
             "supports_language_id": False,
-            "supports_language_selection": False,
+            "supports_language_selection": True,  # Paraformer supports Chinese and English
             "supported_languages": list(self._config.supported_languages),
             "supported_dialects": list(self._config.supported_dialects),
             "supported_sample_rates": [16000],

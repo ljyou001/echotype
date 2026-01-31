@@ -4,7 +4,7 @@
 
 用户报告了两个问题：
 1. **识别结果变成乱码**：原本清晰的语音识别成了乱码
-2. **错误消息**："Model paraformer-offline-zh does not support backend selection"
+2. **错误消息**："Model paraformer-offline does not support backend selection"
 
 ## 根本原因
 
@@ -13,7 +13,7 @@
 **原始配置**（错误）:
 ```json
 {
-  "id": "paraformer-offline-zh",
+  "id": "paraformer-offline",
   "capabilities": {
     "supports_device_selection": true,  // ❌ 错误！
     ...
@@ -54,7 +54,7 @@ data = np.mean(data[::3], axis=1).tobytes()
 
 ```json
 {
-  "id": "paraformer-offline-zh",
+  "id": "paraformer-offline",
   "capabilities": {
     "supports_device_selection": false,  // ✅ 不支持设备选择
     "supports_backend_selection": false  // ✅ 不支持 backend 选择（qwen_backend）

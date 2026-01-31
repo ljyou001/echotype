@@ -11,7 +11,7 @@
 - Clickable to switch
 - Show "Running" badge when active
 - Have settings button
-- Examples: paraformer-offline-zh, Qwen3-ASR-0.6B
+- Examples: paraformer-offline, Qwen3-ASR-0.6B
 
 **Auxiliary Models (Secondary):**
 - Slightly faded appearance (85% opacity)
@@ -135,7 +135,7 @@
 **ASR Model (Active):**
 ```
 ┌────────────────────────────────────────┐
-│ paraformer-offline-zh    ● Running     │
+│ paraformer-offline    ● Running     │
 │                                        │
 │ Family: sherpa_onnx                    │
 │ Type: ASR                              │
@@ -291,7 +291,7 @@ All core functionality is working and ready for use!
 Each model now includes:
 ```json
 {
-  "id": "paraformer-offline-zh",
+  "id": "paraformer-offline",
   "family": "sherpa_onnx",
   "kind": "asr",
   "source": "builtin",
@@ -308,7 +308,7 @@ Each model now includes:
 **ASR Model (Active):**
 ```
 ┌─────────────────────────────────────────────────┐
-│ paraformer-offline-zh              [⚙️]         │
+│ paraformer-offline              [⚙️]         │
 │ • Running                                       │
 ├─────────────────────────────────────────────────┤
 │ Quick and high performance, requires low        │

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,8 +17,8 @@ class ModelPaths:
 
 def resolve_paths(config: BackendConfig) -> ModelPaths:
     models_dir = config.models_dir
-    asr_model_path = Path(config.asr_model_path) if config.asr_model_path else models_dir / "paraformer-offline-zh" / "model.int8.onnx"
-    tokens_path = Path(config.tokens_path) if config.tokens_path else models_dir / "paraformer-offline-zh" / "tokens.txt"
+    asr_model_path = Path(config.asr_model_path) if config.asr_model_path else models_dir / "paraformer-offline" / "model.int8.onnx"
+    tokens_path = Path(config.tokens_path) if config.tokens_path else models_dir / "paraformer-offline" / "tokens.txt"
     punc_model_dir = Path(config.punc_model_dir) if config.punc_model_dir else models_dir / "punc_ct-transformer_cn-en"
     if not config.enable_punctuation:
         punc_model_dir = None

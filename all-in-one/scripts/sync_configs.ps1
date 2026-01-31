@@ -14,7 +14,7 @@ Write-Host "Project root: $projectRoot" -ForegroundColor Gray
 Write-Host ""
 
 $models = @(
-    "paraformer-offline-zh",
+    "paraformer-offline",
     "punc_ct-transformer_cn-en",
     "Qwen3-ASR-0.6B"
 )

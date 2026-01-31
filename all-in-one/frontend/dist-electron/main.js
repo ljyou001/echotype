@@ -505,6 +505,11 @@ ipcMain.on("create-quick-action-window", (_event, data) => {
 ipcMain.handle("close-quick-action-window", () => {
     closeQuickActionWindow();
 });
+// Clipboard IPC handler
+ipcMain.handle("copy-to-clipboard", (_event, text) => {
+    clipboard.writeText(text);
+    console.log(`[Clipboard] Copied ${text.length} characters to clipboard`);
+});
 app.whenReady().then(async () => {
     initFrontendLog();
     createWindow();

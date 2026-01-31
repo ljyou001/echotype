@@ -22,6 +22,7 @@ declare global {
       getIntegrationsConfig?: () => Promise<{ instances: any[]; defaultIntegrationId: string | null }>;
       saveIntegrationsConfig?: (instances: any[], defaultIntegrationId: string | null) => Promise<void>;
       onShowQuickAction?: (handler: () => void) => (() => void) | undefined;
+      copyToClipboard?: (text: string) => Promise<void>;
     };
   }
 }

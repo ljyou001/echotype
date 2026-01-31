@@ -257,7 +257,8 @@
     "output": {
       "title": "Output Method",
       "directInput": "Direct Input",
-      "clipboard": "Copy to Clipboard"
+      "clipboard": "Copy to Clipboard",
+      "atLeastOne": "⚠️ At least one output method must be enabled"
     },
     "textProcessing": {
       "title": "Text Processing",
@@ -316,6 +317,10 @@
     "empty": "(empty)"
   },
   "debug": {
-    "modelStatus": "Model status"
+    "modelStatus": "Model status",
+    "modelLog": {
+      "title": "Model log",
+      "empty": "No model log yet. The latest backend log will appear here when running."
+    }
   }
 }

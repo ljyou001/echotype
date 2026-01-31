@@ -48,7 +48,7 @@ class BackendConfig:
     sample_rate: int = 16000
     feature_dim: int = 80
     decoding_method: str = "greedy_search"
-    model_id: str = "paraformer-offline-zh"
+    model_id: str = "paraformer-offline"
 
     device_preference: str = "auto"
     allow_gpu: bool = True

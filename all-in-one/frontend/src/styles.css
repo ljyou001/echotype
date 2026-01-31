@@ -960,24 +960,6 @@ body {
   font-weight: 500;
 }
 
-.settings-log {
-  margin-top: 12px;
-  padding: 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: #fff;
-  color: var(--muted);
-  font-size: 13px;
-  font-family: "Consolas", "Monaco", monospace;
-}
-
-.settings-log h3 {
-  margin: 0 0 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-
 /* Buttons */
 .btn-primary {
   background: var(--highlight);
@@ -1660,6 +1642,24 @@ body {
   color: var(--primary);
 }
 
+.debug-model-log {
+  min-height: 220px;
+  padding: 16px;
+  background: #f8f9fa;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: auto;
+}
+
+.debug-model-log-content {
+  margin: 0;
+  font-family: "Consolas", "Monaco", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
 
 /* Quick Action Modal */
 .quick-action-modal-overlay {
@@ -2161,6 +2161,21 @@ body {
   font-size: 12px;
   color: var(--muted);
   margin: 4px 0 8px 0;
+}
+
+.form-hint {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+}
+
+.form-hint-warning {
+  color: var(--highlight);
+  background: rgba(241, 151, 72, 0.1);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--highlight);
 }
 
 .form-input,

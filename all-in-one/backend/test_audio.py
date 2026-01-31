@@ -91,7 +91,7 @@ def main() -> None:
 
     # 固定 Paraformer，不读 backend_config.json；与后端对 paraformer 的配置一致
     models_dir = Path.home() / ".echotype" / "models"
-    model_id = "paraformer-offline-zh"
+    model_id = "paraformer-offline"
     config = BackendConfig(
         backend="sherpa_onnx",
         model_id=model_id,

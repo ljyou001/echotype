@@ -25,7 +25,7 @@ def main():
     config = BackendConfig(
         models_dir=str(project_root / "models"),
         backend="sherpa_onnx",
-        model_id="paraformer-offline-zh"
+        model_id="paraformer-offline"
     )
     
     # Create manager
