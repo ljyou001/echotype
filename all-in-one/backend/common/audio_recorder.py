@@ -29,7 +29,8 @@ class AudioRecorder:
         if status:
             self._logger.warning(f"Audio callback status: {status}")
         
-        # Pass audio data through asyncio queue
+        # Pass audio data through asyncio queue (without downsampling here)
+        # Downsampling will be done in _audio_sender_loop after accumulation
         if self._queue and self._loop:
             try:
                 asyncio.run_coroutine_threadsafe(

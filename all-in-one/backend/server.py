@@ -545,11 +545,12 @@ class BackendServer:
                         data = np.concatenate(cache_frames + [data])
                         cache_frames.clear()
                     
-                    # Handle multi-channel: take average and downsample (take 1 frame every 3)
+                    # Downsample and handle multi-channel (same as original project)
+                    # np.mean(data[::3], axis=1): downsample to 16kHz + average channels to mono
                     if data.ndim == 2:
-                        data = np.mean(data[::3], axis=1)  # Downsample to 16kHz
+                        data = np.mean(data[::3], axis=1)  # Downsample + channel average
                     else:
-                        data = data[::3]
+                        data = data[::3]  # Downsample only
                     
                     duration += len(data) / 16000
                     chunk = data.astype(np.float32).tobytes()

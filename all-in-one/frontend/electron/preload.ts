@@ -48,6 +48,9 @@ const api = {
   },
   readCatalog: (): Promise<any> => {
     return ipcRenderer.invoke("read-catalog");
+  },
+  setTrayStatus: (status: "loading" | "error" | "ready" | "recording") => {
+    ipcRenderer.send("tray-status", status);
   }
 };
 

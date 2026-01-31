@@ -55,18 +55,29 @@ export default function App() {
     // Load catalog from local file immediately (before WebSocket connection)
     const loadCatalog = async () => {
       try {
-        const catalogData = await window.echotype?.readCatalog?.();
+        console.log("[App] Attempting to read catalog via IPC...");
+        
+        if (!window.echotype?.readCatalog) {
+          console.error("[App] window.echotype.readCatalog is not available!");
+          return;
+        }
+        
+        const catalogData = await window.echotype.readCatalog();
+        console.log("[App] Received catalog data:", catalogData);
+        
         if (catalogData) {
           const setCatalog = useAppStore.getState().setCatalog;
           // Handle both old format (array) and new format (object with models array)
           const models = Array.isArray(catalogData) ? catalogData : (catalogData.models ?? []);
+          console.log(`[App] Parsed ${models.length} models from catalog`);
           setCatalog(models);
-          console.log(`[App] Loaded ${models.length} models from local catalog`);
           
           // Initialize settings after catalog is loaded
           await initializeSettings();
           const appLanguage = useAppStore.getState().appLanguage ?? "system";
           i18n.changeLanguage(resolveAppLanguage(appLanguage));
+        } else {
+          console.warn("[App] catalogData is null or undefined");
         }
       } catch (error) {
         console.error("[App] Failed to load local catalog:", error);
@@ -371,6 +382,16 @@ export default function App() {
       }
     }
   }, [connectionState, backendStatus, handleModelSwitch]);
+
+  // ===== Tray icon status (loading=黄, error=红, ready=无点, recording=白) =====
+  useEffect(() => {
+    type TrayStatus = "loading" | "error" | "ready" | "recording";
+    let status: TrayStatus = "ready";
+    if (backendStatus === "recording") status = "recording";
+    else if (backendStatus === "error" || backendStatus === "offline") status = "error";
+    else if (backendStatus === "loading" || backendStatus === "starting") status = "loading";
+    window.echotype?.setTrayStatus?.(status);
+  }, [backendStatus]);
 
   // ===== Render UI =====
   const renderPage = () => {

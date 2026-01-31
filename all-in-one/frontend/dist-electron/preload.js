@@ -47,6 +47,9 @@ const api = {
     },
     readCatalog: () => {
         return ipcRenderer.invoke("read-catalog");
+    },
+    setTrayStatus: (status) => {
+        ipcRenderer.send("tray-status", status);
     }
 };
 contextBridge.exposeInMainWorld("echotype", api);

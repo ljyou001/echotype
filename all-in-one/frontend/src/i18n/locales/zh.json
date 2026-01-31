@@ -101,6 +101,7 @@
   "models": {
     "title": "模型",
     "description": "切换模型并查看功能。",
+    "showAuxiliaryModels": "显示辅助模型",
     "waitingForModel": "暂无模型。正在连接模型...",
     "status": {
       "running": "正在运行",

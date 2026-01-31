@@ -1,7 +1,7 @@
 import React from "react";
 import { FiHome, FiClock, FiCpu, FiGrid, FiSettings, FiTerminal } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
-import logoUrl from "../../assets/icon.png";
+import logoUrl from "@assets/icon-white.png";
 import { useAppStore } from "../store/appStore";
 
 export type PageKey = "home" | "history" | "models" | "integrations" | "settings" | "debug";

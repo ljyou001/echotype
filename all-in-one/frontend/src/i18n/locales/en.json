@@ -101,6 +101,7 @@
   "models": {
     "title": "Models",
     "description": "Switch models and review capabilities.",
+    "showAuxiliaryModels": "Show auxiliary models",
     "waitingForModel": "No models found. Connecting to model...",
     "status": {
       "running": "Running",

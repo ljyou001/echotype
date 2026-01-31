@@ -20,7 +20,7 @@
         "supports_timestamps": false
       },
       "defaults": {
-        "device": "auto",
+        "device": "cpu",
         "language": "Chinese",
         "streaming": false,
         "use_punctuation": true
@@ -30,10 +30,21 @@
         "min_vram_gb": 0,
         "requires_gpu": false
       },
-      "devices": ["cpu", "cuda"],
-      "languages": ["Chinese"],
-      "sample_rates": [16000],
-      "tags": ["chinese", "fast", "lightweight", "offline"],
+      "devices": [
+        "cpu"
+      ],
+      "languages": [
+        "Chinese"
+      ],
+      "sample_rates": [
+        16000
+      ],
+      "tags": [
+        "chinese",
+        "fast",
+        "lightweight",
+        "offline"
+      ],
       "status": "stable"
     },
     {
@@ -61,10 +72,22 @@
         "min_vram_gb": 0,
         "requires_gpu": false
       },
-      "devices": ["cpu"],
-      "languages": ["Chinese", "English"],
-      "sample_rates": [16000],
-      "tags": ["punctuation", "auxiliary", "chinese", "english"],
+      "devices": [
+        "cpu"
+      ],
+      "languages": [
+        "Chinese",
+        "English"
+      ],
+      "sample_rates": [
+        16000
+      ],
+      "tags": [
+        "punctuation",
+        "auxiliary",
+        "chinese",
+        "english"
+      ],
       "status": "stable"
     },
     {
@@ -75,7 +98,7 @@
       "version": "0.6.0",
       "source": "hf",
       "repo": "Qwen/Qwen3-ASR-0.6B",
-      "description": "Advanced multilingual model with superior accuracy. Supports 30 languages and 22 Chinese dialects. Requires more resources than Paraformer.",
+      "description": "Advanced multilingual model with superior accuracy. Built-in punctuation support (no external model needed). Supports 30 languages and 22 Chinese dialects. Requires more resources than Paraformer.",
       "capabilities": {
         "supports_device_selection": true,
         "supports_language_selection": true,
@@ -94,19 +117,57 @@
         "min_ram_gb": 4,
         "min_vram_gb": 2,
         "requires_gpu": false,
-        "python_packages": ["qwen-asr", "transformers", "torch"]
+        "python_packages": [
+          "qwen-asr",
+          "transformers",
+          "torch"
+        ]
       },
-      "devices": ["cpu", "cuda"],
-      "languages": [
-        "Chinese", "English", "Cantonese", "Arabic", "German", 
-        "French", "Spanish", "Portuguese", "Indonesian", "Italian",
-        "Korean", "Russian", "Thai", "Vietnamese", "Japanese",
-        "Turkish", "Hindi", "Malay", "Dutch", "Swedish",
-        "Danish", "Finnish", "Polish", "Czech", "Filipino",
-        "Persian", "Greek", "Hungarian", "Macedonian", "Romanian"
+      "devices": [
+        "cpu",
+        "cuda"
       ],
-      "sample_rates": [16000],
-      "tags": ["multilingual", "accurate", "streaming", "dialects"],
+      "languages": [
+        "Chinese",
+        "English",
+        "Cantonese",
+        "Arabic",
+        "German",
+        "French",
+        "Spanish",
+        "Portuguese",
+        "Indonesian",
+        "Italian",
+        "Korean",
+        "Russian",
+        "Thai",
+        "Vietnamese",
+        "Japanese",
+        "Turkish",
+        "Hindi",
+        "Malay",
+        "Dutch",
+        "Swedish",
+        "Danish",
+        "Finnish",
+        "Polish",
+        "Czech",
+        "Filipino",
+        "Persian",
+        "Greek",
+        "Hungarian",
+        "Macedonian",
+        "Romanian"
+      ],
+      "sample_rates": [
+        16000
+      ],
+      "tags": [
+        "multilingual",
+        "accurate",
+        "streaming",
+        "dialects"
+      ],
       "status": "stable",
       "docs_url": "https://github.com/QwenLM/Qwen-Audio"
     },
@@ -134,19 +195,56 @@
         "min_ram_gb": 2,
         "min_vram_gb": 1,
         "requires_gpu": false,
-        "python_packages": ["qwen-asr", "transformers", "torch"]
+        "python_packages": [
+          "qwen-asr",
+          "transformers",
+          "torch"
+        ]
       },
-      "devices": ["cpu", "cuda"],
-      "languages": [
-        "Chinese", "English", "Cantonese", "Arabic", "German", 
-        "French", "Spanish", "Portuguese", "Indonesian", "Italian",
-        "Korean", "Russian", "Thai", "Vietnamese", "Japanese",
-        "Turkish", "Hindi", "Malay", "Dutch", "Swedish",
-        "Danish", "Finnish", "Polish", "Czech", "Filipino",
-        "Persian", "Greek", "Hungarian", "Macedonian", "Romanian"
+      "devices": [
+        "cpu",
+        "cuda"
       ],
-      "sample_rates": [16000],
-      "tags": ["timestamps", "auxiliary", "alignment"],
+      "languages": [
+        "Chinese",
+        "English",
+        "Cantonese",
+        "Arabic",
+        "German",
+        "French",
+        "Spanish",
+        "Portuguese",
+        "Indonesian",
+        "Italian",
+        "Korean",
+        "Russian",
+        "Thai",
+        "Vietnamese",
+        "Japanese",
+        "Turkish",
+        "Hindi",
+        "Malay",
+        "Dutch",
+        "Swedish",
+        "Danish",
+        "Finnish",
+        "Polish",
+        "Czech",
+        "Filipino",
+        "Persian",
+        "Greek",
+        "Hungarian",
+        "Macedonian",
+        "Romanian"
+      ],
+      "sample_rates": [
+        16000
+      ],
+      "tags": [
+        "timestamps",
+        "auxiliary",
+        "alignment"
+      ],
       "status": "stable",
       "docs_url": "https://github.com/QwenLM/Qwen-Audio"
     }

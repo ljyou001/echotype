@@ -16,7 +16,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from backend.common.config import BackendConfig
 from backend.common.types import RecognitionTask
 from backend.qwen3.adapter import Qwen3Adapter
-from backend.sherpa_onnx.adapter import SherpaOnnxAdapter
+from backend.sherpa_adapter.adapter import SherpaOnnxAdapter
 
 
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".ogg"}

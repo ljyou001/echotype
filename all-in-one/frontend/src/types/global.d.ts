@@ -17,6 +17,7 @@ declare global {
       log?: (level: string, message: string) => Promise<void>;
       typeText?: (text: string) => Promise<void>;
       readCatalog?: () => Promise<any>;
+      setTrayStatus?: (status: "loading" | "error" | "ready" | "recording") => void;
     };
   }
 }

@@ -235,6 +235,34 @@ body {
   font-size: 15px;
 }
 
+.page-header-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.models-auxiliary-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--muted);
+  user-select: none;
+}
+
+.models-auxiliary-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.models-auxiliary-toggle:hover {
+  color: var(--text);
+}
+
 /* Home Page */
 .home-page {
   align-items: center;

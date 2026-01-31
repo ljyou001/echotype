@@ -48,24 +48,33 @@ class SherpaOnnxAdapter:
     def capabilities(self) -> Dict[str, object]:
         return dict(self._capabilities)
 
+    def close(self) -> None:
+        self._recognizer = None
+        self._punc_model = None
+        self._states.clear()
+
     def load(self) -> None:
         self._paths = resolve_paths(self._config)
         validate_paths(self._paths)
 
         self._logger.info("Loading backend modules...")
         try:
-            import sherpa_onnx  # noqa: F401
-            from funasr_onnx import CT_Transformer  # noqa: F401
+            import sherpa_onnx
         except Exception as exc:
             raise RuntimeError(f"Failed to import ASR dependencies: {exc}") from exc
-
+        
         self._progress_callback("modules", "done")
 
         try:
-            import sherpa_onnx
-
             self._logger.info("Loading speech model")
-            self._recognizer = sherpa_onnx.OfflineRecognizer.from_paraformer(
+            # The library has OfflineRecognizer at top level or in submodule
+            if hasattr(sherpa_onnx, "OfflineRecognizer"):
+                recognizer_cls = sherpa_onnx.OfflineRecognizer
+            else:
+                import sherpa_onnx.offline_recognizer
+                recognizer_cls = sherpa_onnx.offline_recognizer.OfflineRecognizer
+
+            self._recognizer = recognizer_cls.from_paraformer(
                 paraformer=str(self._paths.asr_model_path),
                 tokens=str(self._paths.tokens_path),
                 num_threads=self._config.num_threads,
@@ -94,24 +103,19 @@ class SherpaOnnxAdapter:
         self._capabilities = {
             "backend": "sherpa_onnx",
             "model_id": self._config.model_id,
-            "supports_streaming": True,
+            "supports_streaming": False,  # Paraformer offline does not support streaming
             "supports_punctuation": bool(self._punc_model),
             "supports_timestamps": True,
             "supports_language_id": False,
             "supports_language_selection": False,
             "supported_languages": list(self._config.supported_languages),
             "supported_dialects": list(self._config.supported_dialects),
-            "sample_rates": list(self._config.sample_rates),
+            "supported_sample_rates": [16000],
             "devices": ["cpu"],
             "default_device": "cpu",
             "preferred_device": "cpu",
             "requires_gpu": False,
         }
-
-    def close(self) -> None:
-        self._recognizer = None
-        self._punc_model = None
-        self._states.clear()
 
     def process_task(self, task: RecognitionTask) -> RecognitionResult:
         if self._recognizer is None:
@@ -123,12 +127,27 @@ class SherpaOnnxAdapter:
         state = self._states[task.task_id]
         
         # Accumulate audio data for complete recording
-        state.accumulated_audio += task.data
+        if task.data:
+            state.accumulated_audio += task.data
 
-        samples = np.frombuffer(task.data, dtype=np.float32)
+        # Paraformer Offline must process the WHOLE buffer to get context
+        # Convert accumulated audio to samples
+        samples = np.frombuffer(state.accumulated_audio, dtype=np.float32)
         
+        # Paraformer 固定 16k；若前端/录音为 48k 等，必须重采样后再识别
+        model_rate = self._config.sample_rate
+        effective_rate = model_rate
+        # Note: server.py downsamples to 16kHz before sending, but we keep this for robustness
+        if task.samplerate != model_rate:
+            duration_sec = len(samples) / task.samplerate
+            n_target = int(duration_sec * model_rate)
+            x_old = np.linspace(0, 1, len(samples), dtype=np.float64)
+            x_new = np.linspace(0, 1, n_target, dtype=np.float64, endpoint=False)
+            samples = np.interp(x_new, x_old, samples.astype(np.float64)).astype(np.float32)
+            self._logger.debug(f"Task {task.task_id}: Resampled {task.samplerate} Hz -> {model_rate} Hz, samples {samples.size}")
+
         self._logger.info(f"Task {task.task_id}: Processing audio - samples={samples.size}, "
-                         f"duration={samples.size/task.samplerate:.2f}s, is_final={task.is_final}")
+                         f"total_duration={samples.size/effective_rate:.2f}s, is_final={task.is_final}")
         
         # Save complete recording to file (only on final)
         if task.is_final and len(state.accumulated_audio) > 0:
@@ -171,70 +190,49 @@ class SherpaOnnxAdapter:
                 lang=task.lang,
             )
         
-        # For non-final messages, skip processing if samples are too few (< 0.1 seconds) to avoid noise
-        # But final messages must be processed as they contain the complete recording
-        if not task.is_final and samples.size < int(0.1 * task.samplerate):
-            self._logger.debug(f"Task {task.task_id}: Audio too short ({samples.size} samples), skipping (non-final)")
+        # For non-final messages, skip processing if samples are too few (< 0.5 seconds) to avoid noise
+        # This is more important for offline models as they process the whole buffer
+        if not task.is_final and samples.size < int(0.5 * effective_rate):
             return RecognitionResult(
                 task_id=task.task_id,
                 client_id=task.client_id,
                 source=task.source,
                 text="",
-                tokens=list(state.tokens),
-                timestamps=list(state.timestamps),
+                tokens=[],
+                timestamps=[],
                 is_final=task.is_final,
-                duration=state.duration,
+                duration=samples.size / effective_rate,
                 time_start=task.time_start,
                 time_submit=task.time_submit,
                 time_complete=time.time(),
                 lang=task.lang,
             )
         
-        duration = len(samples) / task.samplerate
-        state.duration += duration - task.overlap
-        if task.is_final:
-            state.duration += task.overlap
+        state.duration = len(samples) / effective_rate
 
+        t0_asr = time.perf_counter()
         stream = self._recognizer.create_stream()
-        stream.accept_waveform(task.samplerate, samples)
+        stream.accept_waveform(effective_rate, samples)
         self._recognizer.decode_stream(stream)
+        asr_seconds = time.perf_counter() - t0_asr
 
-        result_timestamps = list(stream.result.timestamps)
-        result_tokens = list(stream.result.tokens)
-
-        m = n = len(result_timestamps)
-        for index, timestamp in enumerate(result_timestamps):
-            if timestamp > task.overlap / 2:
-                m = index
-                break
-        for index, timestamp in enumerate(result_timestamps, start=1):
-            n = index
-            if timestamp > duration - task.overlap / 2:
-                break
-
-        if not state.timestamps:
-            m = 0
-        if task.is_final:
-            n = len(result_timestamps)
-
-        if state.tokens and state.tokens[-2:] == result_tokens[m:n][:2]:
-            m += 2
-        elif state.tokens and state.tokens[-1:] == result_tokens[m:n][:1]:
-            m += 1
-
-        state.timestamps += [ts + task.offset for ts in result_timestamps[m:n]]
-        state.tokens += result_tokens[m:n]
+        # For offline model, we replace the state with the full transcription of current buffer
+        state.timestamps = [ts for ts in stream.result.timestamps]
+        state.tokens = [token for token in stream.result.tokens]
 
         text = " ".join(state.tokens).replace("@@ ", "")
         text = re.sub(r"([^a-zA-Z0-9]) (?![a-zA-Z0-9])", r"\1", text)
 
+        punc_seconds = 0.0
         if task.is_final:
+            t0_punc = time.perf_counter()
             text = format_text(
                 text,
                 self._punc_model,
                 format_spacing=self._config.format_spacing,
                 format_numbers=self._config.format_numbers,
             )
+            punc_seconds = time.perf_counter() - t0_punc
 
         result = RecognitionResult(
             task_id=task.task_id,
@@ -249,6 +247,8 @@ class SherpaOnnxAdapter:
             time_submit=task.time_submit,
             time_complete=time.time(),
             lang=task.lang,
+            asr_seconds=asr_seconds,
+            punc_seconds=punc_seconds if task.is_final else None,
         )
 
         if task.is_final:

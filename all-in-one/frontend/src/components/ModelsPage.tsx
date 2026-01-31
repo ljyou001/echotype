@@ -12,6 +12,7 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
   const models = useAppStore((state) => state.models);
   const catalog = useAppStore((state) => state.catalog);
   const activeModelId = useAppStore((state) => state.activeModelId);
+  const connectionState = useAppStore((state) => state.connectionState);
   const defaultDevice = useAppStore((state) => state.defaultDevice);
   const devices = useAppStore((state) => state.devices);
   const selectedLanguage = useAppStore((state) => state.selectedLanguage);
@@ -20,6 +21,7 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
   const setQwenBackend = useAppStore((state) => state.setQwenBackend);
   const setModelStreaming = useAppStore((state) => state.setModelStreaming);
   const getModelStreaming = useAppStore((state) => state.getModelStreaming);
+  const modelStreaming = useAppStore((state) => state.modelStreaming);
   const setModelDevice = useAppStore((state) => state.setModelDevice);
   const getModelDevice = useAppStore((state) => state.getModelDevice);
   const setModelLanguage = useAppStore((state) => state.setModelLanguage);
@@ -30,6 +32,7 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
 
   const [selectedModelId, setSelectedModelId] = React.useState<string | undefined>(activeModelId);
   const [expandedSettings, setExpandedSettings] = React.useState<string | null>(null);
+  const [showAuxiliaryModels, setShowAuxiliaryModels] = React.useState<boolean>(false);
   const [selectedDevice, setSelectedDevice] = React.useState<string>("auto");
   const [localLanguage, setLocalLanguage] = React.useState<string>("auto");
   const [localQwenBackend, setLocalQwenBackend] = React.useState<string>("transformers");
@@ -39,7 +42,7 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
       setSelectedModelId(activeModelId);
     }
   }, [activeModelId, selectedModelId]);
-  
+
   // Load saved settings for expanded model when settings panel opens
   React.useEffect(() => {
     if (expandedSettings) {
@@ -48,11 +51,11 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
         // Load saved device for this model
         const savedDevice = getModelDevice(expandedSettings);
         setSelectedDevice(savedDevice);
-        
+
         // Load saved language for this model
         const savedLanguage = getModelLanguage(expandedSettings);
         setLocalLanguage(savedLanguage);
-        
+
         // Load saved backend for this model
         if (supportsBackendSelection(entry)) {
           const savedBackend = getModelBackend(expandedSettings);
@@ -64,31 +67,38 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
 
   const installedIds = React.useMemo(() => new Set(models.map((m) => m.id)), [models]);
 
+  /** Show ASR only or all (including auxiliary) based on switch */
+  const visibleCatalog = React.useMemo(
+    () =>
+      showAuxiliaryModels ? catalog : catalog.filter((e) => e.kind === "asr"),
+    [catalog, showAuxiliaryModels]
+  );
+
   const handleModelClick = (modelId: string) => {
     if (modelId === activeModelId) {
       return; // Already active
     }
     setSelectedModelId(modelId);
-    
+
     // Get model entry to extract backend (family) and saved settings
     const entry = catalog.find(e => e.id === modelId);
     const options: Record<string, unknown> = {};
-    
+
     // Auto-set backend from family (new format)
     if (entry?.family) {
       options.backend = entry.family;
     }
-    
+
     // Load saved device for this model
     const savedDevice = getModelDevice(modelId);
     const deviceToUse = savedDevice !== "auto" ? savedDevice : undefined;
-    
+
     // Load saved language for this model
     const savedLanguage = getModelLanguage(modelId);
     if (savedLanguage && savedLanguage !== "auto") {
       options.language = savedLanguage;
     }
-    
+
     // Load saved backend (e.g., qwen_backend) for this model
     if (entry && supportsBackendSelection(entry)) {
       const savedBackend = getModelBackend(modelId);
@@ -96,23 +106,23 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
         options.qwen_backend = savedBackend;
       }
     }
-    
+
     // Load saved streaming setting
     if (entry && supportsStreaming(entry)) {
       const savedStreaming = getModelStreaming(modelId);
       options.streaming_enabled = savedStreaming;
     }
-    
+
     // Save as last active model
     setLastActiveModelId(modelId);
-    
+
     // Switch model with saved settings
     onModelSwitch(modelId, deviceToUse, options);
   };
 
   const handleApplySettings = (modelId: string, entry: CatalogEntry) => {
     const options: Record<string, unknown> = {};
-    
+
     // Auto-set backend from family (new format)
     if (entry.family) {
       options.backend = entry.family;
@@ -120,7 +130,7 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
 
     // Save settings to persistent storage
     setModelDevice(modelId, selectedDevice);
-    
+
     if (supportsBackendSelection(entry) && localQwenBackend) {
       options.qwen_backend = localQwenBackend;
       setModelBackend(modelId, localQwenBackend);
@@ -143,7 +153,7 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
     } else {
       console.log("[ModelsPage] Settings saved. Will apply when backend connects.");
     }
-    
+
     setExpandedSettings(null); // Close settings panel
   };
 
@@ -195,7 +205,7 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
     }
     // Fallback to streaming_default (old format)
     const v = entry.streaming_default;
-    return v === true || v === "true";
+    return v === true;
   };
 
   const getAvailableDevices = (entry: CatalogEntry): string[] => {
@@ -229,37 +239,47 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
 
   const hasAnySettings = (entry: CatalogEntry): boolean => {
     return supportsDeviceSelection(entry) ||
-           supportsLanguageSelection(entry) ||
-           supportsBackendSelection(entry) ||
-           supportsStreaming(entry);
+      supportsLanguageSelection(entry) ||
+      supportsBackendSelection(entry) ||
+      supportsStreaming(entry);
   };
 
   return (
     <div className="page models-page">
       <header className="page-header">
-        <h1>{t("models.title")}</h1>
-        <p>{t("models.description")}</p>
+        <div className="page-header-top">
+          <div>
+            <h1>{t("models.title")}</h1>
+            <p>{t("models.description")}</p>
+          </div>
+          <label className="models-auxiliary-toggle">
+            <input
+              type="checkbox"
+              checked={showAuxiliaryModels}
+              onChange={(e) => setShowAuxiliaryModels(e.target.checked)}
+            />
+            <span>{t("models.showAuxiliaryModels")}</span>
+          </label>
+        </div>
       </header>
 
       <div className="models-list">
-        {catalog.length === 0 && (
+        {visibleCatalog.length === 0 && (
           <div className="empty-state">
             {t("models.waitingForModel")}
           </div>
         )}
-        {catalog.map((entry) => {
+        {visibleCatalog.map((entry) => {
           const isActive = entry.id === activeModelId;
           const isInstalled = installedIds.has(entry.id);
           const isSelected = entry.id === selectedModelId;
           const isASR = entry.kind === "asr";
-          const isAuxiliary = !isASR; // punctuation, forced_aligner, etc.
+          const isAuxiliary = !isASR;
 
           return (
             <div
               key={entry.id}
-              className={`model-card ${isSelected ? "selected" : ""} ${isActive ? "active" : ""} ${
-                isAuxiliary ? "auxiliary" : ""
-              }`}
+              className={`model-card ${isSelected ? "selected" : ""} ${isActive ? "active" : ""} ${isAuxiliary ? "auxiliary" : ""}`}
               onClick={() => isInstalled && isASR && handleModelClick(entry.id)}
               style={{ cursor: isInstalled && isASR ? "pointer" : "default" }}
             >
@@ -298,24 +318,24 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
               <div className="model-card-info">
                 {/* Debug info - remove later */}
                 {!entry.config && (
-                  <p style={{color: 'red', fontSize: '12px'}}>⚠️ No config loaded for this model</p>
+                  <p style={{ color: 'red', fontSize: '12px' }}>⚠️ No config loaded for this model</p>
                 )}
-                
+
                 {getDescription(entry) ? (
                   <p className="model-description">{getDescription(entry)}</p>
                 ) : (
-                  <p style={{color: 'orange', fontSize: '12px'}}>⚠️ No description available</p>
+                  <p style={{ color: 'orange', fontSize: '12px' }}>⚠️ No description available</p>
                 )}
-                
+
                 {getAvailableLanguages(entry).length > 0 ? (
                   <div className="model-info-item">
                     <span className="model-info-label">{t("models.info.languages")}:</span>
                     <span>{getAvailableLanguages(entry).join(", ")}</span>
                   </div>
                 ) : (
-                  <p style={{color: 'orange', fontSize: '12px'}}>⚠️ No languages configured</p>
+                  <p style={{ color: 'orange', fontSize: '12px' }}>⚠️ No languages configured</p>
                 )}
-                
+
                 {getAvailableDevices(entry).length > 0 && (
                   <div className="model-info-item">
                     <span className="model-info-label">{t("models.info.devices")}:</span>

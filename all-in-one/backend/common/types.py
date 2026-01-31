@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Protocol
@@ -34,6 +34,9 @@ class RecognitionResult:
     time_complete: float = 0.0
     lang: Optional[str] = None
     confidence: Optional[float] = None
+    # 各模型耗时（秒），用于统计
+    asr_seconds: Optional[float] = None
+    punc_seconds: Optional[float] = None
 
 
 class BackendAdapter(Protocol):

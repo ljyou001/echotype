@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import HotkeyManager from "./hotkey-manager.js";
 import os from "node:os";
 import robot from "@hurdlegroup/robotjs";
+import sharp from "sharp";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const BACKEND_HOST = process.env.ECHOTYPE_BACKEND_HOST ?? "127.0.0.1";
@@ -90,6 +91,52 @@ function resolveBackendArgs() {
 }
 function resolveIconPath() {
     return path.resolve(getFrontendRoot(), "assets", "icon.png");
+}
+const TRAY_SIZE = 32;
+const DOT_SIZE = 12;
+const DOT_OFFSET = TRAY_SIZE - DOT_SIZE; // 20
+/** Build tray icon with optional status dot. Uses icon.png (same as window). Dot colors: loading=yellow, error=red, recording=white, ready=no dot. */
+async function makeTrayImage(status) {
+    const pngPath = resolveIconPath();
+    if (!fs.existsSync(pngPath)) {
+        return nativeImage.createEmpty();
+    }
+    let base;
+    try {
+        base = sharp(pngPath).resize(TRAY_SIZE, TRAY_SIZE);
+    }
+    catch {
+        return nativeImage.createFromPath(pngPath);
+    }
+    if (status === "ready") {
+        const buf = await base.png().toBuffer();
+        return nativeImage.createFromBuffer(buf);
+    }
+    const colors = {
+        loading: "#FDD835",
+        error: "#E53935",
+        recording: "#FFFFFF"
+    };
+    const dotSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${DOT_SIZE}" height="${DOT_SIZE}"><circle cx="${DOT_SIZE / 2}" cy="${DOT_SIZE / 2}" r="${DOT_SIZE / 2 - 1}" fill="${colors[status]}"/></svg>`;
+    const overlay = await sharp(Buffer.from(dotSvg))
+        .resize(DOT_SIZE, DOT_SIZE)
+        .toBuffer();
+    const composed = await base
+        .composite([{ input: overlay, left: DOT_OFFSET, top: DOT_OFFSET }])
+        .png()
+        .toBuffer();
+    return nativeImage.createFromBuffer(composed);
+}
+function updateTrayIcon(status) {
+    if (!tray)
+        return;
+    makeTrayImage(status).then((img) => {
+        if (tray && !tray.isDestroyed()) {
+            tray.setImage(img);
+        }
+    }).catch((err) => {
+        console.error("[Tray] Failed to update icon:", err);
+    });
 }
 function sendToRenderer(channel, payload) {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -204,9 +251,8 @@ function toggleWindow() {
         mainWindow.focus();
     }
 }
-function createTray() {
-    const iconPath = resolveIconPath();
-    const icon = nativeImage.createFromPath(iconPath);
+async function createTray() {
+    const icon = await makeTrayImage("ready");
     tray = new Tray(icon);
     const menu = Menu.buildFromTemplate([
         {
@@ -340,8 +386,12 @@ ipcMain.handle("type-text", async (_event, text) => {
     }
 });
 // Add catalog reading IPC handler
+ipcMain.on("tray-status", (_event, status) => {
+    updateTrayIcon(status);
+});
 ipcMain.handle("read-catalog", async () => {
     try {
+        // Read catalog from project directory (static metadata)
         const workspaceRoot = getWorkspaceRoot();
         const catalogPath = path.join(workspaceRoot, "backend", "models_catalog.json");
         console.log(`[Catalog] Reading catalog from: ${catalogPath}`);
@@ -361,10 +411,10 @@ ipcMain.handle("read-catalog", async () => {
         return null;
     }
 });
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
     initFrontendLog();
     createWindow();
-    createTray();
+    await createTray();
     registerHotkeys();
     startBackend();
     app.on("activate", () => {

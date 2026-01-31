@@ -9,7 +9,7 @@ from .common.config import BackendConfig
 from .common.protocol import build_progress
 from .common.types import BackendAdapter
 from .qwen3.adapter import Qwen3Adapter
-from .sherpa_onnx.adapter import SherpaOnnxAdapter
+from .sherpa_adapter.adapter import SherpaOnnxAdapter
 
 
 class BackendManager:
@@ -18,6 +18,9 @@ class BackendManager:
         self._logger = logger
         self._progress_events: List[Dict[str, Any]] = []
         self._adapter: BackendAdapter | None = None
+        
+        # Load and apply saved runtime config
+        self._apply_runtime_config()
 
     @property
     def progress_events(self) -> List[Dict[str, Any]]:
@@ -31,11 +34,51 @@ class BackendManager:
 
     def get_adapter(self) -> BackendAdapter:
         return self.adapter
+    
+    def _apply_runtime_config(self) -> None:
+        """Apply saved runtime configuration on startup"""
+        saved_config = self._load_runtime_config()
+        if saved_config:
+            self._logger.info("Applying saved runtime config: %s", saved_config)
+            self._config = self._config.with_overrides(saved_config)
+        else:
+            self._logger.debug("No saved runtime config found, using defaults")
 
     def load(self) -> None:
+        # Load saved user settings for the current model
+        self._load_and_apply_user_settings()
+        
         adapter = self._build_adapter(self._config)
         adapter.load()
         self._adapter = adapter
+    
+    def _load_and_apply_user_settings(self) -> None:
+        """Load user settings from model's config.ini and apply them"""
+        if not self._config.model_id:
+            return
+        
+        try:
+            model_path = Path(self._config.models_dir) / self._config.model_id
+            model_config = self._load_model_config(model_path)
+            
+            if "user_settings" in model_config:
+                settings = model_config["user_settings"]
+                overrides = {}
+                
+                if "device" in settings:
+                    overrides["device_preference"] = settings["device"]
+                if "streaming_enabled" in settings:
+                    overrides["streaming_default"] = self._str_to_bool(settings["streaming_enabled"])
+                if "qwen_backend" in settings:
+                    overrides["qwen_backend"] = settings["qwen_backend"]
+                if "qwen_use_forced_aligner" in settings:
+                    overrides["qwen_use_forced_aligner"] = self._str_to_bool(settings["qwen_use_forced_aligner"])
+                
+                if overrides:
+                    self._config = self._config.with_overrides(overrides)
+                    self._logger.info("Applied user settings from model config: %s", overrides)
+        except Exception as exc:
+            self._logger.warning("Failed to load user settings from model config: %s", exc)
 
     def record_progress(self, stage: str, status: str) -> None:
         event = build_progress(stage, status)
@@ -73,10 +116,6 @@ class BackendManager:
             if not self._str_to_bool(capabilities.get("supports_language_selection", "false")):
                 raise ValueError(f"Model {model_id} does not support language selection")
         
-        if payload.get("qwen_backend"):
-            if not self._str_to_bool(capabilities.get("supports_backend_selection", "false")):
-                raise ValueError(f"Model {model_id} does not support backend selection")
-        
         # Close current adapter
         if self._adapter:
             try:
@@ -87,8 +126,10 @@ class BackendManager:
         
         # Build overrides
         overrides: Dict[str, Any] = {}
+        # 'backend' identifies which adapter to use (qwen3, paraformer, etc)
         if payload.get("backend"):
             overrides["backend"] = payload["backend"]
+            
         if payload.get("model_id"):
             overrides["model_id"] = payload["model_id"]
         if payload.get("models_dir"):
@@ -124,6 +165,12 @@ class BackendManager:
 
         self._config = new_config
         self._progress_events = []
+        
+        # Persist runtime configuration
+        self._save_runtime_config(new_config)
+        
+        # Also persist model-specific settings to its config.ini
+        self._save_model_settings(model_id, payload)
         
         try:
             adapter = self._build_adapter(new_config)
@@ -290,6 +337,112 @@ class BackendManager:
             self._logger.debug("Failed to load config.ini for %s: %s", model_path.name, exc)
             return {}
     
+    def _save_model_config(self, model_id: str, config_updates: Dict[str, Dict[str, str]]) -> None:
+        """Save/update model-specific configuration to config.ini
+        
+        Args:
+            model_id: Model identifier
+            config_updates: Dictionary of section -> {key: value} to update
+        """
+        try:
+            model_path = Path(self._config.models_dir) / model_id
+            if not model_path.exists():
+                self._logger.warning("Model path does not exist: %s", model_path)
+                return
+            
+            config_file = model_path / "config.ini"
+            parser = configparser.ConfigParser()
+            
+            # Load existing config if it exists
+            if config_file.exists():
+                parser.read(config_file, encoding="utf-8")
+            
+            # Update with new values
+            for section, items in config_updates.items():
+                if not parser.has_section(section):
+                    parser.add_section(section)
+                for key, value in items.items():
+                    parser.set(section, key, str(value))
+            
+            # Write back to file
+            with config_file.open("w", encoding="utf-8") as f:
+                parser.write(f)
+            
+            self._logger.info("Saved config for model %s to %s", model_id, config_file)
+        except Exception as exc:
+            self._logger.warning("Failed to save config for model %s: %s", model_id, exc)
+    
     def _str_to_bool(self, value: str) -> bool:
         """Convert string to boolean"""
         return value.lower() in ("true", "yes", "1", "on")
+    
+    def _save_runtime_config(self, config: BackendConfig) -> None:
+        """Save current runtime configuration to ~/.echotype/backend_config.json"""
+        try:
+            import json
+            
+            runtime_config_path = Path.home() / ".echotype" / "backend_config.json"
+            runtime_config_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Save only the user-configurable fields
+            config_data = {
+                "model_id": config.model_id,
+                "backend": config.backend,
+                "device_preference": config.device_preference,
+                "streaming_default": config.streaming_default,
+                "deployment_mode": config.deployment_mode,
+                "qwen_backend": config.qwen_backend,
+                "qwen_use_forced_aligner": config.qwen_use_forced_aligner,
+            }
+            
+            with runtime_config_path.open("w", encoding="utf-8") as f:
+                json.dump(config_data, f, indent=2, ensure_ascii=False)
+            
+            self._logger.debug("Saved runtime config to %s", runtime_config_path)
+        except Exception as exc:
+            self._logger.warning("Failed to save runtime config: %s", exc)
+    
+    def _save_model_settings(self, model_id: str, payload: Dict[str, Any]) -> None:
+        """Save model-specific settings to its config.ini
+        
+        This persists user preferences directly in the model's config file.
+        """
+        try:
+            # Prepare settings section
+            settings = {}
+            
+            if payload.get("device"):
+                settings["device"] = payload["device"]
+            if payload.get("language"):
+                settings["language"] = payload["language"]
+            if payload.get("streaming_enabled") is not None:
+                settings["streaming_enabled"] = str(payload["streaming_enabled"]).lower()
+            if payload.get("qwen_backend"):
+                settings["qwen_backend"] = payload["qwen_backend"]
+            if payload.get("qwen_use_forced_aligner") is not None:
+                settings["qwen_use_forced_aligner"] = str(payload["qwen_use_forced_aligner"]).lower()
+            
+            if settings:
+                config_updates = {"user_settings": settings}
+                self._save_model_config(model_id, config_updates)
+                self._logger.info("Saved user settings for model %s", model_id)
+        except Exception as exc:
+            self._logger.warning("Failed to save model settings for %s: %s", model_id, exc)
+    
+    def _load_runtime_config(self) -> Dict[str, Any]:
+        """Load saved runtime configuration from ~/.echotype/backend_config.json"""
+        try:
+            import json
+            
+            runtime_config_path = Path.home() / ".echotype" / "backend_config.json"
+            if not runtime_config_path.exists():
+                return {}
+            
+            with runtime_config_path.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+            
+            self._logger.info("Loaded runtime config from %s", runtime_config_path)
+            return data
+        except Exception as exc:
+            self._logger.warning("Failed to load runtime config: %s", exc)
+            return {}
