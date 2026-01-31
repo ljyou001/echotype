@@ -1,0 +1,51 @@
+﻿# EchoType 设计文档
+
+本目录包含EchoType项目的所有设计文档和规范。
+
+## 文档索引
+
+### 核心架构
+- [BACKEND_SPEC.md](BACKEND_SPEC.md) - 后端架构规范
+- [FRONTEND_ELECTRON_SPEC_V2.md](FRONTEND_ELECTRON_SPEC_V2.md) - 前端Electron架构（最新版）
+- [MODEL_SETTINGS_ARCHITECTURE.md](MODEL_SETTINGS_ARCHITECTURE.md) - 模型设置架构
+
+### 功能实现
+- [RECORDING_MODE.md](RECORDING_MODE.md) - 录音模式（对讲机/开关）
+- [HOTKEY_IMPLEMENTATION.md](HOTKEY_IMPLEMENTATION.md) - 全局热键系统
+- [MODEL_SWITCHING_GUIDE.md](MODEL_SWITCHING_GUIDE.md) - 模型切换实现
+- [I18N_GUIDE.md](I18N_GUIDE.md) - 国际化指南
+
+### 问题修复
+- [BUGFIXES.md](BUGFIXES.md) - 已修复的问题汇总
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - 故障排查指南
+
+### 系统功能
+- [LOGGING_SYSTEM.md](LOGGING_SYSTEM.md) - 统一日志系统
+- [TESTING_PROCEDURES.md](TESTING_PROCEDURES.md) - 测试流程
+
+### 更新记录
+- [FINAL_UPDATES.md](FINAL_UPDATES.md) - 完整更新历史
+- [FRONTEND_REFACTOR_SUMMARY.md](FRONTEND_REFACTOR_SUMMARY.md) - 前端重构总结
+- [UPDATES_SUMMARY.md](UPDATES_SUMMARY.md) - 更新摘要
+- [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) - 实现计划
+
+## 快速导航
+
+### 新手入门
+1. 阅读 [QUICKSTART.md](../QUICKSTART.md) 了解如何快速启动
+2. 查看 [FRONTEND_ELECTRON_SPEC_V2.md](FRONTEND_ELECTRON_SPEC_V2.md) 了解前端架构
+3. 查看 [BACKEND_SPEC.md](BACKEND_SPEC.md) 了解后端架构
+
+### 功能开发
+1. [RECORDING_MODE.md](RECORDING_MODE.md) - 录音功能实现
+2. [HOTKEY_IMPLEMENTATION.md](HOTKEY_IMPLEMENTATION.md) - 热键系统
+3. [MODEL_SETTINGS_ARCHITECTURE.md](MODEL_SETTINGS_ARCHITECTURE.md) - 模型配置
+
+### 问题排查
+1. [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - 常见问题解决
+2. [BUGFIXES.md](BUGFIXES.md) - 已知问题修复
+3. [LOGGING_SYSTEM.md](LOGGING_SYSTEM.md) - 日志系统使用
+
+### 测试与部署
+1. [TESTING_PROCEDURES.md](TESTING_PROCEDURES.md) - 测试流程
+2. [DEPLOYMENT.md](../DEPLOYMENT.md) - 部署指南

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Debug</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .log { margin: 5px 0; padding: 5px; background: #f0f0f0; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        .info { background: #d1ecf1; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <button onclick="connect()">Connect</button>
+    <button onclick="disconnect()">Disconnect</button>
+    <button onclick="clearLog()">Clear Log</button>
+    <div id="log"></div>
+    <script>
+        let ws = null;
+        let messageCount = 0;
+
+        function addLog(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            document.getElementById('log').appendChild(div);
+            console.log(message);
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            messageCount = 0;
+        }
+
+        function connect() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                addLog('Already connected', 'info');
+                return;
+            }
+
+            addLog('Creating WebSocket to ws://127.0.0.1:6016 with subprotocol "binary"', 'info');
+            ws = new WebSocket('ws://127.0.0.1:6016', 'binary');
+
+            ws.onopen = () => {
+                addLog(`✓ CONNECTED! Protocol: ${ws.protocol}, ReadyState: ${ws.readyState}`, 'success');
+            };
+
+            ws.onmessage = (event) => {
+                messageCount++;
+                try {
+                    const data = JSON.parse(event.data);
+                    addLog(`✓ Message #${messageCount}: type="${data.type}"`, 'success');
+                    
+                    // Log key details
+                    if (data.type === 'status') {
+                        addLog(`  → Status: state="${data.state}"`, 'info');
+                    } else if (data.type === 'progress') {
+                        addLog(`  → Progress: stage="${data.stage}", status="${data.status}"`, 'info');
+                    } else if (data.type === 'capabilities') {
+                        addLog(`  → Capabilities: backend="${data.backend}", model_id="${data.model_id}"`, 'info');
+                    } else if (data.type === 'models_list') {
+                        addLog(`  → Models: ${data.models?.length || 0} models`, 'info');
+                    } else if (data.type === 'models_catalog') {
+                        addLog(`  → Catalog: ${data.catalog?.length || 0} entries`, 'info');
+                    } else if (data.type === 'devices') {
+                        addLog(`  → Devices: ${data.devices?.length || 0} devices`, 'info');
+                    }
+                } catch (e) {
+                    addLog(`✗ Failed to parse message: ${e.message}`, 'error');
+                }
+            };
+
+            ws.onerror = (error) => {
+                addLog(`✗ WebSocket error: ${error}`, 'error');
+            };
+
+            ws.onclose = (event) => {
+                addLog(`✗ Connection closed. Code: ${event.code}, Reason: "${event.reason}", Clean: ${event.wasClean}`, 'error');
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                addLog('Disconnected', 'info');
+            }
+        }
+
+        // Auto-connect on load
+        window.onload = () => {
+            setTimeout(connect, 500);
+        };
+    </script>
+</body>
+</html>

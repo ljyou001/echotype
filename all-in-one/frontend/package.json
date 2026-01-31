@@ -1,0 +1,36 @@
+{
+  "name": "echotype-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "author": "",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"tsc -p tsconfig.node.json -w\" \"wait-on tcp:5173 && cross-env ELECTRON_RENDERER_URL=http://localhost:5173 electron .\"",
+    "build": "tsc -p tsconfig.node.json && tsc -p tsconfig.preload.json && node -e \"require('fs').renameSync('dist-electron/preload.js', 'dist-electron/preload.cjs')\" && vite build",
+    "preview": "vite preview",
+    "start": "electron ."
+  },
+  "dependencies": {
+    "@hurdlegroup/robotjs": "^0.12.3",
+    "i18next": "^25.8.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-i18next": "^16.5.4",
+    "react-icons": "^5.5.0",
+    "uiohook-napi": "^1.5.4",
+    "zustand": "^5.0.10"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.4.1",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^31.6.0",
+    "typescript": "^5.8.2",
+    "vite": "^5.4.11",
+    "wait-on": "^7.2.0"
+  }
+}

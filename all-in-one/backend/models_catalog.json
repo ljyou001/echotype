@@ -1,0 +1,154 @@
+{
+  "version": "1.0.0",
+  "schema_version": "1.0",
+  "last_updated": "2026-01-31",
+  "models": [
+    {
+      "id": "paraformer-offline-zh",
+      "name": "Paraformer Offline (Chinese)",
+      "family": "sherpa_onnx",
+      "kind": "asr",
+      "version": "1.0.0",
+      "source": "builtin",
+      "description": "Quick and high performance, requires low resources. Best for Chinese language. Supports offline recognition.",
+      "capabilities": {
+        "supports_device_selection": true,
+        "supports_language_selection": false,
+        "supports_backend_selection": false,
+        "supports_streaming": false,
+        "supports_punctuation": true,
+        "supports_timestamps": false
+      },
+      "defaults": {
+        "device": "auto",
+        "language": "Chinese",
+        "streaming": false,
+        "use_punctuation": true
+      },
+      "requirements": {
+        "min_ram_gb": 1,
+        "min_vram_gb": 0,
+        "requires_gpu": false
+      },
+      "devices": ["cpu", "cuda"],
+      "languages": ["Chinese"],
+      "sample_rates": [16000],
+      "tags": ["chinese", "fast", "lightweight", "offline"],
+      "status": "stable"
+    },
+    {
+      "id": "punc_ct-transformer_cn-en",
+      "name": "Punctuation Model (CN/EN)",
+      "family": "sherpa_onnx",
+      "kind": "punctuation",
+      "version": "1.0.0",
+      "source": "builtin",
+      "description": "Punctuation model used automatically with Paraformer. Adds punctuation marks to recognized text.",
+      "capabilities": {
+        "supports_device_selection": false,
+        "supports_language_selection": false,
+        "supports_backend_selection": false,
+        "supports_streaming": false,
+        "supports_punctuation": false,
+        "supports_timestamps": false
+      },
+      "defaults": {
+        "device": "cpu",
+        "language": "Chinese"
+      },
+      "requirements": {
+        "min_ram_gb": 0.5,
+        "min_vram_gb": 0,
+        "requires_gpu": false
+      },
+      "devices": ["cpu"],
+      "languages": ["Chinese", "English"],
+      "sample_rates": [16000],
+      "tags": ["punctuation", "auxiliary", "chinese", "english"],
+      "status": "stable"
+    },
+    {
+      "id": "Qwen3-ASR-0.6B",
+      "name": "Qwen3 ASR 0.6B",
+      "family": "qwen3",
+      "kind": "asr",
+      "version": "0.6.0",
+      "source": "hf",
+      "repo": "Qwen/Qwen3-ASR-0.6B",
+      "description": "Advanced multilingual model with superior accuracy. Supports 30 languages and 22 Chinese dialects. Requires more resources than Paraformer.",
+      "capabilities": {
+        "supports_device_selection": true,
+        "supports_language_selection": true,
+        "supports_backend_selection": false,
+        "supports_streaming": true,
+        "supports_punctuation": true,
+        "supports_timestamps": false
+      },
+      "defaults": {
+        "device": "auto",
+        "language": "auto",
+        "streaming": true,
+        "backend": "transformers"
+      },
+      "requirements": {
+        "min_ram_gb": 4,
+        "min_vram_gb": 2,
+        "requires_gpu": false,
+        "python_packages": ["qwen-asr", "transformers", "torch"]
+      },
+      "devices": ["cpu", "cuda"],
+      "languages": [
+        "Chinese", "English", "Cantonese", "Arabic", "German", 
+        "French", "Spanish", "Portuguese", "Indonesian", "Italian",
+        "Korean", "Russian", "Thai", "Vietnamese", "Japanese",
+        "Turkish", "Hindi", "Malay", "Dutch", "Swedish",
+        "Danish", "Finnish", "Polish", "Czech", "Filipino",
+        "Persian", "Greek", "Hungarian", "Macedonian", "Romanian"
+      ],
+      "sample_rates": [16000],
+      "tags": ["multilingual", "accurate", "streaming", "dialects"],
+      "status": "stable",
+      "docs_url": "https://github.com/QwenLM/Qwen-Audio"
+    },
+    {
+      "id": "Qwen3-ForcedAligner-0.6B",
+      "name": "Qwen3 Forced Aligner 0.6B",
+      "family": "qwen3",
+      "kind": "forced_aligner",
+      "version": "0.6.0",
+      "source": "hf",
+      "repo": "Qwen/Qwen3-ForcedAligner-0.6B",
+      "description": "Optional forced aligner for generating word-level timestamps. Used with Qwen3 ASR for precise timing information.",
+      "capabilities": {
+        "supports_device_selection": true,
+        "supports_language_selection": false,
+        "supports_backend_selection": false,
+        "supports_streaming": false,
+        "supports_punctuation": false,
+        "supports_timestamps": true
+      },
+      "defaults": {
+        "device": "auto"
+      },
+      "requirements": {
+        "min_ram_gb": 2,
+        "min_vram_gb": 1,
+        "requires_gpu": false,
+        "python_packages": ["qwen-asr", "transformers", "torch"]
+      },
+      "devices": ["cpu", "cuda"],
+      "languages": [
+        "Chinese", "English", "Cantonese", "Arabic", "German", 
+        "French", "Spanish", "Portuguese", "Indonesian", "Italian",
+        "Korean", "Russian", "Thai", "Vietnamese", "Japanese",
+        "Turkish", "Hindi", "Malay", "Dutch", "Swedish",
+        "Danish", "Finnish", "Polish", "Czech", "Filipino",
+        "Persian", "Greek", "Hungarian", "Macedonian", "Romanian"
+      ],
+      "sample_rates": [16000],
+      "tags": ["timestamps", "auxiliary", "alignment"],
+      "status": "stable",
+      "docs_url": "https://github.com/QwenLM/Qwen-Audio"
+    }
+  ]
+}

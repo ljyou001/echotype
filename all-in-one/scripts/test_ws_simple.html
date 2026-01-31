@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <div id="log"></div>
+    <script>
+        const log = document.getElementById('log');
+        function addLog(message) {
+            const p = document.createElement('p');
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(p);
+            console.log(message);
+        }
+
+        addLog('Creating WebSocket connection to ws://127.0.0.1:6016 with subprotocol "binary"');
+        const ws = new WebSocket('ws://127.0.0.1:6016', 'binary');
+
+        ws.onopen = () => {
+            addLog(`✓ Connection opened! Protocol: ${ws.protocol}, URL: ${ws.url}, ReadyState: ${ws.readyState}`);
+        };
+
+        ws.onmessage = (event) => {
+            addLog(`✓ Message received: ${event.data.substring(0, 200)}`);
+            try {
+                const data = JSON.parse(event.data);
+                addLog(`  Type: ${data.type}, Keys: ${Object.keys(data).join(', ')}`);
+            } catch (e) {
+                addLog(`  Failed to parse as JSON: ${e.message}`);
+            }
+        };
+
+        ws.onerror = (error) => {
+            addLog(`✗ WebSocket error: ${error}`);
+        };
+
+        ws.onclose = (event) => {
+            addLog(`✗ Connection closed. Code: ${event.code}, Reason: ${event.reason}, Clean: ${event.wasClean}`);
+        };
+    </script>
+</body>
+</html>

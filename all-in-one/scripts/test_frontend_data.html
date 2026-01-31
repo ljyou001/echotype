@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Frontend Data</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #252526;
+            border-radius: 5px;
+        }
+        h2 {
+            color: #4ec9b0;
+            margin-top: 0;
+        }
+        pre {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 3px;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        .success { background: #0e639c; }
+        .error { background: #f14c4c; }
+        .warning { background: #cca700; }
+    </style>
+</head>
+<body>
+    <h1>Frontend Data Test</h1>
+    
+    <div class="section">
+        <h2>WebSocket Connection</h2>
+        <div id="ws-status" class="status">Connecting...</div>
+        <div id="ws-info"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Models Catalog</h2>
+        <div id="catalog-status" class="status">Waiting...</div>
+        <pre id="catalog-data"></pre>
+    </div>
+    
+    <div class="section">
+        <h2>Config Analysis</h2>
+        <div id="config-analysis"></div>
+    </div>
+
+    <script>
+        const WS_URL = 'ws://127.0.0.1:6016';
+        let ws = null;
+        let catalogData = null;
+
+        function updateStatus(elementId, text, className) {
+            const el = document.getElementById(elementId);
+            el.textContent = text;
+            el.className = 'status ' + className;
+        }
+
+        function connect() {
+            ws = new WebSocket(WS_URL, 'binary');
+            
+            ws.onopen = () => {
+                updateStatus('ws-status', 'Connected', 'success');
+                document.getElementById('ws-info').innerHTML = 
+                    `<p>Connected to ${WS_URL}</p>`;
+                
+                // Request catalog
+                ws.send(JSON.stringify({ type: 'models_catalog_request' }));
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const payload = JSON.parse(event.data);
+                    console.log('Received message:', payload.type, payload);
+                    
+                    if (payload.type === 'models_catalog') {
+                        catalogData = payload;
+                        updateStatus('catalog-status', 'Received', 'success');
+                        
+                        // Display catalog
+                        document.getElementById('catalog-data').textContent = 
+                            JSON.stringify(payload, null, 2);
+                        
+                        // Check if config exists
+                        console.log('Catalog entries:', payload.catalog);
+                        payload.catalog.forEach(entry => {
+                            console.log(`${entry.id}: hasConfig=${!!entry.config}`);
+                            if (entry.config) {
+                                console.log('  Config keys:', Object.keys(entry.config));
+                            }
+                        });
+                        
+                        // Analyze config
+                        analyzeConfig(payload.catalog);
+                    }
+                } catch (error) {
+                    console.error('Error parsing message:', error);
+                }
+            };
+            
+            ws.onerror = () => {
+                updateStatus('ws-status', 'Error', 'error');
+            };
+            
+            ws.onclose = () => {
+                updateStatus('ws-status', 'Disconnected', 'warning');
+                setTimeout(connect, 1500);
+            };
+        }
+
+        function analyzeConfig(catalog) {
+            const analysis = document.getElementById('config-analysis');
+            let html = '<table style="width: 100%; border-collapse: collapse;">';
+            html += '<tr style="background: #1e1e1e;"><th>Model</th><th>Has Config</th><th>Description</th><th>Languages</th><th>Devices</th><th>Settings</th></tr>';
+            
+            catalog.forEach(entry => {
+                const hasConfig = !!entry.config;
+                const desc = entry.config?.model?.description || entry.description || '(none)';
+                const langs = entry.config?.languages?.available || '(none)';
+                const devices = entry.config?.devices?.available || '(none)';
+                
+                const supportsDevice = entry.config?.capabilities?.supports_device_selection === 'true';
+                const supportsLang = entry.config?.capabilities?.supports_language_selection === 'true';
+                const supportsBackend = entry.config?.capabilities?.supports_backend_selection === 'true';
+                const hasSettings = supportsDevice || supportsLang || supportsBackend;
+                
+                html += `<tr style="border-top: 1px solid #3e3e42;">
+                    <td style="padding: 8px;">${entry.id}</td>
+                    <td style="padding: 8px;">${hasConfig ? '✅' : '❌'}</td>
+                    <td style="padding: 8px; max-width: 300px; overflow: hidden; text-overflow: ellipsis;">${desc}</td>
+                    <td style="padding: 8px;">${langs}</td>
+                    <td style="padding: 8px;">${devices}</td>
+                    <td style="padding: 8px;">${hasSettings ? '✅' : '❌'}</td>
+                </tr>`;
+            });
+            
+            html += '</table>';
+            analysis.innerHTML = html;
+        }
+
+        // Start connection
+        connect();
+    </script>
+</body>
+</html>

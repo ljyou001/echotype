@@ -1,0 +1,272 @@
+{
+  "app": {
+    "name": "Echotype",
+    "subtitle": "Speak to type!"
+  },
+  "hotkeyLabel": {
+    "RCtrl": "Right Ctrl",
+    "LCtrl": "Left Ctrl",
+    "RAlt": "Right Alt",
+    "LAlt": "Left Alt",
+    "RShift": "Right Shift",
+    "LShift": "Left Shift",
+    "RCmd": "Right ⌘",
+    "LCmd": "Left ⌘",
+    "RWin": "Right ⊞",
+    "LWin": "Left ⊞",
+    "CapsLock": "Caps Lock",
+    "ScrollLock": "Scroll Lock",
+    "NumLock": "Num Lock",
+    "Pause": "Pause",
+    "PrtSc": "Print Screen",
+    "F13": "F13",
+    "F14": "F14",
+    "F15": "F15",
+    "Fn": "Fn"
+  },
+  "nav": {
+    "home": "Home",
+    "history": "History",
+    "models": "Models",
+    "integrations": "Integrations",
+    "settings": "Settings",
+    "debug": "Debug"
+  },
+  "status": {
+    "loading": "Loading",
+    "ready": "Ready",
+    "capturing": "Capturing",
+    "recording": "Recording",
+    "error": "Error",
+    "offline": "Offline",
+    "standby": "Standby",
+    "connected": "Connected",
+    "disconnected": "Disconnected"
+  },
+  "home": {
+    "statusMessage": {
+      "unavailable": "Model unavailable",
+      "listening": "Listening for speech",
+      "ready": "Ready to transcribe",
+      "preparing": "Preparing models",
+      "standby": "Standby",
+      "startingBackend": "Connecting to model...",
+      "loadingModules": "Loading model...",
+      "loadingSpeechModel": "Loading speech model...",
+      "loadingPuncModel": "Loading punctuation model...",
+      "backendReady": "Model ready!"
+    },
+    "cards": {
+      "model": "Model",
+      "hotkey": "Hotkey",
+      "mode": "Mode",
+      "input": "Input",
+      "recordingMode": "Recording Mode"
+    },
+    "modes": {
+      "streaming": "Streaming",
+      "offline": "Offline"
+    },
+    "recordingModes": {
+      "toggle": "Toggle",
+      "pushToTalk": "Push-to-Talk"
+    },
+    "error": {
+      "title": "Model error",
+      "restart": "Restart model"
+    },
+    "transcript": {
+      "live": "Live",
+      "final": "Final",
+      "placeholder": "Speak to start transcription.",
+      "waiting": "..."
+    },
+    "voiceHint": {
+      "pushToTalkPrefix": "Press ",
+      "pushToTalkSuffix": " to voice input",
+      "togglePrefix": "Press ",
+      "toggleSuffix": " to start input; press again to stop"
+    }
+  },
+  "history": {
+    "title": "History",
+    "description": "Recent dictation results.",
+    "empty": "No history yet.",
+    "actions": {
+      "play": "Play audio",
+      "search": "Search",
+      "delete": "Delete"
+    }
+  },
+  "models": {
+    "title": "Models",
+    "description": "Switch models and review capabilities.",
+    "waitingForModel": "No models found. Connecting to model...",
+    "status": {
+      "running": "Running",
+      "installed": "Installed",
+      "comingSoon": "Coming soon",
+      "auxiliary": "Auxiliary Model",
+      "auxiliaryNote": "Used automatically with ASR models"
+    },
+    "info": {
+      "family": "Family",
+      "type": "Type",
+      "languages": "Languages",
+      "devices": "Devices",
+      "deviceSupport": "Device Support",
+      "currentDevice": "Current Device",
+      "notes": "Notes"
+    },
+    "types": {
+      "asr": "ASR",
+      "punctuation": "Punctuation"
+    },
+    "settings": {
+      "title": "Model Settings",
+      "device": "Device",
+      "language": "Language",
+      "qwenBackend": "Qwen3 runtime",
+      "streaming": "Recognition Mode",
+      "streamingOn": "Streaming",
+      "streamingOff": "Offline",
+      "apply": "Apply Settings",
+      "auto": "Auto",
+      "autoDetect": "Auto Detect",
+      "hints": {
+        "languageSelection": "Select the language for transcription, or use Auto Detect",
+        "qwenBackend": "transformers is recommended for general use",
+        "streaming": "Streaming: real-time results; Offline: results after recording completes"
+      }
+    }
+  },
+  "integrations": {
+    "title": "Integrations",
+    "description": "Plugin-based workflows for search and automation.",
+    "comingSoon": "Coming soon",
+    "items": {
+      "clawbot": {
+        "name": "Clawbot",
+        "description": "AI-powered search and automation workflows"
+      },
+      "search": {
+        "name": "Search",
+        "description": "Quick web search integration"
+      },
+      "workflow": {
+        "name": "Workflow",
+        "description": "Custom automation workflows"
+      }
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Global application settings.",
+    "startup": {
+      "title": "Startup",
+      "autoStart": "Launch at startup",
+      "autoLoadModel": "Auto-load model on startup"
+    },
+    "language": {
+      "title": "Language",
+      "systemDefault": "System default",
+      "en": "English",
+      "zh": "中文"
+    },
+    "hotkey": {
+      "title": "Hotkey",
+      "current": "Current hotkey",
+      "configure": "Configure Hotkey",
+      "pressKeys": "Press any key...",
+      "clickToRecord": "Click to record a new hotkey",
+      "quickSelect": "Quick Select",
+      "description": "Set a global hotkey to toggle recording. Default is a single key (right-side modifier), but key combinations are also supported.",
+      "note": "Important Notes",
+      "noteItem1": "Default uses single key (Right Ctrl/Cmd) to avoid conflicts",
+      "noteItem2": "Right-side keys (Right Ctrl, Right Alt, Right Win/Cmd) are most stable",
+      "noteItem3": "Special function keys (F13-F15, Scroll Lock) rarely conflict",
+      "noteItem4": "The hotkey works even when the app is minimized",
+      "save": "Save",
+      "cancel": "Cancel",
+      "errors": {
+        "alreadyInUse": "This hotkey is already in use",
+        "invalid": "Invalid hotkey combination",
+        "systemShortcut": "This is a system shortcut"
+      }
+    },
+    "recordingMode": {
+      "title": "Recording Mode",
+      "pushToTalk": "Push-to-Talk",
+      "toggleMode": "Toggle",
+      "pushToTalkDesc": "Hold hotkey to record, release to stop (like a walkie-talkie)",
+      "toggleModeDesc": "Press hotkey once to start recording, press again to stop"
+    },
+    "audio": {
+      "title": "Audio Input Device",
+      "microphone": "Microphone"
+    },
+    "output": {
+      "title": "Output Method",
+      "directInput": "Direct Input",
+      "clipboard": "Copy to Clipboard"
+    },
+    "textProcessing": {
+      "title": "Text Processing",
+      "punctuation": "Punctuation Processing",
+      "numberFormatting": "Number Formatting"
+    },
+    "streaming": {
+      "title": "Streaming Mode",
+      "on": "On",
+      "off": "Off"
+    },
+    "log": {
+      "title": "Model log"
+    }
+  },
+  "errors": {
+    "model": {
+      "title": "Model issue",
+      "message": "Model load failed"
+    },
+    "device": {
+      "title": "Device issue",
+      "message": "Device not supported"
+    },
+    "performance": {
+      "title": "Performance issue",
+      "message": "Recognition failed"
+    },
+    "dependency": {
+      "title": "Dependency issue",
+      "message": "Runtime dependency missing"
+    },
+    "restart": {
+      "title": "Restart required",
+      "message": "Model restart needed"
+    },
+    "connection": {
+      "title": "Connection lost",
+      "message": "Model not reachable"
+    },
+    "websocket": {
+      "title": "Connection error",
+      "message": "WebSocket connection error"
+    },
+    "malformed": {
+      "title": "Model error",
+      "message": "Malformed model message"
+    },
+    "unknown": {
+      "title": "Model error",
+      "message": "Unknown error"
+    }
+  },
+  "common": {
+    "defaultMicrophone": "Default microphone",
+    "empty": "(empty)"
+  },
+  "debug": {
+    "modelStatus": "Model status"
+  }
+}

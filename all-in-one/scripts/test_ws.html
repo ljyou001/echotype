@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <div id="output"></div>
+    <script>
+        const output = document.getElementById('output');
+        const ws = new WebSocket('ws://127.0.0.1:6016', 'binary');
+        
+        ws.onopen = () => {
+            output.innerHTML += '<p>Connected!</p>';
+            ws.send(JSON.stringify({ type: 'capabilities_request' }));
+            ws.send(JSON.stringify({ type: 'models_request' }));
+            ws.send(JSON.stringify({ type: 'models_catalog_request' }));
+            ws.send(JSON.stringify({ type: 'devices_request' }));
+        };
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            output.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        };
+        
+        ws.onerror = (error) => {
+            output.innerHTML += '<p style="color: red;">Error: ' + error + '</p>';
+        };
+        
+        ws.onclose = () => {
+            output.innerHTML += '<p>Disconnected</p>';
+        };
+    </script>
+</body>
+</html>
