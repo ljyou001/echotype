@@ -1,4 +1,4 @@
-import keyboard
+from util.keyboard_wrapper import hook_key, send, normalize_name, KeyboardEvent
 from util.client_cosmic import Cosmic, console
 from client_config import ClientConfig as Config
 
@@ -22,15 +22,15 @@ def _emit_status(state, detail=None):
     Cosmic.emit_status(state, detail)
 
 
-def shortcut_correct(e: keyboard.KeyboardEvent):
+def shortcut_correct(e):
     # On Windows, left ctrl and right ctrl have the same keycode,
     # keyboard library triggers based on keycode
     # Even if right ctrl is set, pressing left ctrl will also trigger
     # However, although the keycodes are the same, e.name is different
     # Add a check here, if e.name is not the expected key, return
     shortcut = Config.shortcut or ''
-    key_expect = keyboard.normalize_name(shortcut) if shortcut else ''
-    key_actual = keyboard.normalize_name(e.name) if e.name else ''
+    key_expect = normalize_name(shortcut) if shortcut else ''
+    key_actual = normalize_name(e.name) if e.name else ''
     if not key_expect:
         return False
     return key_expect == key_actual
@@ -127,10 +127,10 @@ def manage_task(e: Event):
             cancel_task()
 
         # Hold, send key
-        keyboard.send(Config.shortcut)
+        send(Config.shortcut)
 
 
-def click_mode(e: keyboard.KeyboardEvent):
+def click_mode(e):
     global pressed, released, event
 
     if e.event_type == 'down' and released:
@@ -148,7 +148,7 @@ def click_mode(e: keyboard.KeyboardEvent):
 # ======================Hold mode==================================
 
 
-def hold_mode(e: keyboard.KeyboardEvent):
+def hold_mode(e):
     """Like a walkie-talkie, press to record, release to stop"""
     global task
 
@@ -168,7 +168,7 @@ def hold_mode(e: keyboard.KeyboardEvent):
             # After releasing shortcut, press again to restore CapsLock or Shift key state
             if Config.restore_key:
                 time.sleep(0.01)
-                keyboard.send(Config.shortcut)
+                send(Config.shortcut)
 
 
 
@@ -177,7 +177,7 @@ def hold_mode(e: keyboard.KeyboardEvent):
 # ==================== Bind handler ===============================
 
 
-def hold_handler(e: keyboard.KeyboardEvent) -> None:
+def hold_handler(e) -> None:
 
     # Verify key name is correct
     if not shortcut_correct(e):
@@ -187,7 +187,7 @@ def hold_handler(e: keyboard.KeyboardEvent) -> None:
     hold_mode(e)
 
 
-def click_handler(e: keyboard.KeyboardEvent) -> None:
+def click_handler(e) -> None:
 
     # Verify key name is correct
     if not shortcut_correct(e):
@@ -207,15 +207,41 @@ def unbond_shortcut():
     Cosmic.shortcut_handles = []
     pressed = False
     released = True
+    # Give OS time to release hook
+    time.sleep(0.3)
 
 
 def bond_shortcut():
     unbond_shortcut()
-    if Config.hold_mode:
-        handle = keyboard.hook_key(Config.shortcut, hold_handler, suppress=Config.suppress)
-    else:
-        # Click mode must suppress shortcut key
-        # When receiving hold, simulate sending key
-        handle = keyboard.hook_key(Config.shortcut, click_handler, suppress=True)
-    Cosmic.shortcut_handles.append(handle)
-    _emit_status('ready')
+    
+    import sys
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Debug logging for packaged app
+    logger.info(f"Attempting to bind shortcut: {Config.shortcut}, hold_mode: {Config.hold_mode}, suppress: {Config.suppress}")
+    
+    # Check if running in packaged mode
+    is_packaged = getattr(sys, 'frozen', False)
+    if is_packaged:
+        logger.info("Running in packaged mode (PyInstaller)")
+    
+    try:
+        if Config.hold_mode:
+            handle = hook_key(Config.shortcut, hold_handler, suppress=Config.suppress)
+        else:
+            # Click mode must suppress shortcut key
+            # When receiving hold, simulate sending key
+            handle = hook_key(Config.shortcut, click_handler, suppress=True)
+        
+        if handle:
+            Cosmic.shortcut_handles.append(handle)
+            logger.info(f"Shortcut bound successfully, handle: {handle}")
+            _emit_status('ready')
+        else:
+            logger.error("hook_key returned None")
+            _emit_status('error', 'Failed to bind shortcut')
+    except Exception as e:
+        logger.error(f"Failed to bind shortcut: {e}", exc_info=True)
+        _emit_status('error', f'Shortcut binding failed: {e}')
+        raise

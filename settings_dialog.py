@@ -500,7 +500,7 @@ class SettingsDialog(QDialog):
                     subprocess.Popen([str(manager_exe)], cwd=str(base_dir))
                     return
                 except Exception as e:
-                    QMessageBox.warning(self, _('Error'), f'{_("Failed to launch server manager")}: {e}')
+                    QMessageBox.warning(self, _('Error'), f"{_('Failed to launch server manager')}: {e}")
                     return
         
         # Fallback for development environment
@@ -515,7 +515,7 @@ class SettingsDialog(QDialog):
             try:
                 subprocess.Popen([sys.executable, str(server_ui_script)], cwd=str(server_ui_script.parent))
             except Exception as e:
-                QMessageBox.warning(self, _('Error'), f'{_("Failed to launch server manager")}: {e}')
+                QMessageBox.warning(self, _('Error'), f"{_('Failed to launch server manager')}: {e}")
         else:
             QMessageBox.warning(self, _('Error'), _('Server manager program not found.'))
 

@@ -7,7 +7,7 @@
   **🎤 快速 · 免费 · 离线的语音输入工具**
   
   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-  [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](#)
+  [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey.svg)](#)
   <!-- [![Release](https://img.shields.io/github/v/release/ljyou001/echotype.svg)](https://github.com/ljyou001/echotype/releases) -->
   
   **Languages / 语言**: [English](README.md) | [中文](README_ZH.md)
@@ -20,7 +20,7 @@
 
 ## 📖 项目总览
 
-**EchoType / 声笔** 是一款专为 Windows 设计的智能语音输入工具，旨在帮助您快速将语音转换为文本输入。它基于 [CapsWriter-Offline](https://github.com/HaujetZhao/CapsWriter-Offline) 项目构建并优化，提供完全离线的语音识别体验。
+**EchoType / 声笔** 是一款适用于 Windows 和 macOS 的智能语音输入工具，旨在帮助您快速将语音转换为文本输入。它基于 [CapsWriter-Offline](https://github.com/HaujetZhao/CapsWriter-Offline) 项目构建并优化，提供完全离线的语音识别体验。
 
 ### 🎯 核心优势
 - **🔒 隐私安全**: 完全离线处理，无数据上传
@@ -43,7 +43,7 @@
 - **热键支持**: 可自定义快捷键，快速激活
 
 ### 🔧 系统集成
-- **开机自启**: 可选的 Windows 启动项
+- **开机自启**: 可选的系统启动项
 - **音频设备**: 智能麦克风检测与切换
 - **输出格式**: 多种文本格式选项
 - **气泡通知**: 实时桌面反馈
@@ -88,15 +88,27 @@
 
 ## 📋 系统要求
 
+### Windows
 | 项目 | 要求 |
 |------|-------------|
 | **操作系统** | Windows 10/11 (64-bit) |
 | **内存** | 最低 4GB RAM |
-| **存储** | 至少 500MB 可用空间 |
+| **存储** | 至少 2GB 可用空间 |
+| **音频设备** | 支持的麦克风设备 |
+| **网络** | 无需互联网连接 |
+
+### macOS
+| 项目 | 要求 |
+|------|-------------|
+| **操作系统** | macOS 10.14+ |
+| **内存** | 最低 4GB RAM |
+| **存储** | 至少 2GB 可用空间 |
 | **音频设备** | 支持的麦克风设备 |
 | **网络** | 无需互联网连接 |
 
 ## 🔧 常见问题
+
+### Windows 相关
 
 <details>
 <summary><strong>❓ 程序无法启动？</strong></summary>
@@ -105,24 +117,6 @@
 2. 确认 Windows 版本兼容性
 3. 查看日志文件进行错误诊断
 4. 尝试以管理员身份运行
-</details>
-
-<details>
-<summary><strong>❓ 语音识别不准确？</strong></summary>
-
-1. 检查麦克风设备和音量
-2. 在安静的环境中使用
-3. 添加自定义热词以提高准确率
-4. 调整录音灵敏度设置
-</details>
-
-<details>
-<summary><strong>❓ 如何添加自定义热词？</strong></summary>
-
-1. 右键托盘图标并选择“设置”
-2. 进入“热词管理”选项卡
-3. 添加常用的专业词汇
-4. 保存设置并重启程序
 </details>
 
 <details>
@@ -141,6 +135,40 @@
 4. 如果仍然失败，请使用仅客户端模式并连接到远程服务器
 </details>
 
+### macOS 相关
+
+<details>
+<summary><strong>❓ 如何在 macOS 上运行？</strong></summary>
+
+详细说明请参阅 [docs/MACOS_SETUP.md](docs/MACOS_SETUP.md)。
+
+关键步骤：
+1. 安装依赖：`pip install -r requirements-macos.txt`
+2. 在系统设置中授予辅助功能权限
+3. 运行：`python run_tray.py`
+4. macOS 使用 `pynput` 库提供热键支持
+</details>
+
+### 通用问题
+
+<details>
+<summary><strong>❓ 语音识别不准确？</strong></summary>
+
+1. 检查麦克风设备和音量
+2. 在安静的环境中使用
+3. 添加自定义热词以提高准确率
+4. 调整录音灵敏度设置
+</details>
+
+<details>
+<summary><strong>❓ 如何添加自定义热词？</strong></summary>
+
+1. 右键托盘图标并选择"设置"
+2. 进入"热词管理"选项卡
+3. 添加常用的专业词汇
+4. 保存设置并重启程序
+</details>
+
 ## 🛠️ 开发与打包
 
 <details>
@@ -156,8 +184,10 @@ EchoType 使用客户端-服务器架构：
 
 语音识别服务器需要 `sherpa-onnx`、`funasr-onnx` 等。
 
+#### Windows 环境
+
 **先决条件:**
-1. 安装 Visual Studio Build Tools 并勾选 “使用C++的桌面开发”。
+1. 安装 Visual Studio Build Tools 并勾选 "使用C++的桌面开发"。
 2. 安装 CMake。
 
 **安装步骤:**
@@ -168,13 +198,25 @@ python -m venv .venv
 .venv\Scripts\activate
 
 # 2. 安装依赖
-pip install -r requirements-simple.txt
-pip install --find-links https://k2-fsa.github.io/sherpa/onnx/install/python.html sherpa-onnx
-pip install funasr-onnx==0.2.5
-pip install kaldi-native-fbank
+pip install -r requirements.txt
+```
+
+#### macOS 环境
+
+**安装步骤:**
+
+```bash
+# 1. 创建并激活虚拟环境
+python -m venv .venv
+source .venv/bin/activate
+
+# 2. 安装依赖
+pip install -r requirements-macos.txt
 ```
 
 ### 开发模式下运行
+
+#### Windows
 
 ```bash
 # 1. 在后台启动服务器
@@ -184,6 +226,16 @@ start /B python server/start_server.py
 pythonw run_tray.py
 ```
 
+#### macOS
+
+```bash
+# 1. 在后台启动服务器
+python server/start_server.py &
+
+# 2. 运行客户端
+python run_tray.py
+```
+
 </details>
 
 <details>
@@ -191,13 +243,18 @@ pythonw run_tray.py
 
 推荐使用 [PyInstaller](https://pyinstaller.org/) 将项目打包为独立的可执行文件。
 
-### 先决条件
+### Windows 打包
+
+#### 先决条件
 
 1. **设置虚拟环境:**
    ```bash
    python -m venv .venv
    .venv\Scripts\activate
-   pip install -r requirements.txt
+   pip install -r requirements-simple.txt
+   pip install --find-links https://k2-fsa.github.io/sherpa/onnx/install/python.html sherpa-onnx
+   pip install funasr-onnx==0.2.5
+   pip install kaldi-native-fbank
    ```
 
 2. **安装 PyInstaller:**
@@ -205,7 +262,7 @@ pythonw run_tray.py
    pip install pyinstaller
    ```
 
-### 构建流程
+#### 构建流程
 
 **第一步: 构建所有组件**
 
@@ -223,13 +280,27 @@ call .venv\Scripts\pyinstaller.exe EchoTypeServerManager.spec
 **第二步: 合并发行文件**
 
 ```bash
-call .venv\Scripts\python.exe build_package.py
+call .venv\Scripts\python.exe build_package_en.py
 ```
 
 **第三步: 测试打包结果**
 
 ```bash
 call .venv\Scripts\python.exe test_package.py
+```
+
+### macOS 打包
+
+详细说明请参阅 [docs/MACOS_SETUP.md](docs/MACOS_SETUP.md)。
+
+**注意：macOS 打包功能尚在开发中。目前请使用开发模式运行：**
+
+```bash
+# 双击运行
+open start_echotype.command
+
+# 或在终端运行
+bash start_echotype.command
 ```
 
 ### 最终包结构
@@ -249,9 +320,10 @@ EchoType_Release/
 
 ### 注意事项
 
-- `.spec` 文件已预先配置好正确的路径和依赖项。
-- `build_package.py` 会自动合并所有三个 `dist` 文件夹。
-- 如遇问题，请参阅 [PACKAGING_GUIDE.md](PACKAGING_GUIDE.md)。
+- `.spec` 文件已预先配置好正确的路径和依赖项
+- `build_package.py` 会自动合并所有三个 `dist` 文件夹
+- 如遇问题，请参阅 [docs/PACKAGING_GUIDE.md](docs/PACKAGING_GUIDE.md)
+- macOS 打包说明请参阅 [docs/MACOS_SETUP.md](docs/MACOS_SETUP.md)
 
 </details>
 

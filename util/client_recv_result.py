@@ -1,7 +1,7 @@
 import asyncio
 import json
 
-import keyboard
+from util.keyboard_wrapper import send, write
 import websockets
 from client_config import ClientConfig as Config
 from util.client_cosmic import Cosmic, console

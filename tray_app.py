@@ -41,6 +41,16 @@ class TrayApp:
     def __init__(self) -> None:
         self.app = QApplication(sys.argv)
         self.app.setQuitOnLastWindowClosed(False)
+        
+        # Check macOS accessibility permission early - only request if not granted
+        import platform
+        if platform.system() == 'Darwin':
+            from macos_permissions import check_accessibility_permission
+            if not check_accessibility_permission():
+                # Only show dialog once on first launch
+                from macos_permissions import show_accessibility_dialog
+                show_accessibility_dialog()
+        
         config_manager.ensure_directories()
         self.config = config_manager.load_config()
         init_translation(self.config)
@@ -166,7 +176,7 @@ class TrayApp:
         addr = self.config.get('addr', '127.0.0.1')
         port = int(self.config.get('port', 6016))
         try:
-            with socket.create_connection((addr, port), timeout=1):
+            with socket.create_connection((addr, port), timeout=2):
                 return True
         except (socket.timeout, ConnectionRefusedError, OSError):
             return False
@@ -179,18 +189,33 @@ class TrayApp:
             return
         
         try:
-            if entry.suffix.lower() == '.exe':
-                self._server_process = subprocess.Popen(
-                    [str(entry)],
-                    cwd=str(entry.parent),
-                    creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
-                )
+            import platform
+            if platform.system() == 'Darwin':
+                # macOS: log server output to file for debugging
+                log_file = config_manager.LOG_DIR / 'server_output.log'
+                with open(log_file, 'a') as f:
+                    self._server_process = subprocess.Popen(
+                        [str(entry)],
+                        cwd=str(entry.parent),
+                        stdout=f,
+                        stderr=subprocess.STDOUT
+                    )
+                self.logger.info(f'Server started, output logged to {log_file}')
             else:
-                self._server_process = subprocess.Popen(
-                    [sys.executable, str(entry)],
-                    cwd=str(entry.parent),
-                    creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
-                )
+                # Windows
+                creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
+                if entry.suffix.lower() == '.exe':
+                    self._server_process = subprocess.Popen(
+                        [str(entry)],
+                        cwd=str(entry.parent),
+                        creationflags=creationflags
+                    )
+                else:
+                    self._server_process = subprocess.Popen(
+                        [sys.executable, str(entry)],
+                        cwd=str(entry.parent),
+                        creationflags=creationflags
+                    )
             self.logger.info('Server auto-started successfully')
             self._show_notification(_('Server Starting'), _('Loading models, please wait...'))
         except Exception as e:
@@ -316,6 +341,20 @@ class TrayApp:
     def _do_restart_listening(self) -> None:
         """Delayed restart of listening service"""
         self.logger.info('Preparing to restart listening service...')
+        
+        # Check accessibility permission before restart on macOS - only warn if not granted
+        import platform
+        if platform.system() == 'Darwin':
+            from macos_permissions import check_accessibility_permission
+            if not check_accessibility_permission():
+                self.logger.warning('Accessibility permission not granted')
+                self._show_notification(
+                    _('Permission Required'),
+                    _('Please grant accessibility permission in System Settings'),
+                    force=True
+                )
+                # Don't return - still try to restart
+        
         try:
             self.backend.restart_listening()
             self._listening = True
@@ -360,6 +399,13 @@ class TrayApp:
         return self._resolve_server_entry() is not None
 
     def _resolve_server_entry(self) -> Path | None:
+        # For macOS .app bundle
+        if getattr(sys, 'frozen', False):
+            bundle_dir = Path(sys.executable).parent.parent  # Contents/
+            server_in_resources = bundle_dir / 'Resources' / 'server' / 'EchoTypeServer'
+            if server_in_resources.exists():
+                return server_in_resources
+        
         search_dirs = [
             Path.cwd(),
             self._package_dir,
@@ -367,7 +413,7 @@ class TrayApp:
             self._package_dir.parent,
             self._package_dir.parent / 'server',
         ]
-        names = ['EchoTypeServer.exe', 'start_server.py']
+        names = ['EchoTypeServer.exe', 'EchoTypeServer', 'start_server.py']
         seen = set()
         for directory in search_dirs:
             for name in names:
@@ -406,11 +452,26 @@ class TrayApp:
             pass
         ready = False
         try:
-            self._show_notification(_('Loading Model'), f'{_('Starting')} {entry.name}...', force=True)
-            if entry.suffix.lower() == '.exe':
-                self._server_process = subprocess.Popen([str(entry)], cwd=str(entry.parent))
+            self._show_notification(_('Loading Model'), f"{_('Starting')} {entry.name}...", force=True)
+            
+            import platform
+            if platform.system() == 'Darwin':
+                # macOS: log server output to file for debugging
+                log_file = config_manager.LOG_DIR / 'server_output.log'
+                with open(log_file, 'a') as f:
+                    self._server_process = subprocess.Popen(
+                        [str(entry)],
+                        cwd=str(entry.parent),
+                        stdout=f,
+                        stderr=subprocess.STDOUT
+                    )
+                self.logger.info(f'Server started, output logged to {log_file}')
             else:
-                self._server_process = subprocess.Popen([sys.executable, str(entry)], cwd=str(entry.parent))
+                # Windows
+                if entry.suffix.lower() == '.exe':
+                    self._server_process = subprocess.Popen([str(entry)], cwd=str(entry.parent))
+                else:
+                    self._server_process = subprocess.Popen([sys.executable, str(entry)], cwd=str(entry.parent))
             if return_progress:
                 for stage in self._wait_for_server_ready(progress_file):
                     progress.append(stage)

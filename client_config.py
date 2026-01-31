@@ -1,5 +1,7 @@
 """Windows tray client configuration defaults replicated locally."""
+import platform
 
+_IS_MACOS = platform.system() == 'Darwin'
 
 class ClientConfig:
     addr = '127.0.0.1'
@@ -12,7 +14,7 @@ class ClientConfig:
     model_api_url = ''
     model_api_key = ''
 
-    shortcut = 'right ctrl'
+    shortcut = 'right option' if _IS_MACOS else 'right ctrl'
     hold_mode = True
     suppress = False
     restore_key = True
