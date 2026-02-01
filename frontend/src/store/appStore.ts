@@ -255,7 +255,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   modelBackend: {}, // Backend selection for each model
   lastActiveModelId: undefined,
   appLanguage: "system",
-  recordingMode: "toggle", // Default to toggle mode (push-to-talk requires native keyUp support)
+  recordingMode: "push-to-talk", // Default to push-to-talk mode
   _userHasSetRecordingMode: false,
   outputDirectInput: true, // Default: direct input enabled
   outputClipboard: false, // Default: clipboard disabled
