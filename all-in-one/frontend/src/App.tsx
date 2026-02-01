@@ -10,6 +10,7 @@ import { SettingsPage } from "./components/SettingsPage";
 import { DebugPage } from "./components/DebugPage";
 import { QuickActionModal } from "./components/QuickActionModal";
 import { QuickActionWindow } from "./components/QuickActionWindow";
+import { Onboarding } from "./components/Onboarding";
 import { getWebSocketManager, getRecordingManager } from "./services/managers";
 import { MessageRouter } from "./services/messages";
 import { AudioProcessor } from "./services/audio";
@@ -59,6 +60,7 @@ export default function App() {
   const initializeIntegrations = useAppStore((state) => state.initializeIntegrations);
   const setLastTranscribedText = useAppStore((state) => state.setLastTranscribedText);
   const setShowQuickActionModal = useAppStore((state) => state.setShowQuickActionModal);
+  const onboardingCompleted = useAppStore((state) => state.onboardingCompleted);
 
   // ===== Initialize WebSocket & Settings =====
   useEffect(() => {
@@ -447,6 +449,10 @@ export default function App() {
   }, [backendStatus]);
 
   // ===== Render UI =====
+  if (!onboardingCompleted) {
+    return <Onboarding />;
+  }
+
   const renderPage = () => {
     switch (activePage) {
       case "home":

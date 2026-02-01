@@ -315,6 +315,32 @@
       "message": "Unknown error"
     }
   },
+  "onboarding": {
+    "title": "Welcome to EchoType",
+    "subtitle": "Voice input needs microphone and hotkey access. Please complete the steps below.",
+    "stepPermissions": "Permissions",
+    "stepMicrophone": "Choose Microphone",
+    "permissions": {
+      "microphone": "Microphone",
+      "microphoneDesc": "Used to record speech and transcribe to text.",
+      "openMicrophone": "Open microphone settings",
+      "accessibility": "Hotkey / Accessibility",
+      "accessibilityDescWin": "On Windows, no separate permission is usually needed. If hotkeys don't work, ensure the app is running.",
+      "accessibilityDescMac": "Required for global hotkeys (e.g. start/stop recording). Allow this app under Accessibility.",
+      "openAccessibility": "Open accessibility settings",
+      "checking": "Checking…",
+      "granted": "Granted",
+      "denied": "Not granted",
+      "recheck": "Recheck"
+    },
+    "microphone": {
+      "title": "Choose microphone",
+      "description": "Select the microphone for voice input. You'll see the level meter when speaking.",
+      "finish": "Finish"
+    },
+    "next": "Next",
+    "back": "Back"
+  },
   "common": {
     "defaultMicrophone": "Default microphone",
     "empty": "(empty)"

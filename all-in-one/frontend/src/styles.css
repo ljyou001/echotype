@@ -999,6 +999,134 @@ body {
   cursor: not-allowed;
 }
 
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--secondary);
+  color: var(--secondary);
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(65, 139, 243, 0.08);
+  border-color: var(--secondary);
+}
+
+/* Onboarding (first-run) */
+.onboarding {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--background);
+  position: relative;
+}
+
+.onboarding-inner {
+  max-width: 520px;
+  width: 100%;
+}
+
+.onboarding .onboarding-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 8px 0;
+}
+
+.onboarding .onboarding-subtitle {
+  font-size: 15px;
+  color: var(--muted);
+  margin: 0 0 28px 0;
+  line-height: 1.5;
+}
+
+.onboarding-step-label {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.onboarding-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.onboarding-card {
+  padding: 18px 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+.onboarding-card--single {
+  margin-bottom: 24px;
+}
+
+.onboarding-card h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 6px 0;
+  color: var(--text);
+}
+
+.onboarding-desc {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0 0 12px 0;
+}
+
+.onboarding-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.onboarding-status {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.onboarding-status--granted {
+  color: #2e7d32;
+}
+
+.onboarding-status--denied {
+  color: #c62828;
+}
+
+.onboarding-status--checking {
+  color: var(--muted);
+}
+
+.onboarding-no-devices {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.onboarding-card .btn-secondary {
+  margin-right: 8px;
+}
+
+.onboarding-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
 /* Empty State */
 .empty-state {
   padding: 48px 24px;

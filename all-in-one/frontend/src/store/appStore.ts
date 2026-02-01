@@ -171,6 +171,7 @@ type AppState = {
   _userHasSetRecordingMode: boolean; // Prevent initializeSettings from overwriting user's recent choice
   outputDirectInput: boolean; // Output via direct input (typing)
   outputClipboard: boolean; // Output via clipboard
+  onboardingCompleted: boolean; // First-run onboarding finished
 
   // Quick Action Integrations
   lastTranscribedText: string;                    // Last transcribed text
@@ -196,7 +197,7 @@ type AppState = {
   addHistoryEntry: (entry: HistoryEntry) => void;
   deleteHistoryEntry: (id: string) => void;
   setInputDevices: (devices: MediaDeviceInfo[]) => void;
-  setSelectedInputId: (id: string) => void;
+  setSelectedInputId: (id: string) => void; // also persists via settings
   setSelectedLanguage: (lang: string) => void;
   setQwenBackend: (backend: string) => void;
   setModelStreaming: (modelId: string, enabled: boolean) => void;
@@ -213,7 +214,8 @@ type AppState = {
   initializeSettings: () => Promise<void>;
   setOutputDirectInput: (enabled: boolean) => void;
   setOutputClipboard: (enabled: boolean) => void;
-  
+  setOnboardingCompleted: (completed: boolean) => void;
+
   // Quick Action Integration Actions
   setLastTranscribedText: (text: string) => void;
   setShowQuickActionModal: (show: boolean) => void;
@@ -257,7 +259,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   _userHasSetRecordingMode: false,
   outputDirectInput: true, // Default: direct input enabled
   outputClipboard: false, // Default: clipboard disabled
-  
+  onboardingCompleted: false,
+
   // Quick Action Integrations
   lastTranscribedText: '',
   showQuickActionModal: false,
@@ -284,7 +287,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   deleteHistoryEntry: (id) =>
     set((state) => ({ history: state.history.filter((e) => e.id !== id) })),
   setInputDevices: (devices) => set({ inputDevices: devices }),
-  setSelectedInputId: (id) => set({ selectedInputId: id }),
+  setSelectedInputId: (id) => {
+    set({ selectedInputId: id });
+    window.echotype?.updateSetting?.("selectedInputId", id);
+  },
   setSelectedLanguage: (lang) => set({ selectedLanguage: lang }),
   setQwenBackend: (backend) => set({ qwenBackend: backend }),
   setModelStreaming: (modelId, enabled) => {
@@ -347,12 +353,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ outputClipboard: enabled });
     window.echotype?.updateSetting?.("outputClipboard", enabled);
   },
+  setOnboardingCompleted: (completed) => {
+    set({ onboardingCompleted: completed });
+    window.echotype?.updateSetting?.("onboardingCompleted", completed);
+  },
   initializeSettings: async () => {
     const recordingMode = await window.echotype?.getSetting?.("recordingMode");
     const appLanguage = await window.echotype?.getSetting?.("appLanguage");
     const lastActiveModelId = await window.echotype?.getSetting?.("lastActiveModelId");
     const outputDirectInput = await window.echotype?.getSetting?.("outputDirectInput");
     const outputClipboard = await window.echotype?.getSetting?.("outputClipboard");
+    const onboardingCompleted = await window.echotype?.getSetting?.("onboardingCompleted");
+    const savedSelectedInputId = await window.echotype?.getSetting?.("selectedInputId");
     const state = useAppStore.getState();
 
     // Load per-model settings for all models
@@ -430,6 +442,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       // First time: set default to false and save it
       set({ outputClipboard: false });
       window.echotype?.updateSetting?.("outputClipboard", false);
+    }
+
+    if (onboardingCompleted === true) {
+      set({ onboardingCompleted: true });
+    }
+    if (savedSelectedInputId && typeof savedSelectedInputId === "string") {
+      set({ selectedInputId: savedSelectedInputId });
     }
   },
   

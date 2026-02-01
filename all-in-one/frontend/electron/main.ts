@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell, clipboard } from "electron";
+import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell, clipboard, systemPreferences } from "electron";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -399,6 +399,38 @@ ipcMain.handle("backend-restart", () => {
 
 ipcMain.handle("open-external", (_event, url: string) => {
   return shell.openExternal(url);
+});
+
+// Open system permission settings (microphone / accessibility) for onboarding
+ipcMain.handle("open-system-permission", (_event, type: "microphone" | "accessibility") => {
+  const isMac = process.platform === "darwin";
+  const isWin = process.platform === "win32";
+  if (type === "microphone") {
+    if (isWin) {
+      return shell.openExternal("ms-settings:privacy-microphone");
+    }
+    if (isMac) {
+      return shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone");
+    }
+  }
+  if (type === "accessibility") {
+    if (isMac) {
+      return shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility");
+    }
+    if (isWin) {
+      // Windows: global hotkeys typically don't require a separate permission; open general privacy as fallback
+      return shell.openExternal("ms-settings:privacy");
+    }
+  }
+  return Promise.resolve();
+});
+
+// Get microphone permission status (macOS: native; Windows: not available, renderer uses getUserMedia)
+ipcMain.handle("get-media-access-status", () => {
+  if (process.platform === "darwin") {
+    return systemPreferences.getMediaAccessStatus("microphone");
+  }
+  return "unknown";
 });
 
 ipcMain.handle("hotkey-get", (_event, key: string) => {

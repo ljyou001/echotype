@@ -315,6 +315,32 @@
       "message": "未知错误"
     }
   },
+  "onboarding": {
+    "title": "欢迎使用 EchoType",
+    "subtitle": "语音输入需要麦克风与快捷键权限，请按步骤完成设置。",
+    "stepPermissions": "权限设置",
+    "stepMicrophone": "选择麦克风",
+    "permissions": {
+      "microphone": "麦克风权限",
+      "microphoneDesc": "用于录制语音并转写为文字。",
+      "openMicrophone": "打开麦克风设置",
+      "accessibility": "快捷键 / 辅助功能权限",
+      "accessibilityDescWin": "Windows 上通常无需单独授权；若快捷键无效，请检查应用是否在后台运行。",
+      "accessibilityDescMac": "用于全局快捷键（如开始/停止录音），需在「辅助功能」中允许本应用。",
+      "openAccessibility": "打开辅助功能设置",
+      "checking": "检测中…",
+      "granted": "已授权",
+      "denied": "未授权",
+      "recheck": "重新检测"
+    },
+    "microphone": {
+      "title": "选择麦克风",
+      "description": "选择要用于语音输入的麦克风设备，说话时可以看到电平条。",
+      "finish": "完成"
+    },
+    "next": "下一步",
+    "back": "上一步"
+  },
   "common": {
     "defaultMicrophone": "默认麦克风",
     "empty": "（空）"

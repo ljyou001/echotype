@@ -38,6 +38,12 @@ const api = {
   openExternal: (url: string) => {
     ipcRenderer.invoke("open-external", url);
   },
+  openSystemPermission: (type: "microphone" | "accessibility") => {
+    return ipcRenderer.invoke("open-system-permission", type);
+  },
+  getMediaAccessStatus: (): Promise<string> => {
+    return ipcRenderer.invoke("get-media-access-status");
+  },
   getHotkey: (key: string): Promise<string> => {
     return ipcRenderer.invoke("hotkey-get", key);
   },

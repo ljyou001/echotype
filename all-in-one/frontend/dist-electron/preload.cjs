@@ -39,6 +39,12 @@ const api = {
     openExternal: (url) => {
         electron_1.ipcRenderer.invoke("open-external", url);
     },
+    openSystemPermission: (type) => {
+        return electron_1.ipcRenderer.invoke("open-system-permission", type);
+    },
+    getMediaAccessStatus: () => {
+        return electron_1.ipcRenderer.invoke("get-media-access-status");
+    },
     getHotkey: (key) => {
         return electron_1.ipcRenderer.invoke("hotkey-get", key);
     },

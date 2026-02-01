@@ -9,6 +9,8 @@ declare global {
       requestWindowAction: (action: "show" | "hide" | "toggle") => void;
       restartBackend?: () => void;
       openExternal?: (url: string) => void;
+      openSystemPermission?: (type: "microphone" | "accessibility") => Promise<void>;
+      getMediaAccessStatus?: () => Promise<string>;
       getHotkey?: (key: string) => Promise<string>;
       updateHotkey?: (key: string, accelerator: string) => Promise<{ success: boolean; error?: string }>;
       validateHotkey?: (accelerator: string) => Promise<{ valid: boolean; error?: string }>;
