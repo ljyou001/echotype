@@ -1,180 +1,330 @@
-# EchoType
+# EchoType All-in-One
 
-一个本地运行的语音识别应用，支持中英文实时转写。
+<div align="center">
 
-## 特性
+**🎤 Modern Voice-to-Text Application with AI Integration**
 
-- 🎙️ **本地识别** - 所有处理在本地完成，保护隐私
-- 🚀 **快速响应** - 低延迟实时转写
-- 🌐 **多语言支持** - 支持中文、英文等30+语言（Qwen3模型）
-- ⌨️ **全局热键** - 可自定义快捷键，支持对讲机和开关两种模式
-- 🔄 **多模型支持** - 可切换不同的ASR模型
-- 📝 **自动保存** - 录音和识别结果自动保存
+Fast · Offline · Intelligent · Cross-platform
 
-## 快速开始
+[📥 Download](https://github.com/ljyou001/echotype/releases) · [� Documentation](#documentation) · [🛠 Development](#development)
 
-### 安装依赖
+</div>
 
-**后端**:
-```powershell
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install -r requirements-backend.txt
+---
+
+## 📖 Overview
+
+EchoType All-in-One is a complete rewrite of the original EchoType project, featuring a modern Electron-based frontend and Python backend architecture. It provides real-time voice-to-text transcription with support for multiple AI models and integration with external AI services.
+
+### Key Features
+
+- **🎤 Real-time Voice Recognition**: Instant speech-to-text with multiple model support
+- **🤖 AI Integration**: Direct integration with OpenClaw, ChatGPT, Claude, and more
+- **⚡ Quick Actions**: Hotkey-triggered quick action window for instant AI interactions
+- **🌍 Multilingual**: Support for English and Chinese with i18n framework
+- **🔒 Privacy-First**: Completely offline processing with local AI models
+- **🎨 Modern UI**: Clean, intuitive interface built with React and TypeScript
+
+## 🏗 Architecture
+
+### Frontend (Electron + React)
+- **Framework**: Electron with React and TypeScript
+- **UI Library**: React with Zustand for state management
+- **Styling**: Custom CSS with modern design system
+- **Build Tool**: Vite for fast development and building
+
+### Backend (Python)
+- **Framework**: FastAPI with WebSocket support
+- **Models**: Sherpa-ONNX (Paraformer) and Qwen3-ASR
+- **Audio Processing**: Real-time audio streaming and processing
+- **API**: RESTful API and WebSocket for real-time communication
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Node.js**: v18 or higher
+- **Python**: 3.9 or higher
+- **Operating System**: Windows 10/11 or macOS 10.14+
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/ljyou001/echotype.git
+   cd echotype/all-in-one
+   ```
+
+2. **Install backend dependencies**
+   ```bash
+   python -m venv .venv
+   .venv\Scripts\activate  # Windows
+   # source .venv/bin/activate  # macOS/Linux
+   pip install -r requirements-backend.txt
+   ```
+
+3. **Install frontend dependencies**
+   ```bash
+   cd frontend
+   npm install
+   ```
+
+4. **Download AI models**
+   - Models are stored in `models/` directory
+   - Paraformer (offline): ~200MB
+   - Qwen3-ASR (offline): ~1.2GB
+
+### Running in Development
+
+**Option 1: Using launcher (Recommended)**
+```bash
+python launcher.py
 ```
 
-**前端**:
-```powershell
-cd frontend
-npm install
+**Option 2: Manual start**
+
+Terminal 1 (Backend):
+```bash
+.venv\Scripts\activate
+python -m backend
 ```
 
-### 启动应用
-
-```powershell
-cd frontend
-npm run dev
-```
-
-详细说明请查看 [QUICKSTART.md](QUICKSTART.md)
-
-## 使用方法
-
-1. **选择模型** - 在Models页面选择一个ASR模型
-2. **配置热键** - 在Settings页面设置录音快捷键（默认：RCtrl）
-3. **选择模式** - 选择对讲机模式（按住录音）或开关模式（按一次开始）
-4. **开始录音** - 按下热键开始说话，识别结果会自动显示
-
-## 录音模式
-
-### 对讲机模式（默认）
-- 按住热键录音
-- 松开热键停止
-- 适合短句输入
-
-### 开关模式
-- 按一次开始录音
-- 再按一次停止
-- 适合长句输入
-
-## 支持的模型
-
-### Paraformer (paraformer-offline)
-- 快速高效，资源占用低
-- 支持中英文
-- 仅CPU
-
-### Qwen3-ASR-0.6B
-- 高级多语言模型，准确率更高
-- 支持30+语言
-- 支持CPU和CUDA
-- 可配置设备和语言
-
-## 目录结构
-
-```
-.
-├── backend/              # Python后端
-│   ├── common/          # 公共模块
-│   ├── sherpa_onnx/     # Sherpa-ONNX适配器
-│   ├── qwen3/           # Qwen3适配器
-│   └── server.py        # WebSocket服务器
-├── frontend/            # Electron前端
-│   ├── electron/        # Electron主进程
-│   ├── src/            # React源码
-│   └── dist/           # 构建输出
-├── models/             # 模型文件
-├── design/             # 设计文档
-├── scripts/            # 测试和工具脚本
-└── test/               # 测试文件和资源
-```
-
-## 配置文件
-
-- 用户设置：`~/.echotype/settings.json`
-- 日志文件：`~/.echotype/logs/`
-- 录音文件：`~/.echotype/rec/`
-- 模型配置：`~/.echotype/models/*/config.ini`
-
-## 文档
-
-- [快速开始](QUICKSTART.md) - 安装和启动指南
-- [部署指南](DEPLOYMENT.md) - 生产环境部署
-- [设计文档](design/README.md) - 架构和设计说明
-- [故障排查](design/TROUBLESHOOTING.md) - 常见问题解决
-- [测试流程](design/TESTING_PROCEDURES.md) - 测试指南
-- [脚本工具](scripts/README.md) - 测试和诊断脚本
-
-## 技术栈
-
-### 后端
-- Python 3.10+
-- Sherpa-ONNX - 语音识别引擎
-- FunASR - 标点模型
-- Qwen3-ASR - 多语言模型
-- WebSocket - 通信协议
-
-### 前端
-- Electron - 桌面应用框架
-- React - UI框架
-- TypeScript - 类型安全
-- Zustand - 状态管理
-- i18next - 国际化
-
-## 开发
-
-### 开发模式
-```powershell
+Terminal 2 (Frontend):
+```bash
 cd frontend
 npm run dev
 ```
 
-### 构建
-```powershell
+### Building for Production
+
+```bash
 cd frontend
 npm run build
 ```
 
-### 测试
-```powershell
-# 测试配置加载
-python .\scripts\test_config_loading.py
+The built application will be in `frontend/dist-electron/`.
 
-# 测试模型目录
-python .\scripts\test_backend_catalog.py
+## 📚 Documentation
 
-# 验证bug修复
-.\scripts\quick_verify.ps1
+### User Guides
+- [Quick Start Guide](QUICKSTART.md) - Get started in 5 minutes
+- [Configuration Guide](design/SETTINGS_EXPLAINED.md) - Detailed settings explanation
+- [Hotkey Configuration](design/HOTKEY_IMPLEMENTATION.md) - Customize your hotkeys
+- [Model Switching](design/MODEL_SWITCHING_GUIDE.md) - Switch between AI models
 
-# 同步配置文件
-.\scripts\sync_configs.ps1
+### Integration Guides
+- [OpenClaw Integration](design/OPENCLAW_INTEGRATION.md) - Connect with OpenClaw AI agent
+- [Quick Actions](design/QUICK_ACTION_INTEGRATION_SYSTEM.md) - Use quick action system
+- [Integrations System](design/QUICK_ACTION_INTEGRATION_IMPLEMENTATION.md) - Add custom integrations
+
+### Technical Documentation
+- [Backend Specification](design/BACKEND_SPEC.md) - Backend API and architecture
+- [Frontend Specification](design/FRONTEND_ELECTRON_SPEC_V2.md) - Frontend architecture
+- [Model Architecture](design/MODEL_SETTINGS_ARCHITECTURE.md) - AI model system
+- [Logging System](design/LOGGING_SYSTEM.md) - Debug and logging
+- [i18n Guide](design/I18N_GUIDE.md) - Internationalization
+
+### Development Guides
+- [Packaging Guide](design/PACKAGING.md) - Build distributable packages
+- [Deployment Guide](design/DEPLOYMENT.md) - Deploy to production
+- [Testing Procedures](design/TESTING_PROCEDURES.md) - Test the application
+- [Troubleshooting](design/TROUBLESHOOTING.md) - Common issues and solutions
+
+## 🎯 Features
+
+### Voice Recognition
+- **Multiple Models**: Sherpa-ONNX (Paraformer) and Qwen3-ASR support
+- **Real-time Processing**: Instant transcription with low latency
+- **High Accuracy**: Advanced AI models for accurate recognition
+- **Offline Support**: Works completely offline with local models
+
+### Quick Actions
+- **Hotkey Activation**: Trigger with customizable hotkey (default: Ctrl+Shift+Space)
+- **AI Integrations**: Send transcribed text to ChatGPT, Claude, OpenClaw, etc.
+- **Reply Display**: View AI responses directly in quick action window
+- **Smart Positioning**: Window appears near cursor with intelligent placement
+
+### Integrations
+- **OpenClaw**: AI agent with WebSocket and HTTP API support
+- **ChatGPT**: Direct integration with OpenAI's ChatGPT
+- **Claude**: Anthropic's Claude AI assistant
+- **Perplexity**: AI-powered search engine
+- **Custom Integrations**: Easy to add new integrations
+
+### User Interface
+- **Modern Design**: Clean, intuitive interface with smooth animations
+- **Dark Mode Ready**: Prepared for dark mode support
+- **Responsive**: Adapts to different screen sizes
+- **Accessible**: Keyboard navigation and screen reader support
+
+### System Integration
+- **System Tray**: Runs in background with tray icon
+- **Auto-start**: Optional startup on system boot
+- **Global Hotkeys**: System-wide hotkey support
+- **Notifications**: Desktop notifications for important events
+
+## 🛠 Development
+
+### Project Structure
+
+```
+all-in-one/
+├── backend/                 # Python backend
+│   ├── common/             # Shared utilities
+│   ├── qwen3/              # Qwen3 model adapter
+│   ├── sherpa_adapter/     # Sherpa-ONNX adapter
+│   ├── app.py              # FastAPI application
+│   ├── manager.py          # Model manager
+│   └── server.py           # WebSocket server
+├── frontend/               # Electron frontend
+│   ├── electron/           # Electron main process
+│   ├── src/                # React application
+│   │   ├── components/     # React components
+│   │   ├── services/       # Business logic
+│   │   ├── store/          # State management
+│   │   └── i18n/           # Internationalization
+│   ├── assets/             # Static assets
+│   └── dist/               # Build output
+├── models/                 # AI models
+│   ├── paraformer-offline/ # Paraformer model
+│   └── Qwen3-ASR-0.6B/     # Qwen3 model
+├── design/                 # Documentation
+├── test/                   # Test files
+└── scripts/                # Utility scripts
 ```
 
-更多脚本请查看 [scripts/README.md](scripts/README.md)
+### Technology Stack
 
-## 常见问题
+**Frontend**:
+- Electron 28+
+- React 18
+- TypeScript 5
+- Vite 5
+- Zustand (state management)
+- i18next (internationalization)
 
-### 端口被占用
-```powershell
-netstat -ano | findstr :6016
-taskkill /F /PID <PID>
+**Backend**:
+- Python 3.9+
+- FastAPI
+- WebSocket
+- Sherpa-ONNX
+- FunASR
+- NumPy
+
+### Development Workflow
+
+1. **Make changes** in `frontend/src/` or `backend/`
+2. **Test locally** using `npm run dev` or `python -m backend`
+3. **Build** using `npm run build`
+4. **Test build** by running the built application
+5. **Commit** with clear commit messages
+
+### Code Style
+
+- **Frontend**: ESLint + Prettier
+- **Backend**: Black + isort
+- **Commits**: Conventional Commits format
+
+## 🧪 Testing
+
+### Frontend Testing
+```bash
+cd frontend
+npm run dev  # Development mode with hot reload
 ```
 
-### 无识别结果
-1. 检查麦克风权限
-2. 确保录音时长足够（至少2-3秒）
-3. 查看日志：`~/.echotype/logs/`
+### Backend Testing
+```bash
+.venv\Scripts\activate
+python -m backend --host 127.0.0.1 --port 6016
+```
 
-### 热键不响应
-1. 检查热键是否被其他应用占用
-2. 尝试更换热键
-3. 检查录音模式设置
+### Integration Testing
+```bash
+# Test OpenClaw integration
+open test/test_openclaw_api.html
 
-更多问题请查看 [故障排查指南](design/TROUBLESHOOTING.md)
+# Test WebSocket connection
+open test/test_ws_simple.html
+```
 
-## 许可证
+## 📦 Building & Packaging
 
-[待添加]
+### Build Frontend
+```bash
+cd frontend
+npm run build
+```
 
-## 贡献
+### Package Application
+```bash
+cd frontend
+npm run build:win  # Windows
+npm run build:mac  # macOS
+```
 
-欢迎提交Issue和Pull Request！
+See [Packaging Guide](design/PACKAGING.md) for detailed instructions.
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Backend won't start**
+- Check Python version (3.9+)
+- Verify virtual environment is activated
+- Install dependencies: `pip install -r requirements-backend.txt`
+
+**Frontend won't build**
+- Check Node.js version (18+)
+- Clear node_modules: `rm -rf node_modules && npm install`
+- Clear cache: `npm run clean`
+
+**Models not loading**
+- Verify models are in `models/` directory
+- Check model paths in `backend/models_catalog.json`
+- Ensure sufficient disk space
+
+**Hotkeys not working**
+- Check hotkey configuration in settings
+- Verify no conflicts with other applications
+- Try different hotkey combinations
+
+See [Troubleshooting Guide](design/TROUBLESHOOTING.md) for more solutions.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Original [CapsWriter-Offline](https://github.com/HaujetZhao/CapsWriter-Offline) project
+- [Sherpa-ONNX](https://github.com/k2-fsa/sherpa-onnx) for offline speech recognition
+- [FunASR](https://github.com/alibaba-damo-academy/FunASR) for Paraformer model
+- [Qwen](https://github.com/QwenLM/Qwen) for Qwen3-ASR model
+- [OpenClaw](https://github.com/openclaw/openclaw) for AI agent integration
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/ljyou001/echotype/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/ljyou001/echotype/discussions)
+- **Documentation**: [Design Docs](design/)
+
+---
+
+<div align="center">
+
+**⭐ If this project helps you, please give it a Star!**
+
+Made with ❤️ by ljyou001
+
+</div>

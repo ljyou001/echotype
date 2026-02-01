@@ -23,7 +23,8 @@ export interface IntegrationPlugin {
   supportsDirectInput: boolean;    // Whether plugin supports direct input via URL/API
   
   // Execute integration action
-  execute(text: string, config?: Record<string, any>, outputMode?: OutputMode): Promise<void>;
+  // Can optionally return { reply: string } to display reply in quick action window
+  execute(text: string, config?: Record<string, any>, outputMode?: OutputMode): Promise<void | { reply?: string }>;
   
   // Validate configuration
   validateConfig(config: Record<string, any>): boolean;

@@ -225,7 +225,7 @@
                 
                 const ws = new WebSocket(wsUrl);
                 let results = `WebSocket URL: ${wsUrl}\n\n`;
-                let challengeNonce = null;
+                let connected = false;
                 let messageSent = false;
                 
                 const timeout = setTimeout(() => {
@@ -236,60 +236,83 @@
                 
                 ws.onopen = () => {
                     results += '✅ WebSocket 已连接\n\n';
-                    results += '等待 challenge...';
+                    
+                    // Send connect handshake (REQUIRED!)
+                    const connectRequest = {
+                        type: "req",
+                        id: "1",
+                        method: "connect",
+                        params: {
+                            minProtocol: 1,
+                            maxProtocol: 1,
+                            auth: {
+                                token: config.token
+                            },
+                            client: {
+                                id: "test-client",
+                                displayName: "Test Script",
+                                version: "1.0.0",
+                                platform: "web",
+                                mode: "bot"
+                            }
+                        }
+                    };
+                    
+                    results += '发送 connect 握手:\n' + JSON.stringify(connectRequest, null, 2) + '\n\n';
+                    ws.send(JSON.stringify(connectRequest));
                     showResult(results, 'info');
                 };
                 
                 ws.onmessage = (event) => {
                     try {
                         const data = JSON.parse(event.data);
-                        results += `\n\n收到消息:\n${JSON.stringify(data, null, 2)}\n`;
+                        results += `\n收到消息:\n${JSON.stringify(data, null, 2)}\n`;
                         
-                        // Handle connect.challenge
-                        if (data.type === 'event' && data.event === 'connect.challenge') {
-                            challengeNonce = data.payload.nonce;
-                            results += `\n✅ 收到 challenge nonce: ${challengeNonce}\n`;
-                            
-                            // Send challenge response
-                            const challengeResponse = {
-                                type: 'event',
-                                event: 'connect.challenge.response',
-                                payload: {
-                                    nonce: challengeNonce
-                                }
-                            };
-                            
-                            results += `\n发送 challenge 响应:\n${JSON.stringify(challengeResponse, null, 2)}\n`;
-                            ws.send(JSON.stringify(challengeResponse));
-                            showResult(results, 'info');
-                            
-                            // Wait a bit, then send the actual message
-                            setTimeout(() => {
-                                if (!messageSent) {
-                                    const messagePayload = {
-                                        type: 'message',
-                                        payload: {
-                                            text: config.message,
-                                            content: config.message
-                                        }
-                                    };
-                                    
-                                    results += `\n发送消息:\n${JSON.stringify(messagePayload, null, 2)}\n`;
-                                    ws.send(JSON.stringify(messagePayload));
-                                    messageSent = true;
-                                    results += '\n✅ 消息已发送，等待响应...\n';
-                                    showResult(results, 'info');
-                                }
-                            }, 200);
+                        // Handle connect response
+                        if (data.type === 'res' && data.id === '1') {
+                            if (data.ok && data.payload?.type === 'hello-ok') {
+                                results += '\n✅ Connect 握手成功！\n';
+                                connected = true;
+                                
+                                // Send agent request
+                                const agentRequest = {
+                                    type: "req",
+                                    id: "2",
+                                    method: "agent",
+                                    params: {
+                                        message: config.message,
+                                        to: "test-user",
+                                        stream: true
+                                    }
+                                };
+                                
+                                results += '\n发送 agent 请求:\n' + JSON.stringify(agentRequest, null, 2) + '\n';
+                                ws.send(JSON.stringify(agentRequest));
+                                messageSent = true;
+                                showResult(results, 'info');
+                            } else {
+                                results += '\n❌ Connect 握手失败\n';
+                                showResult(results, 'error');
+                                ws.close();
+                            }
                         }
-                        // Handle message response
-                        else if (data.type === 'message' || data.type === 'response') {
-                            results += '\n✅ 收到 OpenClaw 响应！\n';
+                        // Handle agent response
+                        else if (data.type === 'res' && data.id === '2') {
+                            results += '\n✅ Agent 请求已确认\n';
+                            showResult(results, 'info');
+                        }
+                        // Handle events
+                        else if (data.type === 'event') {
+                            results += `\n📡 事件: ${data.event}\n`;
+                            showResult(results, 'info');
+                        }
+                        // Handle final response
+                        else if (data.type === 'res' && data.ok) {
+                            results += '\n✅ 收到最终响应\n';
                             results += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
-                            results += '✅ 消息发送成功！OpenClaw 已收到并处理。';
+                            results += '✅ 消息发送成功！OpenClaw 正在处理。';
                             showResult(results, 'success');
                             
-                            // Keep connection open for a bit
                             setTimeout(() => {
                                 clearTimeout(timeout);
                                 ws.close();
@@ -313,10 +336,11 @@
                         results += `\n\n✅ 连接正常关闭`;
                         showResult(results, 'success');
                     } else if (messageSent) {
-                        results += `\n\n⚠️ 消息已发送，但连接异常关闭: ${event.code} - ${event.reason || 'No reason'}`;
-                        results += `\n\n提示: 消息可能已经成功发送到 OpenClaw。`;
-                        results += `\n请检查 OpenClaw Web 界面确认。`;
+                        results += `\n\n⚠️ 消息已发送，连接关闭: ${event.code} - ${event.reason || 'No reason'}`;
                         showResult(results, 'warning');
+                    } else if (connected) {
+                        results += `\n\n❌ 已连接但消息未发送: ${event.code} - ${event.reason || 'No reason'}`;
+                        showResult(results, 'error');
                     } else {
                         results += `\n\n❌ WebSocket 关闭: ${event.code} - ${event.reason || 'No reason'}\n`;
                         showResult(results, 'error');

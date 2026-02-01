@@ -196,6 +196,41 @@
       "confirmRemove": "Are you sure you want to remove this integration?",
       "manualPasteRequired": "⚠️ Manual paste required"
     },
+    "plugins": {
+      "clawbot": {
+        "config": {
+          "gatewayHint": "Get host, port, token from OpenClaw UI: Control → Overview → Gateway Access; or use OpenClaw CLI: `openclaw gateway status` for gateway status, `openclaw gateway discover` to discover gateways and wsUrl. Config and token are in `~/.openclaw/openclaw.json`.",
+          "host": {
+            "label": "Host",
+            "description": "OpenClaw server host (default: localhost)"
+          },
+          "port": {
+            "label": "Port",
+            "description": "OpenClaw server port (default: 18789)"
+          },
+          "apiKey": {
+            "label": "Token",
+            "description": "Your OpenClaw access token"
+          },
+          "session": {
+            "label": "Session ID",
+            "description": "OpenClaw session ID (default: agent:main:main). For WebSocket: specifies sessionKey for message routing. Leave default for auto-routing."
+          },
+          "useHttp": {
+            "label": "Use HTTP API",
+            "description": "Use HTTP API instead of WebSocket (requires manual enablement in OpenClaw config). Default: WebSocket (always available)."
+          },
+          "openInterface": {
+            "label": "Open web interface after sending",
+            "description": "Automatically open OpenClaw web interface after sending the message"
+          },
+          "timeout": {
+            "label": "Connection Timeout (ms)",
+            "description": "Connection timeout in milliseconds (default: 15000, WebSocket only)"
+          }
+        }
+      }
+    },
     "items": {
       "clawbot": {
         "name": "OpenClaw / Clawbot",

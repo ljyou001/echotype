@@ -86,8 +86,15 @@ const api = {
   closeQuickActionWindow: () => {
     ipcRenderer.invoke("close-quick-action-window");
   },
+  resizeQuickActionWindow: (newHeight: number) => {
+    ipcRenderer.invoke("resize-quick-action-window", newHeight);
+  },
   copyToClipboard: (text: string): Promise<void> => {
     return ipcRenderer.invoke("copy-to-clipboard", text);
+  },
+  // HTTP request (bypasses CORS)
+  httpRequest: (url: string, options: { method: string; headers: Record<string, string>; body?: string }): Promise<{ ok: boolean; status: number; statusText: string; headers: Record<string, string>; body: string }> => {
+    return ipcRenderer.invoke("http-request", url, options);
   }
 };
 

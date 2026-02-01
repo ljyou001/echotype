@@ -87,8 +87,15 @@ const api = {
     closeQuickActionWindow: () => {
         electron_1.ipcRenderer.invoke("close-quick-action-window");
     },
+    resizeQuickActionWindow: (newHeight) => {
+        electron_1.ipcRenderer.invoke("resize-quick-action-window", newHeight);
+    },
     copyToClipboard: (text) => {
         return electron_1.ipcRenderer.invoke("copy-to-clipboard", text);
+    },
+    // HTTP request (bypasses CORS)
+    httpRequest: (url, options) => {
+        return electron_1.ipcRenderer.invoke("http-request", url, options);
     }
 };
 electron_1.contextBridge.exposeInMainWorld("echotype", api);

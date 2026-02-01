@@ -196,6 +196,41 @@
       "confirmRemove": "确定要移除此整合吗？",
       "manualPasteRequired": "⚠️ 需要手动粘贴"
     },
+    "plugins": {
+      "clawbot": {
+        "config": {
+          "gatewayHint": "可从 OpenClaw 界面「Control → Overview → Gateway Access」获取主机、端口、令牌等信息；或使用 OpenClaw CLI：`openclaw gateway status` 查看网关状态，`openclaw gateway discover` 发现网关及 wsUrl，配置与令牌见 `~/.openclaw/openclaw.json`。",
+          "host": {
+            "label": "主机",
+            "description": "OpenClaw 服务主机地址（默认：localhost）"
+          },
+          "port": {
+            "label": "端口",
+            "description": "OpenClaw 服务端口（默认：18789）"
+          },
+          "apiKey": {
+            "label": "令牌",
+            "description": "您的 OpenClaw 访问令牌"
+          },
+          "session": {
+            "label": "会话 ID",
+            "description": "OpenClaw 会话 ID（默认：agent:main:main）。WebSocket 下用于指定 sessionKey 以控制消息路由，保持默认则自动路由。"
+          },
+          "useHttp": {
+            "label": "使用 HTTP API",
+            "description": "使用 HTTP API 而非 WebSocket（需在 OpenClaw 配置中手动开启）。默认使用 WebSocket（始终可用）。"
+          },
+          "openInterface": {
+            "label": "发送后打开网页界面",
+            "description": "发送消息后自动打开 OpenClaw 网页界面"
+          },
+          "timeout": {
+            "label": "连接超时（毫秒）",
+            "description": "连接超时时间，单位毫秒（默认：15000，仅对 WebSocket 有效）"
+          }
+        }
+      }
+    },
     "items": {
       "clawbot": {
         "name": "OpenClaw / Clawbot",

@@ -215,107 +215,290 @@ export class DoubaoPlugin implements IntegrationPlugin {
   }
 }
 
-// OpenClaw / Clawbot Plugin - Custom integration using WebSocket
+// OpenClaw / Clawbot Plugin - Custom integration using WebSocket or HTTP API
 export class ClawbotPlugin implements IntegrationPlugin {
   id = 'clawbot';
   name = 'OpenClaw / Clawbot';
   category = 'ai' as const;
   icon = '🦾';
   requiresAuth = true;
-  supportsDirectInput = true; // Uses WebSocket
+  supportsDirectInput = true; // Uses WebSocket or HTTP API
 
-  async execute(text: string, config?: Record<string, any>, outputMode: OutputMode = 'clipboard'): Promise<void> {
+  async execute(text: string, config?: Record<string, any>, outputMode: OutputMode = 'clipboard'): Promise<void | { reply?: string }> {
     const shouldCopy = outputMode === 'clipboard' || outputMode === 'both';
     const shouldDirect = outputMode === 'direct' || outputMode === 'both';
 
-    console.log('[ClawbotPlugin] Executing with:', { text, config, outputMode, shouldCopy, shouldDirect });
+    console.log('[ClawbotPlugin] ===== EXECUTE START =====');
+    console.log('[ClawbotPlugin] Text:', text);
+    console.log('[ClawbotPlugin] Config:', config);
+    console.log('[ClawbotPlugin] Output mode:', outputMode);
+    console.log('[ClawbotPlugin] Should copy:', shouldCopy);
+    console.log('[ClawbotPlugin] Should direct:', shouldDirect);
+    
+    await window.echotype?.log?.('DEBUG', '[ClawbotPlugin] ===== EXECUTE START =====');
+    await window.echotype?.log?.('DEBUG', `[ClawbotPlugin] Text: ${text}`);
+    await window.echotype?.log?.('DEBUG', `[ClawbotPlugin] Config: ${JSON.stringify(config)}`);
+    await window.echotype?.log?.('DEBUG', `[ClawbotPlugin] Output mode: ${outputMode}`);
 
-    if (shouldCopy) {
+    try {
+      // Always copy to clipboard first
       await copyToClipboard(text);
       console.log('[ClawbotPlugin] Text copied to clipboard');
-    }
+      await window.echotype?.log?.('DEBUG', '[ClawbotPlugin] Text copied to clipboard');
 
-    if (shouldDirect) {
-      const host = config?.host || 'localhost';
-      const port = config?.port || '18789';
-      const token = config?.apiKey;
-      const session = config?.session || 'agent:main:main';
-      
-      // OpenClaw WebSocket format: ws://host:port/token/session
-      const wsUrl = `ws://${host}:${port}/${token}/${session}`;
-      
-      console.log('[ClawbotPlugin] Connecting to WebSocket:', wsUrl);
-      console.log('[ClawbotPlugin] Message to send:', text);
-      
-      try {
-        await this.sendViaWebSocket(wsUrl, text, config);
+      if (shouldDirect) {
+        const useHttp = config?.useHttp === true; // Default to WebSocket (OpenClaw default)
+        console.log('[ClawbotPlugin] Use HTTP:', useHttp);
+        await window.echotype?.log?.('DEBUG', `[ClawbotPlugin] Use HTTP: ${useHttp}`);
         
-        // Show success notification
-        if (window.echotype?.showNotification) {
-          window.echotype.showNotification({
-            title: 'OpenClaw',
-            body: 'Message sent successfully!',
-            type: 'success'
-          });
-        }
-        
-        // Optionally open the web interface
-        if (config?.openInterface !== false) {
-          const webUrl = `http://${host}:${port}/chat?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`;
-          console.log('[ClawbotPlugin] Opening web interface:', webUrl);
-          window.echotype?.openExternal?.(webUrl);
-        }
-      } catch (error) {
-        console.error('[ClawbotPlugin] WebSocket error:', error);
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-        
-        // Fallback: open web interface
-        console.log('[ClawbotPlugin] Falling back to web interface');
-        const webUrl = `http://${host}:${port}/chat?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`;
-        window.echotype?.openExternal?.(webUrl);
-        
-        // Copy to clipboard
-        await copyToClipboard(text);
-        
-        if (window.echotype?.showNotification) {
-          window.echotype.showNotification({
-            title: 'OpenClaw',
-            body: 'Could not send via WebSocket. Web interface opened with message in clipboard.',
-            type: 'warning'
-          });
+        if (useHttp) {
+          // Use HTTP API (OpenAI compatible) - requires manual enablement in OpenClaw
+          await window.echotype?.log?.('DEBUG', '[ClawbotPlugin] Using HTTP mode');
+          return await this.sendViaHttp(text, config);
         } else {
-          alert(`Could not connect to OpenClaw: ${errorMsg}\n\nOpening web interface instead.\nMessage copied to clipboard - paste it in the chat.`);
+          // Use WebSocket (default, always available)
+          await window.echotype?.log?.('DEBUG', '[ClawbotPlugin] Using WebSocket mode');
+          return await this.sendViaWebSocket(text, config);
         }
+      } else {
+        // If not direct mode, just open the web interface
+        const host = config?.host || 'localhost';
+        const port = config?.port || '18789';
+        const token = config?.apiKey;
+        const session = config?.session || 'agent:main:main';
+        const webUrl = `http://${host}:${port}/chat?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`;
+        console.log('[ClawbotPlugin] Opening web interface (clipboard mode):', webUrl);
+        await window.echotype?.log?.('DEBUG', `[ClawbotPlugin] Opening web interface (clipboard mode): ${webUrl}`);
+        window.echotype?.openExternal?.(webUrl);
+        return undefined;
       }
-    } else {
-      // If not direct mode, just open the web interface
-      const host = config?.host || 'localhost';
-      const port = config?.port || '18789';
-      const token = config?.apiKey;
-      const session = config?.session || 'agent:main:main';
-      const webUrl = `http://${host}:${port}/chat?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`;
-      window.echotype?.openExternal?.(webUrl);
+    } catch (error) {
+      console.error('[ClawbotPlugin] ===== EXECUTE ERROR =====');
+      console.error('[ClawbotPlugin] Error:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      await window.echotype?.log?.('ERROR', `[ClawbotPlugin] Execute error: ${errorMsg}`);
+      throw error;
     }
   }
 
-  private sendViaWebSocket(wsUrl: string, message: string, config?: Record<string, any>): Promise<void> {
+  private async sendViaHttp(message: string, config?: Record<string, any>): Promise<{ reply?: string } | undefined> {
+    const host = config?.host || 'localhost';
+    const port = config?.port || '18789';
+    const token = config?.apiKey;
+    
+    const apiUrl = `http://${host}:${port}/v1/chat/completions`;
+    
+    console.log('[ClawbotPlugin] Sending via HTTP API:', apiUrl);
+    
+    try {
+      const requestBody = JSON.stringify({
+        model: 'agent',
+        messages: [
+          {
+            role: 'user',
+            content: message
+          }
+        ]
+      });
+      
+      // Use Electron's HTTP request to bypass CORS
+      let response;
+      if (window.echotype?.httpRequest) {
+        console.log('[ClawbotPlugin] Using Electron HTTP request (bypasses CORS)');
+        response = await window.echotype.httpRequest(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: requestBody
+        });
+      } else {
+        console.log('[ClawbotPlugin] Using browser fetch');
+        const fetchResponse = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: requestBody
+        });
+        
+        const responseHeaders: Record<string, string> = {};
+        fetchResponse.headers.forEach((value, key) => {
+          responseHeaders[key] = value;
+        });
+        
+        response = {
+          ok: fetchResponse.ok,
+          status: fetchResponse.status,
+          statusText: fetchResponse.statusText,
+          headers: responseHeaders,
+          body: await fetchResponse.text()
+        };
+      }
+      
+      console.log('[ClawbotPlugin] HTTP response status:', response.status);
+      
+      if (!response.ok) {
+        console.error('[ClawbotPlugin] HTTP error:', response.body);
+        throw new Error(`HTTP ${response.status}: ${response.body}`);
+      }
+      
+      // Parse response to get reply content
+      let replyContent: string | null = null;
+      let sessionId: string | null = null;
+      
+      try {
+        const data = JSON.parse(response.body);
+        console.log('[ClawbotPlugin] HTTP response:', data);
+        
+        // Extract reply content
+        if (data.choices && data.choices[0]?.message?.content) {
+          replyContent = data.choices[0].message.content;
+          console.log('[ClawbotPlugin] OpenClaw reply:', replyContent);
+        }
+        
+        // Try to extract session ID from response (if available)
+        if (data.id) {
+          sessionId = data.id;
+          console.log('[ClawbotPlugin] Session ID from response:', sessionId);
+        }
+      } catch (e) {
+        console.error('[ClawbotPlugin] Failed to parse response:', e);
+      }
+      
+      // Open the web interface if configured to do so
+      // Use extracted session ID if available, otherwise use configured session
+      if (config?.openInterface !== false) {
+        const session = sessionId || config?.session || 'agent:main:main';
+        const webUrl = `http://${host}:${port}/chat?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`;
+        console.log('[ClawbotPlugin] Opening web interface:', webUrl);
+        window.echotype?.openExternal?.(webUrl);
+      }
+      
+      // Return reply to display in quick action window
+      if (replyContent) {
+        return { reply: replyContent };
+      }
+      
+      return undefined;
+    } catch (error) {
+      console.error('[ClawbotPlugin] HTTP request failed:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Fallback: open web interface
+      console.log('[ClawbotPlugin] Falling back to web interface');
+      const session = config?.session || 'agent:main:main';
+      const webUrl = `http://${host}:${port}/chat?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`;
+      window.echotype?.openExternal?.(webUrl);
+      
+      if (window.echotype?.showNotification) {
+        window.echotype.showNotification({
+          title: 'OpenClaw',
+          body: 'HTTP request failed. Web interface opened - paste your message (Ctrl+V).',
+          type: 'warning'
+        });
+      } else {
+        alert(`HTTP request failed: ${errorMsg}\n\nOpening web interface instead.\nMessage is in clipboard - paste it with Ctrl+V.`);
+      }
+      
+      return undefined;
+    }
+  }
+
+  private async sendViaWebSocket(message: string, config?: Record<string, any>): Promise<{ reply?: string } | undefined> {
+    const host = config?.host || 'localhost';
+    const port = config?.port || '18789';
+    const token = config?.apiKey;
+    
+    // Correct WebSocket URL - just the base URL, no token or session in path
+    const wsUrl = `ws://${host}:${port}`;
+    
+    console.log('[ClawbotPlugin] Attempting WebSocket connection:', wsUrl);
+    
+    try {
+      const reply = await this.sendViaWebSocketInternal(wsUrl, message, token, config);
+      
+      console.log('[ClawbotPlugin] WebSocket message sent successfully');
+      console.log('[ClawbotPlugin] Received reply:', reply);
+      
+      // Show success notification
+      if (window.echotype?.showNotification) {
+        window.echotype.showNotification({
+          title: 'OpenClaw',
+          body: 'Message sent via WebSocket!',
+          type: 'success'
+        });
+      }
+      
+      // Optionally open the web interface
+      if (config?.openInterface !== false) {
+        const session = config?.session || 'agent:main:main';
+        const webUrl = `http://${host}:${port}/chat?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`;
+        console.log('[ClawbotPlugin] Opening web interface:', webUrl);
+        window.echotype?.openExternal?.(webUrl);
+      }
+      
+      // Return reply if we got one
+      if (reply) {
+        return { reply };
+      }
+      return undefined;
+    } catch (error) {
+      console.error('[ClawbotPlugin] WebSocket failed:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Fallback: open web interface with message in clipboard
+      console.log('[ClawbotPlugin] Falling back to web interface');
+      const session = config?.session || 'agent:main:main';
+      const webUrl = `http://${host}:${port}/chat?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`;
+      window.echotype?.openExternal?.(webUrl);
+      
+      if (window.echotype?.showNotification) {
+        window.echotype.showNotification({
+          title: 'OpenClaw',
+          body: 'WebSocket failed. Web interface opened - paste your message (Ctrl+V).',
+          type: 'warning'
+        });
+      } else {
+        alert(`WebSocket connection failed: ${errorMsg}\n\nOpening web interface instead.\nMessage is in clipboard - paste it with Ctrl+V.`);
+      }
+      
+      return undefined;
+    }
+  }
+
+  private sendViaWebSocketInternal(wsUrl: string, message: string, token: string, config?: Record<string, any>): Promise<string | null> {
+    console.log('[ClawbotPlugin] ===== WebSocket Internal Start =====');
+    console.log('[ClawbotPlugin] WS URL:', wsUrl);
+    console.log('[ClawbotPlugin] Message:', message);
+    window.echotype?.log?.('DEBUG', '[ClawbotPlugin] ===== WebSocket Internal Start =====');
+    window.echotype?.log?.('DEBUG', `[ClawbotPlugin] WS URL: ${wsUrl}`);
+    window.echotype?.log?.('DEBUG', `[ClawbotPlugin] Message: ${message}`);
+    
     return new Promise((resolve, reject) => {
-      const timeout = config?.timeout || 10000; // 10 seconds default
-      let timeoutId: NodeJS.Timeout;
-      let challengeNonce: string | null = null;
+      const timeout = config?.timeout || 30000; // Increase timeout to 30s for streaming
+      let timeoutId: ReturnType<typeof setTimeout>;
+      let challengeReceived = false;
+      let connected = false;
       let messageSent = false;
+      let responseStarted = false;
+      let accumulatedReply = ''; // Accumulate the reply text
       
       try {
         const ws = new WebSocket(wsUrl);
         
-        // Set timeout
         timeoutId = setTimeout(() => {
-          ws.close();
-          reject(new Error('WebSocket connection timeout'));
+          if (!messageSent) {
+            ws.close();
+            reject(new Error('WebSocket connection timeout'));
+          }
         }, timeout);
         
         ws.onopen = () => {
           console.log('[ClawbotPlugin] WebSocket connected, waiting for challenge...');
+          window.echotype?.log?.('DEBUG', '[ClawbotPlugin] WebSocket connected, waiting for challenge...');
         };
         
         ws.onmessage = (event) => {
@@ -324,49 +507,157 @@ export class ClawbotPlugin implements IntegrationPlugin {
           try {
             const data = JSON.parse(event.data);
             
-            // Handle connect.challenge event
+            // Step 1: Handle connect.challenge event
             if (data.type === 'event' && data.event === 'connect.challenge') {
-              challengeNonce = data.payload.nonce;
-              console.log('[ClawbotPlugin] Received challenge nonce:', challengeNonce);
+              challengeReceived = true;
+              console.log('[ClawbotPlugin] Challenge received, sending connect request...');
+              window.echotype?.log?.('DEBUG', '[ClawbotPlugin] Challenge received, sending connect request...');
               
-              // Respond to challenge
-              const challengeResponse = {
-                type: 'event',
-                event: 'connect.challenge.response',
-                payload: {
-                  nonce: challengeNonce
+              // Send connect request with proper protocol version and parameters
+              const connectRequest = {
+                type: "req",
+                id: "1",
+                method: "connect",
+                params: {
+                  minProtocol: 3,
+                  maxProtocol: 3,
+                  client: {
+                    id: "cli",  // Must be "cli" constant
+                    version: "1.0.0",
+                    platform: "web",
+                    mode: "cli"
+                  },
+                  role: "operator",
+                  scopes: ["operator.read", "operator.write"],
+                  auth: {
+                    token: token
+                  }
                 }
               };
               
-              console.log('[ClawbotPlugin] Sending challenge response:', challengeResponse);
-              ws.send(JSON.stringify(challengeResponse));
-              
-              // After challenge response, send the actual message
-              setTimeout(() => {
-                if (!messageSent) {
-                  const messagePayload = {
-                    type: 'message',
-                    payload: {
-                      text: message,
-                      content: message
-                    }
-                  };
-                  
-                  console.log('[ClawbotPlugin] Sending message:', messagePayload);
-                  ws.send(JSON.stringify(messagePayload));
-                  messageSent = true;
-                }
-              }, 100);
+              console.log('[ClawbotPlugin] Sending connect request');
+              ws.send(JSON.stringify(connectRequest));
             }
-            // Handle message acknowledgment or response
-            else if (data.type === 'message' || data.type === 'ack') {
-              console.log('[ClawbotPlugin] Message acknowledged or response received');
-              clearTimeout(timeoutId);
-              // Keep connection open for a bit to receive full response
-              setTimeout(() => {
+            // Step 2: Handle connect response (hello-ok)
+            else if (data.type === 'res' && data.id === '1') {
+              console.log('[ClawbotPlugin] Connect response received:', JSON.stringify(data, null, 2));
+              
+              if (data.ok && data.payload?.type === 'hello-ok') {
+                console.log('[ClawbotPlugin] Connect handshake successful! Protocol:', data.payload.protocol);
+                window.echotype?.log?.('DEBUG', `[ClawbotPlugin] Connect handshake successful! Protocol: ${data.payload.protocol}`);
+                connected = true;
+                
+                // Build agent request params
+                const agentParams: any = {
+                  message: message,
+                  to: "echotype-user",
+                  idempotencyKey: `echotype-${Date.now()}`
+                };
+                
+                // If user specified a session, use it to control where the message goes
+                const session = config?.session;
+                if (session && session !== 'agent:main:main') {
+                  // User wants to send to a specific session
+                  agentParams.sessionKey = session;
+                  console.log('[ClawbotPlugin] Using explicit sessionKey:', session);
+                }
+                
+                // Now send the actual agent request
+                const agentRequest = {
+                  type: "req",
+                  id: "2",
+                  method: "agent",
+                  params: agentParams
+                };
+                
+                console.log('[ClawbotPlugin] Sending agent request with params:', agentParams);
+                window.echotype?.log?.('DEBUG', `[ClawbotPlugin] Sending agent request with params: ${JSON.stringify(agentParams)}`);
+                ws.send(JSON.stringify(agentRequest));
+                messageSent = true;
+              } else {
+                console.error('[ClawbotPlugin] Connect handshake failed!');
+                console.error('[ClawbotPlugin] Response data:', JSON.stringify(data, null, 2));
+                console.error('[ClawbotPlugin] data.ok:', data.ok);
+                console.error('[ClawbotPlugin] data.payload?.type:', data.payload?.type);
+                reject(new Error(`Connect handshake failed: ${JSON.stringify(data)}`));
                 ws.close();
-                resolve();
-              }, 1000);
+              }
+            }
+            // Step 3: Handle agent response acknowledgement
+            else if (data.type === 'res' && data.id === '2') {
+              if (data.ok) {
+                console.log('[ClawbotPlugin] Agent request acknowledged, runId:', data.payload?.runId);
+                window.echotype?.log?.('DEBUG', `[ClawbotPlugin] Agent request acknowledged, runId: ${data.payload?.runId}`);
+                responseStarted = true;
+                // Keep connection open to receive streaming response
+              } else {
+                console.error('[ClawbotPlugin] Agent request failed:', data);
+                window.echotype?.log?.('ERROR', `[ClawbotPlugin] Agent request failed: ${JSON.stringify(data)}`);
+                reject(new Error('Agent request failed'));
+                ws.close();
+              }
+            }
+            // Step 4: Handle streaming events
+            else if (data.type === 'event' && data.event === 'agent') {
+              const stream = data.payload?.stream;
+              const phase = data.payload?.data?.phase;
+              const text = data.payload?.data?.text;
+              const sessionKey = data.payload?.sessionKey;
+              
+              if (sessionKey) {
+                console.log('[ClawbotPlugin] Message routed to session:', sessionKey);
+              }
+              
+              console.log('[ClawbotPlugin] Agent event - stream:', stream, 'phase:', phase, 'text:', text?.substring(0, 50));
+              
+              // Lifecycle events
+              if (stream === 'lifecycle') {
+                if (phase === 'start') {
+                  console.log('[ClawbotPlugin] Agent started processing');
+                  window.echotype?.log?.('DEBUG', '[ClawbotPlugin] Agent started processing');
+                } else if (phase === 'end') {
+                  console.log('[ClawbotPlugin] Agent completed');
+                  console.log('[ClawbotPlugin] Final accumulated reply:', accumulatedReply);
+                  window.echotype?.log?.('DEBUG', '[ClawbotPlugin] Agent completed');
+                  window.echotype?.log?.('DEBUG', `[ClawbotPlugin] Final accumulated reply length: ${accumulatedReply?.length || 0}`);
+                  clearTimeout(timeoutId);
+                  // Wait a bit for any final messages, then close
+                  setTimeout(() => {
+                    ws.close();
+                    resolve(accumulatedReply || null);
+                  }, 1000);
+                }
+              }
+              // Assistant response (the actual reply)
+              else if (stream === 'assistant') {
+                if (text) {
+                  console.log('[ClawbotPlugin] Received assistant text:', text);
+                  window.echotype?.log?.('DEBUG', `[ClawbotPlugin] Received assistant text, length: ${text.length}`);
+                  // Accumulate the full reply text
+                  accumulatedReply = text;
+                }
+              }
+            }
+            // Handle chat events (alternative format)
+            else if (data.type === 'event' && data.event === 'chat') {
+              const state = data.payload?.state;
+              const content = data.payload?.message?.content;
+              
+              if (state === 'final' && content && content[0]?.text) {
+                // Final message - use this as the complete reply
+                console.log('[ClawbotPlugin] Chat final:', content[0].text);
+                accumulatedReply = content[0].text;
+              } else if (state === 'delta' && content && content[0]?.text) {
+                console.log('[ClawbotPlugin] Chat delta:', content[0].text);
+              }
+            }
+            // Ignore tick events
+            else if (data.type === 'event' && data.event === 'tick') {
+              // Heartbeat, ignore
+            }
+            // Ignore health events
+            else if (data.type === 'event' && data.event === 'health') {
+              // Health check, ignore
             }
           } catch (e) {
             console.error('[ClawbotPlugin] Failed to parse message:', e);
@@ -376,19 +667,30 @@ export class ClawbotPlugin implements IntegrationPlugin {
         ws.onerror = (error) => {
           console.error('[ClawbotPlugin] WebSocket error:', error);
           clearTimeout(timeoutId);
-          reject(new Error('WebSocket connection failed'));
+          if (!messageSent) {
+            reject(new Error('WebSocket connection failed'));
+          }
         };
         
         ws.onclose = (event) => {
           console.log('[ClawbotPlugin] WebSocket closed:', event.code, event.reason);
+          window.echotype?.log?.('DEBUG', `[ClawbotPlugin] WebSocket closed: ${event.code} - ${event.reason}`);
           clearTimeout(timeoutId);
           
-          // If message was sent, consider it success
-          if (messageSent) {
-            resolve();
+          if (messageSent && responseStarted) {
+            // Message was sent and response started, consider it success
+            console.log('[ClawbotPlugin] Resolving with accumulated reply:', accumulatedReply);
+            window.echotype?.log?.('DEBUG', `[ClawbotPlugin] Resolving with accumulated reply, length: ${accumulatedReply?.length || 0}`);
+            resolve(accumulatedReply || null);
+          } else if (connected) {
+            // Connected but message not sent
+            reject(new Error('Connection closed before message could be sent'));
+          } else if (challengeReceived) {
+            // Challenge received but connection failed
+            reject(new Error('Connection failed after challenge'));
           } else if (event.code !== 1000) {
-            // Abnormal closure
-            reject(new Error(`WebSocket closed abnormally: ${event.code} - ${event.reason}`));
+            // Failed to connect
+            reject(new Error(`WebSocket closed: ${event.code} - ${event.reason || 'No reason'}`));
           }
         };
       } catch (error) {
@@ -434,7 +736,14 @@ export class ClawbotPlugin implements IntegrationPlugin {
         type: 'text',
         required: false,
         placeholder: 'agent:main:main',
-        description: 'OpenClaw session ID (default: agent:main:main)'
+        description: 'OpenClaw session ID (default: agent:main:main). For WebSocket: specifies sessionKey to control message routing. Leave default for auto-routing.'
+      },
+      {
+        key: 'useHttp',
+        label: 'Use HTTP API',
+        type: 'checkbox',
+        required: false,
+        description: 'Use HTTP API instead of WebSocket (requires manual enablement in OpenClaw config). Default: WebSocket (always available)'
       },
       {
         key: 'openInterface',
@@ -448,8 +757,8 @@ export class ClawbotPlugin implements IntegrationPlugin {
         label: 'Connection Timeout (ms)',
         type: 'text',
         required: false,
-        placeholder: '10000',
-        description: 'WebSocket connection timeout in milliseconds (default: 10000)'
+        placeholder: '15000',
+        description: 'Connection timeout in milliseconds (default: 15000, only for WebSocket)'
       }
     ];
   }

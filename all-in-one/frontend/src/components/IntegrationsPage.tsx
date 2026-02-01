@@ -361,11 +361,20 @@ function AddIntegrationDialog({ onClose }: { onClose: () => void }) {
                 </select>
               </div>
 
-              {configSchema.map(field => (
-                <div key={field.key} className="form-group">
-                  <label>{field.label}</label>
-                  {field.description && <p className="form-description">{field.description}</p>}
-                  {field.type === 'text' && (
+              {configSchema.map(field => {
+                const labelKey = `integrations.plugins.${selectedPluginId}.config.${field.key}.label`;
+                const descKey = `integrations.plugins.${selectedPluginId}.config.${field.key}.description`;
+                const label = t(labelKey, { defaultValue: field.label });
+                const description = field.description ? t(descKey, { defaultValue: field.description }) : undefined;
+                const gatewayHint = selectedPluginId === 'clawbot' && field.key === 'host'
+                  ? t('integrations.plugins.clawbot.config.gatewayHint')
+                  : null;
+                return (
+                <div key={field.key}>
+                  <div className="form-group">
+                    <label>{label}</label>
+                    {description && <p className="form-description">{description}</p>}
+                    {field.type === 'text' && (
                     <input
                       type="text"
                       value={config[field.key] ?? ''}
@@ -390,7 +399,7 @@ function AddIntegrationDialog({ onClose }: { onClose: () => void }) {
                         checked={!!config[field.key]}
                         onChange={e => setConfig({ ...config, [field.key]: e.target.checked })}
                       />
-                      {field.label}
+                      {label}
                     </label>
                   )}
                   {field.type === 'select' && (
@@ -404,8 +413,11 @@ function AddIntegrationDialog({ onClose }: { onClose: () => void }) {
                       ))}
                     </select>
                   )}
+                  </div>
+                  {gatewayHint && <p className="form-description form-hint">{gatewayHint}</p>}
                 </div>
-              ))}
+              );
+              })}
             </>
           )}
         </div>

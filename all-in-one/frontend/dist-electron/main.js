@@ -1,10 +1,10 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell, clipboard, systemPreferences } from "electron";
+import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell, clipboard, systemPreferences, screen } from "electron";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import HotkeyManager from "./hotkey-manager.js";
-import { createQuickActionWindow, closeQuickActionWindow } from "./quick-action-window.js";
+import { createQuickActionWindow, closeQuickActionWindow, resizeQuickActionWindow, getQuickActionWindow } from "./quick-action-window.js";
 import os from "node:os";
 import robot from "@hurdlegroup/robotjs";
 import sharp from "sharp";
@@ -536,10 +536,69 @@ ipcMain.on("create-quick-action-window", (_event, data) => {
 ipcMain.handle("close-quick-action-window", () => {
     closeQuickActionWindow();
 });
+// Resize quick action window
+ipcMain.handle("resize-quick-action-window", (_event, newHeight) => {
+    resizeQuickActionWindow(newHeight);
+});
+// Move quick action window (for dragging)
+ipcMain.on("move-quick-action-window", (_event, delta) => {
+    console.log('[Main] Received move-quick-action-window:', delta);
+    const window = getQuickActionWindow();
+    if (!window) {
+        console.log('[Main] No quick action window found');
+        return;
+    }
+    if (window.isDestroyed()) {
+        console.log('[Main] Quick action window is destroyed');
+        return;
+    }
+    const currentBounds = window.getBounds();
+    console.log('[Main] Current bounds:', currentBounds);
+    const newX = currentBounds.x + delta.deltaX;
+    const newY = currentBounds.y + delta.deltaY;
+    console.log('[Main] New position (before clamp):', newX, newY);
+    // Get screen bounds to prevent moving off screen
+    const display = screen.getDisplayNearestPoint({ x: newX, y: newY });
+    const margin = 20;
+    // Clamp position to screen bounds
+    const clampedX = Math.max(display.bounds.x + margin, Math.min(newX, display.bounds.x + display.bounds.width - currentBounds.width - margin));
+    const clampedY = Math.max(display.bounds.y + margin, Math.min(newY, display.bounds.y + display.bounds.height - currentBounds.height - margin));
+    console.log('[Main] Clamped position:', clampedX, clampedY);
+    window.setPosition(clampedX, clampedY);
+    console.log('[Main] Window position updated');
+});
 // Clipboard IPC handler
 ipcMain.handle("copy-to-clipboard", (_event, text) => {
     clipboard.writeText(text);
     console.log(`[Clipboard] Copied ${text.length} characters to clipboard`);
+});
+// HTTP request handler (bypasses CORS)
+ipcMain.handle("http-request", async (_event, url, options) => {
+    console.log(`[HTTP] ${options.method} ${url}`);
+    try {
+        const response = await fetch(url, {
+            method: options.method,
+            headers: options.headers,
+            body: options.body
+        });
+        const responseHeaders = {};
+        response.headers.forEach((value, key) => {
+            responseHeaders[key] = value;
+        });
+        const body = await response.text();
+        console.log(`[HTTP] Response: ${response.status} ${response.statusText}`);
+        return {
+            ok: response.ok,
+            status: response.status,
+            statusText: response.statusText,
+            headers: responseHeaders,
+            body: body
+        };
+    }
+    catch (error) {
+        console.error(`[HTTP] Request failed:`, error);
+        throw error;
+    }
 });
 app.whenReady().then(async () => {
     initFrontendLog();
