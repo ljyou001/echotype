@@ -503,26 +503,53 @@ export const useAppStore = create<AppState>((set, get) => ({
         defaultIntegrationId: config.defaultIntegrationId || null
       });
     } else {
-      // First run: create default Google Search integration
-      const defaultInstance: IntegrationInstance = {
-        instanceId: crypto.randomUUID(),
-        pluginId: 'google-search',
-        name: 'Google Search',
-        icon: '🔍',
-        order: 0,
-        enabled: true,
-        isDefault: true,
-        config: {},
-        outputMode: 'direct' // Google Search supports direct input
-      };
+      // First run: create default integrations
+      const defaultInstances: IntegrationInstance[] = [
+        {
+          instanceId: crypto.randomUUID(),
+          pluginId: 'google-search',
+          name: 'Google Search',
+          icon: '🔍',
+          order: 0,
+          enabled: true,
+          isDefault: true,
+          config: {},
+          outputMode: 'direct'
+        },
+        {
+          instanceId: crypto.randomUUID(),
+          pluginId: 'google-translate',
+          name: 'Google Translate',
+          icon: '🌐',
+          order: 1,
+          enabled: true,
+          isDefault: false,
+          config: {
+            sourceLang: 'auto',
+            targetLang: 'en'
+          },
+          outputMode: 'direct'
+        },
+        {
+          instanceId: crypto.randomUUID(),
+          pluginId: 'perplexity',
+          name: 'Perplexity',
+          icon: '🔮',
+          order: 2,
+          enabled: true,
+          isDefault: false,
+          config: {},
+          outputMode: 'direct'
+        }
+      ];
       
       set({
-        integrationInstances: [defaultInstance],
-        defaultIntegrationId: defaultInstance.instanceId
+        integrationInstances: defaultInstances,
+        defaultIntegrationId: defaultInstances[0].instanceId
       });
       
       // Save to file
-      await window.echotype?.saveIntegrationsConfig?.([defaultInstance], defaultInstance.instanceId);
+      await window.echotype?.saveIntegrationsConfig?.(defaultInstances, defaultInstances[0].instanceId);
     }
   }
 }));
