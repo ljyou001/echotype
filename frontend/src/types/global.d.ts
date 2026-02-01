@@ -37,6 +37,9 @@ declare global {
       resizeQuickActionWindow?: (newHeight: number) => void;
       httpRequest?: (url: string, options: { method: string; headers: Record<string, string>; body?: string }) => Promise<{ ok: boolean; status: number; statusText: string; headers: Record<string, string>; body: string }>;
       showNotification?: (options: { title: string; body: string; type?: 'info' | 'success' | 'warning' | 'error' }) => void;
+      getModelsStatus?: () => Promise<Record<string, boolean>>;
+      downloadModel?: (id: string, url: string) => Promise<void>;
+      onModelDownloadProgress?: (handler: (payload: { id: string; progress: number; stage: 'downloading' | 'extracting' | 'done' | 'error'; error?: string }) => void) => (() => void) | undefined;
     };
   }
 }

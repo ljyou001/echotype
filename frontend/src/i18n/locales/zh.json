@@ -355,6 +355,7 @@
     "subtitle": "语音输入需要麦克风与快捷键权限，请按步骤完成设置。",
     "stepPermissions": "权限设置",
     "stepMicrophone": "选择麦克风",
+    "stepModels": "模型安装",
     "permissions": {
       "microphone": "麦克风权限",
       "microphoneDesc": "用于录制语音并转写为文字。",
@@ -372,6 +373,19 @@
       "title": "选择麦克风",
       "description": "选择要用于语音输入的麦克风设备，说话时可以看到电平条。",
       "finish": "完成"
+    },
+    "models": {
+      "title": "下载语音模型",
+      "description": "检测到您的电脑尚未安装必要的 AI 模型，需要下载它们才能开始使用。",
+      "paraformer": "Paraformer (基础模型)",
+      "paraformerDesc": "主语音识别模型，支持中文与英文转写。",
+      "qwen": "Qwen3 (高级流式模型)",
+      "qwenDesc": "更强大的 AI 语音模型，支持更好的流式输出（包体较大）。",
+      "downloading": "正在下载...",
+      "extracting": "正在解压...",
+      "installed": "已安装",
+      "error": "下载失败",
+      "download": "下载"
     },
     "next": "下一步",
     "back": "上一步"

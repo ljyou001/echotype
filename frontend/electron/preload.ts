@@ -98,6 +98,18 @@ const api = {
   // HTTP request (bypasses CORS)
   httpRequest: (url: string, options: { method: string; headers: Record<string, string>; body?: string }): Promise<{ ok: boolean; status: number; statusText: string; headers: Record<string, string>; body: string }> => {
     return ipcRenderer.invoke("http-request", url, options);
+  },
+  // Model management
+  getModelsStatus: (): Promise<Record<string, boolean>> => {
+    return ipcRenderer.invoke("get-models-status");
+  },
+  downloadModel: (id: string, url: string): Promise<void> => {
+    return ipcRenderer.invoke("download-model", { id, url });
+  },
+  onModelDownloadProgress: (handler: (payload: { id: string; progress: number; stage: 'downloading' | 'extracting' | 'done' | 'error'; error?: string }) => void) => {
+    const listener = (_event: any, payload: any) => handler(payload);
+    ipcRenderer.on("model-download-progress", listener);
+    return () => ipcRenderer.removeListener("model-download-progress", listener);
   }
 };
 

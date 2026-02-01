@@ -355,6 +355,7 @@
     "subtitle": "Voice input needs microphone and hotkey access. Please complete the steps below.",
     "stepPermissions": "Permissions",
     "stepMicrophone": "Choose Microphone",
+    "stepModels": "AI Models",
     "permissions": {
       "microphone": "Microphone",
       "microphoneDesc": "Used to record speech and transcribe to text.",
@@ -372,6 +373,19 @@
       "title": "Choose microphone",
       "description": "Select the microphone for voice input. You'll see the level meter when speaking.",
       "finish": "Finish"
+    },
+    "models": {
+      "title": "Download AI Models",
+      "description": "We noticed that some required AI models are missing from your computer. You need to download them to start using EchoType.",
+      "paraformer": "Paraformer (Core)",
+      "paraformerDesc": "The primary speech recognition model, supports Chinese and English transcription.",
+      "qwen": "Qwen3 (Advanced)",
+      "qwenDesc": "A more powerful AI speech model for better streaming output (larger file size).",
+      "downloading": "Downloading...",
+      "extracting": "Extracting...",
+      "installed": "Installed",
+      "error": "Failed",
+      "download": "Download"
     },
     "next": "Next",
     "back": "Back"

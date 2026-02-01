@@ -8,6 +8,7 @@ import { createQuickActionWindow, closeQuickActionWindow, resizeQuickActionWindo
 import os from "node:os";
 import robot from "@hurdlegroup/robotjs";
 import Jimp from "jimp";
+import { setupModelManager } from "./model-manager.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -333,6 +334,9 @@ function createWindow(): void {
   } else {
     console.log('[Main] hotkeyManager not yet initialized (will be set in registerHotkeys)');
   }
+
+  // Register model management IPCs
+  setupModelManager(mainWindow);
 }
 
 function toggleWindow(): void {
