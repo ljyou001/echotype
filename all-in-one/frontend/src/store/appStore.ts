@@ -513,7 +513,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         enabled: true,
         isDefault: true,
         config: {},
-        outputMode: 'clipboard' // Default to clipboard
+        outputMode: 'direct' // Google Search supports direct input
       };
       
       set({

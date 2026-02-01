@@ -237,6 +237,9 @@ function AddIntegrationDialog({ onClose }: { onClose: () => void }) {
   const handleAdd = () => {
     if (!selectedPluginId || !name) return;
 
+    // Set default outputMode based on plugin capabilities
+    const defaultOutputMode = selectedPlugin?.supportsDirectInput ? 'direct' : 'clipboard';
+
     const newInstance: IntegrationInstance = {
       instanceId: crypto.randomUUID(),
       pluginId: selectedPluginId,
@@ -246,7 +249,7 @@ function AddIntegrationDialog({ onClose }: { onClose: () => void }) {
       enabled: true,
       isDefault: instances.length === 0,
       config: {},
-      outputMode: 'clipboard' // Default to clipboard
+      outputMode: defaultOutputMode
     };
 
     addInstance(newInstance);

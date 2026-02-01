@@ -1692,38 +1692,42 @@ body {
   height: 100vh;
   background: var(--background);
   border-radius: 12px;
-  padding: 16px;
+  padding: 20px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
   outline: none;
+  overflow: hidden;
 }
 
 .quick-action-window-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .quick-action-window-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
   color: var(--text);
   font-weight: 600;
 }
 
 .quick-action-window-text {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .quick-action-window-text label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  font-weight: 500;
 }
 
 .quick-action-window-text .text-preview {
@@ -1741,73 +1745,83 @@ body {
 .quick-action-window-text .text-input {
   width: 100%;
   background: var(--background);
-  border-radius: 6px;
-  padding: 8px;
-  font-size: 13px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
   color: var(--text);
   line-height: 1.4;
   border: 2px solid var(--border);
   font-family: inherit;
-  resize: vertical;
-  min-height: 60px;
+  resize: none;
+  height: 60px;
   transition: border-color 0.2s;
 }
 
 .quick-action-window-text .text-input:focus {
   outline: none;
   border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(90, 39, 153, 0.1);
 }
 
 .quick-action-window-icons {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
-  padding: 8px 0;
-  flex: 1;
-  align-items: center;
+  padding: 0;
+  flex-shrink: 0;
 }
 
 .quick-action-window-icons .icon-btn {
-  width: 50px;
-  height: 50px;
-  border-radius: 10px;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
   border: 2px solid var(--border);
   background: var(--background);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 28px;
   transition: all 0.2s;
   position: relative;
+  flex-shrink: 0;
 }
 
 .quick-action-window-icons .icon-btn:hover {
   border-color: var(--primary);
-  background: rgba(var(--primary-rgb), 0.05);
-  transform: scale(1.05);
+  background: rgba(90, 39, 153, 0.05);
+  transform: scale(1.08);
 }
 
 .quick-action-window-icons .icon-btn.default {
   border-color: var(--primary);
-  background: rgba(var(--primary-rgb), 0.1);
+  background: rgba(90, 39, 153, 0.1);
+  box-shadow: 0 0 0 2px rgba(90, 39, 153, 0.2);
+}
+
+.quick-action-window-icons .icon-btn .icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .quick-action-window-icons .icon-btn .tooltip {
   position: absolute;
-  bottom: -24px;
+  bottom: -28px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s;
+  z-index: 10;
+  font-weight: 500;
 }
 
 .quick-action-window-icons .icon-btn:hover .tooltip {
@@ -1816,16 +1830,39 @@ body {
 
 .quick-action-window-hint {
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
-  margin-top: 8px;
+  margin-top: 12px;
+  flex-shrink: 0;
 }
 
 .quick-action-window .no-integrations {
   text-align: center;
   color: var(--muted);
-  font-size: 13px;
-  padding: 20px;
+  font-size: 14px;
+  padding: 30px 20px;
+}
+
+.quick-action-window .close-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.quick-action-window .close-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
 @keyframes slideIn {

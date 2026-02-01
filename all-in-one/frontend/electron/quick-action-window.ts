@@ -17,9 +17,14 @@ export function createQuickActionWindow(text: string, instances: any[]): Browser
   const cursorPoint = screen.getCursorScreenPoint();
   const display = screen.getDisplayNearestPoint(cursorPoint);
 
-  // Window dimensions
-  const width = 500;
-  const height = 250;
+  // Window dimensions - calculate height based on number of instances
+  const width = 520;
+  const baseHeight = 180; // Header + text area + hint
+  const iconsPerRow = 8; // Max icons per row
+  const iconSize = 58; // Icon button size + gap
+  const rows = Math.ceil(instances.length / iconsPerRow);
+  const iconsHeight = rows * iconSize + 16; // Add padding
+  const height = Math.min(baseHeight + iconsHeight, 400); // Cap at 400px
 
   // Position near cursor, but ensure it's fully visible
   let x = cursorPoint.x - width / 2;

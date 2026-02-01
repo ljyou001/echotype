@@ -85,7 +85,6 @@ export function QuickActionWindow() {
           value={editedText}
           onChange={(e) => setEditedText(e.target.value)}
           placeholder={t('integrations.quickAction.noText')}
-          rows={3}
           autoFocus
         />
       </div>
