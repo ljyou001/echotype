@@ -11,10 +11,9 @@
     "build": "tsc -p tsconfig.node.json && tsc -p tsconfig.preload.json && node -e \"require('fs').renameSync('dist-electron/preload.js', 'dist-electron/preload.cjs')\" && vite build",
     "preview": "vite preview",
     "start": "electron .",
-    "ico-to-png": "node scripts/ico-to-png.cjs",
     "package": "npm run build && electron-builder build --config.directories.output=dist-package",
     "dist": "electron-builder",
-    "postinstall": "electron-rebuild -f -w uiohook-napi,@hurdlegroup/robotjs"
+    "postinstall": "node -e \"if(process.platform==='darwin') { require('child_process').execSync('electron-rebuild -f -w uiohook-napi,@hurdlegroup/robotjs', {stdio:'inherit'}) }\""
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

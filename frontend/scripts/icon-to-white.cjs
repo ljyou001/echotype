@@ -4,7 +4,7 @@
  */
 const path = require("path");
 const fs = require("fs");
-const sharp = require("sharp");
+const Jimp = require("jimp");
 
 const frontendDir = path.resolve(__dirname, "..");
 const pngPath = path.join(frontendDir, "assets", "icon.png");
@@ -15,19 +15,18 @@ if (!fs.existsSync(pngPath)) {
   process.exit(1);
 }
 
-(async () => {
-  const { data, info } = await sharp(pngPath)
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const { width, height, channels } = info;
-  for (let i = 0; i < data.length; i += channels) {
-    data[i] = 255;
-    data[i + 1] = 255;
-    data[i + 2] = 255;
-  }
-  await sharp(data, { raw: { width, height, channels } })
-    .png()
-    .toFile(whitePath);
+Jimp.read(pngPath).then(image => {
+  image.scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, idx) {
+    // x, y - pixel position
+    // idx - index of the red channel for this pixel
+    this.bitmap.data[idx + 0] = 255;
+    this.bitmap.data[idx + 1] = 255;
+    this.bitmap.data[idx + 2] = 255;
+    // index + 3 is alpha, which we preserve
+  });
+  return image.writeAsync(whitePath);
+}).then(() => {
   console.log("Written:", whitePath);
-})();
+}).catch(err => {
+  console.error("Error:", err);
+});

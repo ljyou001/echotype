@@ -7,7 +7,7 @@ import HotkeyManager from "./hotkey-manager.js";
 import { createQuickActionWindow, closeQuickActionWindow, resizeQuickActionWindow, getQuickActionWindow } from "./quick-action-window.js";
 import os from "node:os";
 import robot from "@hurdlegroup/robotjs";
-import sharp from "sharp";
+import Jimp from "jimp";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -156,36 +156,47 @@ const TRAY_SIZE = 32;
 const DOT_SIZE = 12;
 const DOT_OFFSET = TRAY_SIZE - DOT_SIZE; // 20
 
-/** Build tray icon with optional status dot. Uses icon.png (same as window). Dot colors: loading=yellow, error=red, recording=white, ready=no dot. */
+/** Build tray icon with optional status dot. Uses icon.png. Dot colors: loading=yellow, error=red, recording=white, ready=no dot. */
 async function makeTrayImage(status: TrayStatus): Promise<Electron.NativeImage> {
   const pngPath = resolveIconPath();
   if (!fs.existsSync(pngPath)) {
     return nativeImage.createEmpty();
   }
-  let base: sharp.Sharp;
+
   try {
-    base = sharp(pngPath).resize(TRAY_SIZE, TRAY_SIZE);
-  } catch {
+    // Read base icon
+    const image = await Jimp.read(pngPath);
+    image.resize(TRAY_SIZE, TRAY_SIZE);
+
+    if (status !== "ready") {
+      const colors: Record<Exclude<TrayStatus, "ready">, number> = {
+        loading: 0xFDD835FF,   // RGBA
+        error: 0xE53935FF,
+        recording: 0xFFFFFFFF
+      };
+
+      // Create a status dot using a small circle
+      const dot = new Jimp(DOT_SIZE, DOT_SIZE, 0x00000000);
+      const radius = DOT_SIZE / 2;
+      const color = colors[status];
+
+      for (let x = 0; x < DOT_SIZE; x++) {
+        for (let y = 0; y < DOT_SIZE; y++) {
+          const dist = Math.sqrt(Math.pow(x - radius, 2) + Math.pow(y - radius, 2));
+          if (dist <= radius) {
+            dot.setPixelColor(color, x, y);
+          }
+        }
+      }
+      image.composite(dot, DOT_OFFSET, DOT_OFFSET);
+    }
+
+    const buffer = await image.getBufferAsync(Jimp.MIME_PNG);
+    return nativeImage.createFromBuffer(buffer);
+  } catch (error) {
+    console.error("[Tray] Failed to create tray image with Jimp:", error);
     return nativeImage.createFromPath(pngPath);
   }
-  if (status === "ready") {
-    const buf = await base.png().toBuffer();
-    return nativeImage.createFromBuffer(buf);
-  }
-  const colors: Record<Exclude<TrayStatus, "ready">, string> = {
-    loading: "#FDD835",
-    error: "#E53935",
-    recording: "#FFFFFF"
-  };
-  const dotSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${DOT_SIZE}" height="${DOT_SIZE}"><circle cx="${DOT_SIZE / 2}" cy="${DOT_SIZE / 2}" r="${DOT_SIZE / 2 - 1}" fill="${colors[status]}"/></svg>`;
-  const overlay = await sharp(Buffer.from(dotSvg))
-    .resize(DOT_SIZE, DOT_SIZE)
-    .toBuffer();
-  const composed = await base
-    .composite([{ input: overlay, left: DOT_OFFSET, top: DOT_OFFSET }])
-    .png()
-    .toBuffer();
-  return nativeImage.createFromBuffer(composed);
 }
 
 function updateTrayIcon(status: TrayStatus): void {

@@ -45,6 +45,9 @@ const api = {
     getMediaAccessStatus: () => {
         return electron_1.ipcRenderer.invoke("get-media-access-status");
     },
+    getAccessibilityStatus: () => {
+        return electron_1.ipcRenderer.invoke("get-accessibility-status");
+    },
     getHotkey: (key) => {
         return electron_1.ipcRenderer.invoke("hotkey-get", key);
     },
