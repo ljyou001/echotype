@@ -24,6 +24,7 @@ let hotkeyManager: HotkeyManager | null = null;
 let frontendLogFile: string | null = null;
 let frontendLogStream: fs.WriteStream | null = null;
 let enableFileLogging: boolean = true; // File logging enabled by default
+let isQuitting: boolean = false;
 
 // Check if environment variable disables file logging
 if (process.env.ECHOTYPE_NO_LOG_FILE === "1") {
@@ -351,6 +352,10 @@ function createWindow(): void {
     }
   });
 
+  // Hide the menu bar
+  mainWindow.setMenu(null);
+  mainWindow.setMenuBarVisibility(false);
+
   const rendererUrl = process.env.ELECTRON_RENDERER_URL;
   if (rendererUrl) {
     void mainWindow.loadURL(rendererUrl);
@@ -360,6 +365,14 @@ function createWindow(): void {
 
   mainWindow.once("ready-to-show", () => {
     mainWindow?.show();
+  });
+
+  mainWindow.on("close", (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      mainWindow?.hide();
+      return false;
+    }
   });
 
   mainWindow.on("closed", () => {
@@ -409,7 +422,10 @@ async function createTray(): Promise<void> {
     },
     {
       label: "Quit",
-      click: () => app.quit()
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      }
     }
   ]);
   tray.setToolTip("Echotype");
@@ -792,6 +808,8 @@ app.whenReady().then(async () => {
   }
 
   initFrontendLog();
+  // Remove global menu bar
+  Menu.setApplicationMenu(null);
   createWindow();
   await createTray();
   registerHotkeys();

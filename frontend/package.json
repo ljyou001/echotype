@@ -1,7 +1,7 @@
 {
   "name": "echotype-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "2.0.0",
   "type": "module",
   "main": "dist-electron/main.js",
   "description": "Modern Voice-to-Text Application with AI Integration",
@@ -59,7 +59,6 @@
     "extraResources": [],
     "win": {
       "target": [
-        "portable",
         "zip"
       ],
       "icon": "assets/icon.png",
