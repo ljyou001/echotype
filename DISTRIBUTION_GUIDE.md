@@ -4,91 +4,64 @@
 
 ## 1. 后端打包 (Python Backend)
 
-后端打包的目标是生成一个单一的可执行文件，内置所有库依赖（包括复杂的 torch 和 transformers）。
+后端打包的目标是将所有库依赖（包括复杂的 torch 和 transformers）以及业务逻辑封装起来。
 
 ### Windows 生成结果
 *   运行脚本：`.\scripts\build_backend.ps1`
-*   文件名：`echotype-backend.exe`
-*   位置：`dist/echotype-backend.exe` (单一文件，约 3GB+)
+*   结果形式：`onedir` 文件夹（包含启动程序和依赖 DLL）
+*   位置：`dist/echotype-backend/`
+*   特点：相比 `onefile`，`onedir` 启动速度显著提高，且能更好解决 `nagisa` 等库的相对寻址问题。
 
 ### macOS 生成结果
-*   运行命令：参见下文附录
-*   文件名：`echotype-backend` (无后缀二进制文件)
+*   文件名：`echotype-backend`
 *   位置：`dist/echotype-backend`
 
 ---
 
-## 2. 前端集成与可运行逻辑
+## 2. Windows 终极打包方案 (处理体积限制)
 
-为了让 Electron 能够找到并运行打包后的后端，前端代码 (`frontend/electron/main.ts`) 已经进行了以下适配：
+由于后端和模型总体积通常在 4GB-6GB 之间，超过了传统 `nsis` 安装程序 2GB 的限制。
+
+### 🚀 推荐方案：一键发布脚本
+我们提供了一个自动处理路径、清理内存僵尸进程并完成打包的脚本：
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\release_windows.ps1
+```
+
+### 方案 A：便携版/绿色版 (推荐)
+1.  在 `frontend/package.json` 中配置 `target` 为 `portable` 和 `zip`。
+2.  执行 `npx electron-builder --win --dir`。
+3.  用户得到的是一个文件夹，直接运行 `EchoType.exe` 即可。
+
+### 方案 B：专业的安装程序 (高级)
+如果确实需要安装程序，请使用 **Inno Setup**：
+1.  使用 `electron-builder` 生成 `win-unpacked` 目录。
+2.  使用 Inno Setup 将该目录封装为 `.exe` 或 `.msi`。Inno Setup 没有 2GB 的硬性体积限制。
+
+---
+
+## 3. 前端集成逻辑
 
 ### A. 智能路径解析 (`resolveBackendCommand`)
 代码会自动根据 `process.platform` 判断资源路径：
-*   **Windows**: 寻找 `resources/backend/echotype-backend.exe`。
-*   **macOS**: 寻找 `resources/backend/echotype-backend`。
+*   **Windows (Packaged)**: 寻找 `resources/backend/echotype-backend.exe`。
+*   **macOS (Packaged)**: 寻找 `resources/backend/echotype-backend`。
 
 ### B. 模型目录映射
-在打包模式下，模型文件夹必须放置在 `resources/models`。前端启动后端时会强制添加 `--models-dir` 参数，确保后端能找到离线模型文件。
-
-### C. 跨平台快捷键处理
-针对不同平台的粘贴快捷键已经自动适配：
-*   **macOS**: 使用 `command + v`。
-*   **Windows**: 使用 `control + v`。
+打包模式下，模型文件夹放置在 `resources/models`。前端启动后端时会强制添加 `--models-dir` 参数。
 
 ---
 
-## 3. Windows 终极打包方案 (处理 2GB 限制)
+## 4. 关键调优与修复
 
-由于后端和模型总体积超过 4GB，Electron 默认的 NSIS 工具会因为 2GB 限制导致打包失败。请使用以下两种方案之一：
-
-### 方案 A：专业的 Inno Setup 安装程序 (推荐)
-这是最专业的发布方式，支持安装向导、桌面快捷方式和权限管理。
-1.  在 `frontend` 目录下运行：`npx electron-builder --dir` (仅生成 `win-unpacked` 目录)。
-2.  将 `dist/echotype-backend.exe` 复制到 `frontend/dist-package/win-unpacked/resources/backend/` 下。
-3.  将 `models/` 文件夹整体复制到 `frontend/dist-package/win-unpacked/resources/` 下。
-4.  下载并安装 [Inno Setup 6](https://jrsoftware.org/isdl.php)。
-5.  在项目根目录运行或编译脚本：`.\scripts\setup_script.iss`。
-6.  成品：`Output/EchoType_Installer.exe`。
-
-### 方案 B：7-Zip 自解压便携版 (SFX)
-适合快速分发绿色版，用户双击即解压，无需安装。
-1.  确保电脑安装了 7-Zip。
-2.  在项目根目录运行自动化脚本：
-    ```powershell
-    .\scripts\build_sfx.ps1
-    ```
-3.  成品：`EchoType_Portable.exe`。
-
----
-
-## 4. macOS 打包说明
-
-### 打包命令
-在 macOS 终端执行：
-```bash
-./.venv/bin/python -m PyInstaller \
-    --name echotype-backend \
-    --onefile \
-    --add-data "backend/models_catalog.json:backend" \
-    --collect-all sherpa_onnx \
-    --collect-all funasr_onnx \
-    --collect-all kaldi_native_fbank \
-    --collect-all jieba \
-    --collect-all qwen_asr \
-    --collect-submodules torch \
-    --collect-submodules transformers \
-    --hidden-import websockets \
-    launcher.py
-```
-
-### 注意事项
-1.  **2GB 限制**：macOS 生成 `.dmg` 没有 2GB 限制，可以正常打包。
-2.  **辅助功能权限**：首次运行需引导用户开启 **系统设置 -> 隐私与安全性 -> 辅助功能**，否则全局热键无效。
-3.  **GPU 加速**：macOS 版本已自动适配 MPS (Metal Performance Shaders)，Qwen3 模型运行速度会非常快。
+*   **热键判定**: 唤起快捷窗口的阈值设置为 **150ms**，保证操作丝滑且不误触。
+*   **GPU 兼容性**: Qwen3 模型已强制使用 `float16` 精度，避免在部分显卡上出现初始化挂起。
+*   **进程残留**: 打包版本的启动器 `launcher.py` 增强了日志输出，并在构建脚本中加入了旧进程强制清理逻辑。
 
 ---
 
 ## 5. 维护与更新
 
-*   **更新后端逻辑**：修改 Python 代码后，重新运行 `.\scripts\build_backend.ps1`，只替换 `resources/backend/` 下的文件即可。
-*   **更新前端 UI**：在 `frontend` 下运行 `npm run build`，重新执行 Electron 打包步骤。
+*   **更新后端**: 运行 `.\scripts\build_backend.ps1`。
+*   **更新前端**: 进入 `frontend` 目录运行 `npm run build`。
+*   **完整更新**: 运行 `.\scripts\release_windows.ps1`。

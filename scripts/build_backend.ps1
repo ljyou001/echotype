@@ -19,21 +19,32 @@ Write-Host "Starting PyInstaller build (this will take several minutes due to to
 
 & $PythonExe -m PyInstaller `
     --name $BackendName `
-    --onefile `
+    --onedir `
     --clean `
+    --noconfirm `
     --add-data "backend/models_catalog.json;backend" `
     --collect-all sherpa_onnx `
     --collect-all funasr_onnx `
     --collect-all kaldi_native_fbank `
     --collect-all jieba `
+    --collect-all nagisa `
+    --collect-all transformers `
+    --collect-all torch `
     --collect-all qwen_asr `
-    --collect-submodules torch `
-    --collect-submodules transformers `
     --hidden-import websockets `
+    --hidden-import qwen_asr `
+    --hidden-import nagisa `
+    --hidden-import nagisa_utils `
+    --hidden-import nagisa.prepro `
+    --hidden-import nagisa.model `
+    --hidden-import nagisa.tagger `
+    --hidden-import nagisa.utils `
+    --paths ".venv/Lib/site-packages/nagisa" `
     launcher.py
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "Backend build successful! Executable is at dist\$BackendName.exe" -ForegroundColor Green
-} else {
+    Write-Host "Backend build successful! Folder is at dist\$BackendName" -ForegroundColor Green
+}
+else {
     Write-Error "Backend build failed."
 }

@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 const DEFAULT_RECORDING_FALLBACK_WIN = ["RCtrl", "RAlt", "CapsLock"];
-const DEFAULT_RECORDING_FALLBACK_MAC = ["RCmd", "RAlt", "CapsLock"];
+const DEFAULT_RECORDING_FALLBACK_MAC = ["RAlt", "RCmd", "CapsLock"];
 /** singleton logic for global listeners */
 let globalHotkeyManager = null;
 let uiohookListenersAttached = false;
@@ -63,7 +63,7 @@ class HotkeyManager {
                         // Record key down timestamp for duration detection
                         this.keyDownTimestamp = Date.now();
                         // Get recording mode
-                        const recordingMode = this.getAppSetting('recordingMode') || 'toggle';
+                        const recordingMode = this.getAppSetting('recordingMode') || 'push-to-talk';
                         // Toggle mode: set long press timer for quick action
                         if (recordingMode === 'toggle') {
                             this.longPressTimer = setTimeout(() => {
@@ -81,16 +81,18 @@ class HotkeyManager {
                         this.keyState.set(stateKey, false);
                         // Calculate key press duration
                         const duration = Date.now() - this.keyDownTimestamp;
+                        console.log(`[Hotkey] Key UP (uiohook): ${config.accelerator}, duration: ${duration}ms`);
                         // Clear long press timer if exists
                         if (this.longPressTimer) {
                             clearTimeout(this.longPressTimer);
                             this.longPressTimer = null;
                         }
                         // Get recording mode
-                        const recordingMode = this.getAppSetting('recordingMode') || 'toggle';
+                        const recordingMode = this.getAppSetting('recordingMode') || 'push-to-talk';
                         // Push-to-Talk mode: light tap triggers quick action
-                        if (recordingMode === 'push-to-talk' && duration < 100) {
-                            console.log(`[Hotkey] Light tap detected (<100ms), triggering quick action`);
+                        // Reduced threshold to 150ms as per user request for snappier response
+                        if (recordingMode === 'push-to-talk' && duration < 150) {
+                            console.log(`[Hotkey] Light tap detected (${duration}ms < 150ms), triggering quick action`);
                             this.triggerQuickAction();
                         }
                         // Only trigger on down->up state transition, with debounce to avoid duplicates
@@ -140,6 +142,7 @@ class HotkeyManager {
                 this.settings = config.hotkey || {};
             }
             else {
+                console.log('[HotkeyManager] No settings file found, creating defaults');
                 this.settings = {
                     recording: {
                         accelerator: this.getDefaultRecordingAccelerator(),
@@ -151,14 +154,16 @@ class HotkeyManager {
             }
         }
         catch (error) {
-            console.error("Failed to load hotkey settings:", error);
+            console.error("[HotkeyManager] Failed to load hotkey settings:", error);
         }
     }
     saveSettings() {
         try {
             const dir = path.dirname(this.settingsPath);
-            if (!fs.existsSync(dir))
+            if (!fs.existsSync(dir)) {
+                console.log(`[HotkeyManager] Creating settings directory: ${dir}`);
                 fs.mkdirSync(dir, { recursive: true });
+            }
             const existingData = fs.existsSync(this.settingsPath)
                 ? JSON.parse(fs.readFileSync(this.settingsPath, "utf-8"))
                 : {};
@@ -166,9 +171,12 @@ class HotkeyManager {
                 ...existingData,
                 hotkey: this.settings
             };
+            console.log(`[HotkeyManager] Saving settings to: ${this.settingsPath}`);
             fs.writeFileSync(this.settingsPath, JSON.stringify(config, null, 2), "utf-8");
         }
-        catch (error) { }
+        catch (error) {
+            console.error("[HotkeyManager] Failed to save settings:", error);
+        }
     }
     getAppSetting(key) {
         try {
@@ -183,6 +191,11 @@ class HotkeyManager {
     }
     updateAppSetting(key, value) {
         try {
+            const dir = path.dirname(this.settingsPath);
+            if (!fs.existsSync(dir)) {
+                console.log(`[HotkeyManager] Creating settings directory: ${dir}`);
+                fs.mkdirSync(dir, { recursive: true });
+            }
             const config = fs.existsSync(this.settingsPath)
                 ? JSON.parse(fs.readFileSync(this.settingsPath, "utf-8"))
                 : {};
@@ -191,7 +204,9 @@ class HotkeyManager {
             config.app[key] = value;
             fs.writeFileSync(this.settingsPath, JSON.stringify(config, null, 2), "utf-8");
         }
-        catch (e) { }
+        catch (e) {
+            console.error(`[HotkeyManager] Failed to update app setting ${key}:`, e);
+        }
     }
     registerAll(callback) {
         this.hotkeyCallback = callback;

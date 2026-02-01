@@ -108,6 +108,7 @@ class HotkeyManager {
 
             // Calculate key press duration
             const duration = Date.now() - this.keyDownTimestamp;
+            console.log(`[Hotkey] Key UP (uiohook): ${config.accelerator}, duration: ${duration}ms`);
 
             // Clear long press timer if exists
             if (this.longPressTimer) {
@@ -116,11 +117,12 @@ class HotkeyManager {
             }
 
             // Get recording mode
-            const recordingMode = this.getAppSetting('recordingMode') || 'toggle';
+            const recordingMode = this.getAppSetting('recordingMode') || 'push-to-talk';
 
             // Push-to-Talk mode: light tap triggers quick action
-            if (recordingMode === 'push-to-talk' && duration < 100) {
-              console.log(`[Hotkey] Light tap detected (<100ms), triggering quick action`);
+            // Reduced threshold to 150ms as per user request for snappier response
+            if (recordingMode === 'push-to-talk' && duration < 150) {
+              console.log(`[Hotkey] Light tap detected (${duration}ms < 150ms), triggering quick action`);
               this.triggerQuickAction();
             }
 
@@ -173,6 +175,7 @@ class HotkeyManager {
         const config: SettingsFile = JSON.parse(data);
         this.settings = config.hotkey || {};
       } else {
+        console.log('[HotkeyManager] No settings file found, creating defaults');
         this.settings = {
           recording: {
             accelerator: this.getDefaultRecordingAccelerator(),
@@ -183,14 +186,17 @@ class HotkeyManager {
         this.saveSettings();
       }
     } catch (error) {
-      console.error("Failed to load hotkey settings:", error);
+      console.error("[HotkeyManager] Failed to load hotkey settings:", error);
     }
   }
 
   private saveSettings(): void {
     try {
       const dir = path.dirname(this.settingsPath);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      if (!fs.existsSync(dir)) {
+        console.log(`[HotkeyManager] Creating settings directory: ${dir}`);
+        fs.mkdirSync(dir, { recursive: true });
+      }
 
       const existingData = fs.existsSync(this.settingsPath)
         ? JSON.parse(fs.readFileSync(this.settingsPath, "utf-8"))
@@ -200,8 +206,12 @@ class HotkeyManager {
         ...existingData,
         hotkey: this.settings
       };
+
+      console.log(`[HotkeyManager] Saving settings to: ${this.settingsPath}`);
       fs.writeFileSync(this.settingsPath, JSON.stringify(config, null, 2), "utf-8");
-    } catch (error) { }
+    } catch (error) {
+      console.error("[HotkeyManager] Failed to save settings:", error);
+    }
   }
 
   getAppSetting(key: string): any {
@@ -217,13 +227,21 @@ class HotkeyManager {
 
   updateAppSetting(key: string, value: any): void {
     try {
+      const dir = path.dirname(this.settingsPath);
+      if (!fs.existsSync(dir)) {
+        console.log(`[HotkeyManager] Creating settings directory: ${dir}`);
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
       const config: SettingsFile = fs.existsSync(this.settingsPath)
         ? JSON.parse(fs.readFileSync(this.settingsPath, "utf-8"))
         : {};
       if (!config.app) config.app = {};
       config.app[key] = value;
       fs.writeFileSync(this.settingsPath, JSON.stringify(config, null, 2), "utf-8");
-    } catch (e) { }
+    } catch (e) {
+      console.error(`[HotkeyManager] Failed to update app setting ${key}:`, e);
+    }
   }
 
   registerAll(callback: (action: string, keyDown: boolean) => void): void {

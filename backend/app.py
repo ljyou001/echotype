@@ -32,6 +32,9 @@ def setup_logging(level: str, enable_file_logging: bool = True) -> Path | None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         log_file = log_dir / f"backend_{timestamp}.log"
         
+        # Explicit print to stderr as a fallback for debugging
+        print(f"[Backend] Logging to: {log_file}", file=sys.stderr)
+        
         handlers.append(logging.FileHandler(log_file, encoding='utf-8'))
     
     # Configure logging

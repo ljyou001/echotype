@@ -69,6 +69,29 @@ function writeFrontendLog(message: string): void {
   }
 }
 
+// Redirect standard console to file logging
+const originalLog = console.log;
+const originalError = console.error;
+const originalWarn = console.warn;
+
+console.log = (...args: any[]) => {
+  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+  originalLog(...args);
+  writeFrontendLog(`[INFO] ${msg}`);
+};
+
+console.error = (...args: any[]) => {
+  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+  originalError(...args);
+  writeFrontendLog(`[ERROR] ${msg}`);
+};
+
+console.warn = (...args: any[]) => {
+  const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+  originalWarn(...args);
+  writeFrontendLog(`[WARN] ${msg}`);
+};
+
 function closeFrontendLog(): void {
   if (frontendLogStream) {
     frontendLogStream.end();
@@ -117,15 +140,31 @@ function resolveBackendCommand(): { command: string; args: string[] } {
 
 function resolveBackendCwd(): string {
   if (app.isPackaged) {
-    return process.resourcesPath;
+    // Backend is in resources/backend
+    return path.join(process.resourcesPath, "backend");
   }
   return process.env.ECHOTYPE_BACKEND_CWD ?? getWorkspaceRoot();
 }
 
 function resolveModelsDir(): string | null {
+  const userModelsDir = path.join(os.homedir(), ".echotype", "models");
+
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, "models");
+    // If user has downloaded models, use them
+    if (fs.existsSync(userModelsDir) && fs.readdirSync(userModelsDir).length > 0) {
+      return userModelsDir;
+    }
+
+    // Check if bundled resources exist
+    const resourceModelsDir = path.join(process.resourcesPath, "models");
+    if (fs.existsSync(resourceModelsDir) && fs.readdirSync(resourceModelsDir).length > 0) {
+      return resourceModelsDir;
+    }
+
+    // Default to user dir so backend has a stable path to check
+    return userModelsDir;
   }
+
   return null;
 }
 
@@ -379,24 +418,31 @@ async function createTray(): Promise<void> {
 }
 
 function registerHotkeys(): void {
-  // Use Electron userData path, config in AppData/Roaming/<app>/settings.json after packaging
-  const settingsPath = path.join(app.getPath("userData"), "settings.json");
-  hotkeyManager = new HotkeyManager(settingsPath);
+  try {
+    // Unify settings path to ~/.echotype/settings.json as requested
+    const settingsPath = path.join(os.homedir(), ".echotype", "settings.json");
+    console.log(`[Main] Initializing HotkeyManager with settings at: ${settingsPath}`);
 
-  // Set mainWindow reference for quick action support
-  if (mainWindow) {
-    console.log('[Main] Setting mainWindow in hotkeyManager');
-    hotkeyManager.setMainWindow(mainWindow);
-  } else {
-    console.warn('[Main] mainWindow is null when registering hotkeys!');
-  }
+    hotkeyManager = new HotkeyManager(settingsPath);
 
-  hotkeyManager.registerAll((action: string, keyDown: boolean) => {
-    console.log("Hotkey triggered:", action, "keyDown:", keyDown);
-    if (action === "toggle_recording") {
-      sendToRenderer("hotkey", { action: "toggle", keyDown });
+    // Set mainWindow reference for quick action support
+    if (mainWindow) {
+      console.log('[Main] Setting mainWindow in hotkeyManager');
+      hotkeyManager.setMainWindow(mainWindow);
+    } else {
+      console.warn('[Main] mainWindow is null when registering hotkeys!');
     }
-  });
+
+    hotkeyManager.registerAll((action: string, keyDown: boolean) => {
+      console.log(`[Main] Hotkey triggered: action=${action} keyDown=${keyDown}`);
+      if (action === "toggle_recording") {
+        sendToRenderer("hotkey", { action: "toggle", keyDown });
+      }
+    });
+    console.log("[Main] HotkeyManager initialized successfully");
+  } catch (error) {
+    console.error("[Main] Failed to initialize HotkeyManager:", error);
+  }
 }
 
 ipcMain.on("window-action", (_event, action: string) => {
@@ -563,9 +609,14 @@ ipcMain.on("tray-status", (_event, status: TrayStatus) => {
 
 ipcMain.handle("read-catalog", async () => {
   try {
-    // Read catalog from project directory (static metadata)
-    const workspaceRoot = getWorkspaceRoot();
-    const catalogPath = path.join(workspaceRoot, "backend", "models_catalog.json");
+    // Read catalog from correct path depending on environment
+    let catalogPath: string;
+    if (app.isPackaged) {
+      catalogPath = path.join(process.resourcesPath, "backend", "models_catalog.json");
+    } else {
+      const workspaceRoot = getWorkspaceRoot();
+      catalogPath = path.join(workspaceRoot, "backend", "models_catalog.json");
+    }
 
     console.log(`[Catalog] Reading catalog from: ${catalogPath}`);
 
@@ -729,6 +780,17 @@ ipcMain.handle("http-request", async (_event, url: string, options: { method: st
 });
 
 app.whenReady().then(async () => {
+  // Ensure base directory exists (~/.echotype)
+  const baseDir = path.join(os.homedir(), ".echotype");
+  if (!fs.existsSync(baseDir)) {
+    console.log(`[Main] Creating base directory: ${baseDir}`);
+    try {
+      fs.mkdirSync(baseDir, { recursive: true });
+    } catch (e) {
+      console.error("[Main] Failed to create base directory:", e);
+    }
+  }
+
   initFrontendLog();
   createWindow();
   await createTray();

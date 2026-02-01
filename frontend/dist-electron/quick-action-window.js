@@ -98,22 +98,34 @@ export function createQuickActionWindow(text, instances) {
                 instances
             });
             quickActionWindow.show();
+            // Use a slight delay to ensure focus is actually grabbed
+            setTimeout(() => {
+                if (quickActionWindow && !quickActionWindow.isDestroyed()) {
+                    quickActionWindow.focus();
+                }
+            }, 50);
         }
     });
     // Auto-close on blur (but not if we're showing a reply)
     let hasReply = false;
+    // Also add a small grace period (1s) after creation where blur is ignored
+    let isNew = true;
+    setTimeout(() => { isNew = false; }, 1000);
     // Listen for IPC message from renderer when reply is displayed
     ipcMain.on("quick-action-has-reply", () => {
         console.log("[QuickActionWindow] Received quick-action-has-reply, disabling auto-close");
         hasReply = true;
     });
     quickActionWindow.on("blur", () => {
-        if (quickActionWindow && !quickActionWindow.isDestroyed() && !hasReply) {
+        if (quickActionWindow && !quickActionWindow.isDestroyed() && !hasReply && !isNew) {
             console.log("[QuickActionWindow] Blur event, closing window (no reply)");
             quickActionWindow.close();
         }
         else if (hasReply) {
             console.log("[QuickActionWindow] Blur event, but has reply - keeping window open");
+        }
+        else if (isNew) {
+            console.log("[QuickActionWindow] Blur event, but in grace period - keeping window open");
         }
     });
     quickActionWindow.on("closed", () => {

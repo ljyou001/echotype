@@ -138,6 +138,7 @@ export type AppState = {
   backendStatus: BackendStatus;
   errorDetail: ErrorDetail | null;
   lastLog: string;
+  _recordingModeManuallySet: boolean;
 
   // Models & Capabilities
   capabilities: Capabilities;
@@ -257,6 +258,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   appLanguage: "system",
   recordingMode: "push-to-talk", // Default to push-to-talk mode
   _userHasSetRecordingMode: false,
+  _recordingModeManuallySet: false,
   outputDirectInput: true, // Default: direct input enabled
   outputClipboard: false, // Default: clipboard disabled
   onboardingCompleted: false,
@@ -342,8 +344,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     window.echotype?.updateSetting?.("appLanguage", lang);
   },
   setRecordingMode: (mode) => {
-    set({ recordingMode: mode, _userHasSetRecordingMode: true });
+    set({ recordingMode: mode, _userHasSetRecordingMode: true, _recordingModeManuallySet: true });
     window.echotype?.updateSetting?.("recordingMode", mode);
+    window.echotype?.updateSetting?.("recordingMode_manuallySet", true);
   },
   setOutputDirectInput: (enabled) => {
     set({ outputDirectInput: enabled });
@@ -421,8 +424,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ lastActiveModelId });
     }
 
-    if (recordingMode !== undefined && !state._userHasSetRecordingMode) {
-      set({ recordingMode });
+    const recordingModeManuallySet = await window.echotype?.getSetting?.("recordingMode_manuallySet");
+    if (recordingModeManuallySet && recordingMode !== undefined && !state._userHasSetRecordingMode) {
+      set({ recordingMode, _recordingModeManuallySet: true });
     }
     if (appLanguage !== undefined) set({ appLanguage });
     else set({ appLanguage: "system" });

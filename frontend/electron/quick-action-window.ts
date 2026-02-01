@@ -25,7 +25,7 @@ export function createQuickActionWindow(text: string, instances: any[]): Browser
   const rows = Math.ceil(instances.length / iconsPerRow);
   const iconsHeight = rows * iconSize + 16; // Add padding
   const initialHeight = Math.min(baseHeight + iconsHeight, 400); // Cap at 400px
-  
+
   console.log('[QuickActionWindow] Creating window:', {
     width,
     initialHeight,
@@ -47,12 +47,12 @@ export function createQuickActionWindow(text: string, instances: any[]): Browser
   if (x + width > display.bounds.x + display.bounds.width - margin) {
     x = display.bounds.x + display.bounds.width - width - margin;
   }
-  
+
   // Vertical positioning - prefer below cursor, but check if there's enough space
   const spaceBelow = display.bounds.y + display.bounds.height - (cursorPoint.y + 20);
   const spaceAbove = cursorPoint.y - display.bounds.y - 20;
   const maxPotentialHeight = Math.floor(display.bounds.height * 0.8); // Max height window could grow to
-  
+
   if (spaceBelow < maxPotentialHeight && spaceAbove > spaceBelow) {
     // Not enough space below and more space above, position above cursor
     y = cursorPoint.y - initialHeight - 20;
@@ -62,7 +62,7 @@ export function createQuickActionWindow(text: string, instances: any[]): Browser
     y = cursorPoint.y + 20;
     console.log('[QuickActionWindow] Positioning below cursor');
   }
-  
+
   // Final bounds check
   if (y < display.bounds.y + margin) {
     y = display.bounds.y + margin;
@@ -70,7 +70,7 @@ export function createQuickActionWindow(text: string, instances: any[]): Browser
   if (y + initialHeight > display.bounds.y + display.bounds.height - margin) {
     y = display.bounds.y + display.bounds.height - initialHeight - margin;
   }
-  
+
   console.log('[QuickActionWindow] Final position:', { x, y, width, height: initialHeight });
 
   quickActionWindow = new BrowserWindow({
@@ -114,24 +114,36 @@ export function createQuickActionWindow(text: string, instances: any[]): Browser
         instances
       });
       quickActionWindow.show();
+      // Use a slight delay to ensure focus is actually grabbed
+      setTimeout(() => {
+        if (quickActionWindow && !quickActionWindow.isDestroyed()) {
+          quickActionWindow.focus();
+        }
+      }, 50);
     }
   });
 
   // Auto-close on blur (but not if we're showing a reply)
   let hasReply = false;
-  
+
+  // Also add a small grace period (1s) after creation where blur is ignored
+  let isNew = true;
+  setTimeout(() => { isNew = false; }, 1000);
+
   // Listen for IPC message from renderer when reply is displayed
   ipcMain.on("quick-action-has-reply", () => {
     console.log("[QuickActionWindow] Received quick-action-has-reply, disabling auto-close");
     hasReply = true;
   });
-  
+
   quickActionWindow.on("blur", () => {
-    if (quickActionWindow && !quickActionWindow.isDestroyed() && !hasReply) {
+    if (quickActionWindow && !quickActionWindow.isDestroyed() && !hasReply && !isNew) {
       console.log("[QuickActionWindow] Blur event, closing window (no reply)");
       quickActionWindow.close();
     } else if (hasReply) {
       console.log("[QuickActionWindow] Blur event, but has reply - keeping window open");
+    } else if (isNew) {
+      console.log("[QuickActionWindow] Blur event, but in grace period - keeping window open");
     }
   });
 
@@ -159,7 +171,7 @@ export function resizeQuickActionWindow(newHeight: number): void {
   if (quickActionWindow && !quickActionWindow.isDestroyed()) {
     const currentBounds = quickActionWindow.getBounds();
     const display = screen.getDisplayNearestPoint({ x: currentBounds.x, y: currentBounds.y });
-    
+
     console.log('[QuickActionWindow] Resize requested:', {
       currentHeight: currentBounds.height,
       newHeight: newHeight,
@@ -167,25 +179,25 @@ export function resizeQuickActionWindow(newHeight: number): void {
       screenHeight: display.bounds.height,
       screenY: display.bounds.y
     });
-    
+
     // Cap height at 80% of screen height with some margin
     const margin = 40; // Top and bottom margin
     const maxHeight = Math.floor(display.bounds.height * 0.8);
     const finalHeight = Math.min(newHeight, maxHeight);
-    
+
     console.log('[QuickActionWindow] Final height after cap:', finalHeight);
-    
+
     // Calculate if window would go off bottom of screen
     const bottomEdge = currentBounds.y + finalHeight;
     const screenBottom = display.bounds.y + display.bounds.height;
-    
+
     if (bottomEdge > screenBottom - margin) {
       // Window would go off screen bottom, need to adjust position
       console.log('[QuickActionWindow] Window would go off bottom, adjusting position');
-      
+
       // Try to move window up to fit
       let newY = screenBottom - finalHeight - margin;
-      
+
       // Make sure we don't go off the top
       const screenTop = display.bounds.y + margin;
       if (newY < screenTop) {
@@ -194,14 +206,14 @@ export function resizeQuickActionWindow(newHeight: number): void {
         // If still doesn't fit, reduce height further
         const availableHeight = screenBottom - screenTop - (margin * 2);
         const adjustedHeight = Math.min(finalHeight, availableHeight);
-        
+
         quickActionWindow.setBounds({
           x: currentBounds.x,
           y: newY,
           width: currentBounds.width,
           height: adjustedHeight
         });
-        
+
         console.log('[QuickActionWindow] Resized with position adjustment:', {
           x: currentBounds.x,
           y: newY,
@@ -216,7 +228,7 @@ export function resizeQuickActionWindow(newHeight: number): void {
           width: currentBounds.width,
           height: finalHeight
         });
-        
+
         console.log('[QuickActionWindow] Moved up to fit:', {
           x: currentBounds.x,
           y: newY,
@@ -228,7 +240,7 @@ export function resizeQuickActionWindow(newHeight: number): void {
       // Window fits, just resize height
       console.log('[QuickActionWindow] Window fits, just resizing height');
       quickActionWindow.setSize(currentBounds.width, finalHeight);
-      
+
       console.log('[QuickActionWindow] Resized:', {
         width: currentBounds.width,
         height: finalHeight

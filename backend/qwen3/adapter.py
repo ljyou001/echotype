@@ -47,7 +47,7 @@ class Qwen3Adapter:
             from qwen_asr import Qwen3ASRModel  # noqa: F401
         except Exception as exc:
             raise RuntimeError(
-                "Qwen3 backend dependencies are not installed. "
+                f"Qwen3 backend dependencies are not installed: {exc}. "
                 "Install qwen-asr and its runtime first."
             ) from exc
 
@@ -62,6 +62,7 @@ class Qwen3Adapter:
         from qwen_asr import Qwen3ASRModel
 
         if self._backend_kind == "vllm":
+            self._logger.info("Initializing Qwen3 model with vLLM on %s", default_device)
             self._model = Qwen3ASRModel.LLM(
                 model=model_path,
                 max_inference_batch_size=self._config.qwen_max_inference_batch_size,
@@ -70,13 +71,19 @@ class Qwen3Adapter:
             )
         else:
             device_map, dtype = self._resolve_device_map(default_device)
-            self._model = Qwen3ASRModel.from_pretrained(
-                model_path,
-                dtype=dtype,
-                device_map=device_map,
-                max_inference_batch_size=self._config.qwen_max_inference_batch_size,
-                max_new_tokens=self._config.qwen_max_new_tokens,
-            )
+            self._logger.info("Initializing Qwen3 model with Transformers on %s (dtype=%s)", device_map, dtype)
+            try:
+                self._model = Qwen3ASRModel.from_pretrained(
+                    model_path,
+                    dtype=dtype,
+                    device_map=device_map,
+                    max_inference_batch_size=self._config.qwen_max_inference_batch_size,
+                    max_new_tokens=self._config.qwen_max_new_tokens,
+                )
+            except Exception as e:
+                self._logger.error("Failed to load Qwen3 model: %s", e)
+                raise
+            self._logger.info("Qwen3 model loaded successfully")
 
         self._progress_callback("speech_model", "done")
         self._progress_callback("loaded", "done")
@@ -292,10 +299,9 @@ class Qwen3Adapter:
         import torch
 
         if default_device == "cuda":
-            return "cuda:0", torch.bfloat16
+            # float16 is more compatible than bfloat16 for older GPUs
+            return "cuda:0", torch.float16
         if default_device == "mps":
-            # MPS often works better with float16 or bfloat16, but sometimes float32 is safer
-            # Qwen3 weights are usually bfloat16
             return "mps", torch.float16
         return "cpu", torch.float32
 

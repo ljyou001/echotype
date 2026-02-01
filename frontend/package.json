@@ -56,22 +56,21 @@
       "dist-electron/**/*",
       "assets/**/*"
     ],
-    "extraResources": [
-      {
-        "from": "../models",
-        "to": "models"
-      }
-    ],
+    "extraResources": [],
     "win": {
       "target": [
-        "nsis",
+        "portable",
         "zip"
       ],
       "icon": "assets/icon.png",
       "extraResources": [
         {
-          "from": "../dist/echotype-backend.exe",
-          "to": "backend/echotype-backend.exe"
+          "from": "../dist/echotype-backend",
+          "to": "backend"
+        },
+        {
+          "from": "../backend/models_catalog.json",
+          "to": "backend/models_catalog.json"
         }
       ]
     },
@@ -83,7 +82,11 @@
       "extraResources": [
         {
           "from": "../dist/echotype-backend",
-          "to": "backend/echotype-backend"
+          "to": "backend"
+        },
+        {
+          "from": "../backend/models_catalog.json",
+          "to": "backend/models_catalog.json"
         }
       ]
     }

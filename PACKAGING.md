@@ -1,134 +1,70 @@
-# EchoType Packaging Guide
+# EchoType Packaging Guide (Windows)
 
-This document outlines the steps for packaging the EchoType application into a standalone product for Windows and macOS.
+本指南介绍了如何将 EchoType 打包为适用于 Windows 的独立运行包（绿色版）。
 
-## 1. 后端打包 (Python)
+## 🚀 一键打包 (推荐)
 
-### 准备环境
-由于后端使用了复杂的 C 扩展库和分布式依赖，建议在虚拟环境中打包：
+我们提供了一个自动化脚本，可以自动完成从 Python 后端编译到 Electron 前端封装的全过程：
+
 ```powershell
-.\.venv\Scripts\python.exe -m pip install pyinstaller
+# 在根目录下运行
+powershell -ExecutionPolicy Bypass -File scripts\release_windows.ps1
 ```
 
-### 创建启动器 (Launcher)
-为了处理包结构、相对导入以及帮助 PyInstaller 发现大型依赖（如 torch, transformers），我们在根目录创建一个 `launcher.py`：
-```python
-import sys
-import os
-
-# 将当前目录加入路径，确保 backend 包可导入
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-# 显式导入大包，帮助 PyInstaller 静态分析
-import torch
-import transformers
-import websockets
-import sherpa_onnx
-import funasr_onnx
-import jieba
-
-from backend.app import main
-
-if __name__ == "__main__":
-    sys.exit(main())
-```
-
-### 打包命令 (Windows)
-在项目根目录下执行：
-```powershell
-.\.venv\Scripts\python.exe -m PyInstaller `
-    --name echotype-backend `
-    --onefile `
-    --add-data "backend/models_catalog.json;backend" `
-    --collect-all sherpa_onnx `
-    --collect-all funasr_onnx `
-    --collect-all kaldi_native_fbank `
-    --collect-all jieba `
-    --collect-all qwen_asr `
-    --collect-submodules torch `
-    --collect-submodules transformers `
-    --hidden-import websockets `
-    launcher.py
-```
-
-### 打包命令 (macOS)
-在 macOS 环境下执行：
-```bash
-./.venv/bin/python -m PyInstaller \
-    --name echotype-backend \
-    --onefile \
-    --add-data "backend/models_catalog.json:backend" \
-    --collect-all sherpa_onnx \
-    --collect-all funasr_onnx \
-    --collect-all kaldi_native_fbank \
-    --collect-all jieba \
-    --collect-all qwen_asr \
-    --collect-submodules torch \
-    --collect-submodules transformers \
-    --hidden-import websockets \
-    launcher.py
-```
-
-> **注意**: macOS 下使用 `--add-data` 的分隔符是冒号 (`:`)，而 Windows 是分号 (`;`)。
+打包完成后，结果将保存在 `frontend\dist-package` 目录中。
 
 ---
 
-## 2. 前端与集成打包 (Electron)
+## 🛠️ 分步构建细节
 
-我们使用 `electron-builder` 来完成最后的应用封装。
+如果你需要手动调试或修改打包配置，请参考以下详细步骤：
 
-### 环境准备
-在 `frontend` 目录下安装 `electron-builder`:
-```bash
-npm install --save-dev electron-builder
-```
+### 1. 后端打包 (Python)
 
-### 配置 `package.json`
-在 `frontend/package.json` 中配置 `build` 选项，关键是把打包好的后端执行文件和模型文件作为 `extraResources` 引入：
+由于项目包含 `torch`, `transformers` 以及 `qwen_asr` 等大型复杂依赖，我们采用 `onedir` 模式进行打包，以确保启动速度。
+
+*   **入口点**: `launcher.py` (包含对 `nagisa` 等库寻址问题的修复)。
+*   **构建脚本**: `scripts\build_backend.ps1`
+*   **关键配置**:
+    *   使用 `--collect-all` 显式收集 `qwen_asr`, `nagisa`, `torch`, `transformers`。
+    *   对 `nagisa` 内部不规范导入进行路径修复 (`--paths`)。
+    *   Qwen3 GPU 优化：强制使用 `float16` 精度以提高显存兼容性。
+
+### 2. 前端与集成 (Electron)
+
+使用 `electron-builder` 进行封装。
+
+*   **配置文件**: `frontend/package.json`
+*   **打包目标**: `portable` (绿色版目录) 和 `zip` (压缩包)。
+*   **注意**: **不要使用 NSIS (安装程序)**，因为打包后的资源体积通常超过 2GB，NSIS 暂不支持此类超大包。
+
+#### 资源集成 (Package.json 配置)
+`electron-builder` 会将构建好的 `dist\echotype-backend` 目录整体放入应用的 `resources` 文件夹中。
 
 ```json
-"build": {
-  "appId": "com.echotype.app",
-  "productName": "EchoType",
-  "directories": {
-    "output": "dist-package"
+"extraResources": [
+  {
+    "from": "../dist/echotype-backend",
+    "to": "backend"
   },
-  "extraResources": [
-    {
-      "from": "../dist/echotype-backend.exe",
-      "to": "backend/echotype-backend.exe"
-    },
-    {
-      "from": "../models",
-      "to": "models"
-    }
-  ],
-  "win": {
-    "target": ["nsis"]
-  },
-  "mac": {
-    "target": ["dmg"],
-    "extendInfo": {
-      "NSAppleEventsUsageDescription": "EchoType needs to send keystrokes to other applications.",
-      "NSAccessibilityUsageDescription": "EchoType needs accessibility access to listen for global hotkeys."
-    }
+  {
+    "from": "../backend/models_catalog.json",
+    "to": "backend/models_catalog.json"
   }
-}
+]
 ```
 
-### 跨平台兼容性说明
-1. **热键支持**: 
-   - 软件使用了 `uiohook-napi`，在 Windows 和 macOS 上均可工作。
-   - 在 macOS 上，首次运行打包后的应用时，系统会提示需要 **辅助功能 (Accessibility)** 权限，必须手动开启才能触发全局热键。
-   - 在 `frontend/electron/main.ts` 中已适配了粘贴快捷键：Windows 使用 `Ctrl+V`，macOS 使用 `Cmd+V`。
-2. **GPU 加速**:
-   - Qwen3 模型在 Windows 上支持 `CUDA` 加速。
-   - 在 macOS (Apple Silicon) 上已适配 `MPS` (Metal Performance Shaders) 加速，可显著提升识别速度。
+---
 
-### 执行打包
-在 `frontend` 目录下运行：
-```bash
-npm run build    # 编译前端代码
-npm run package  # 执行 electron-builder 打包
-```
-打包结果将存放在 `frontend/dist-package` 目录中。
+## ⚠️ 常见问题修复
+
+### Qwen3 后端无法启动 (ModuleNotFoundError)
+这是由于 `nagisa` 等库在打包环境下无法找到同目录下的子模块（如 `prepro`）。
+**修复**：在 `launcher.py` 中，我们动态检测运行环境并手动将 `_internal/nagisa` 文件夹加入 `sys.path`。
+
+### 热键触发太灵敏
+**修复**：在 `hotkey-manager.ts` 中，轻点判定的时间阈值已调优为 **150ms**。
+
+### GPU 加速卡死
+**修复**：对于 Qwen3 模型，如果显存较低或驱动版本不支持 `bfloat16`，可能会卡住。
+**修复**：后端已强制切换为 `float16`。
