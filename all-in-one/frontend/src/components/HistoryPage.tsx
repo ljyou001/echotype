@@ -1,5 +1,5 @@
 import React from "react";
-import { FiPlay, FiSearch, FiTrash2 } from "react-icons/fi";
+import { FiPlay, FiGrid, FiTrash2 } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../store/appStore";
 
@@ -12,6 +12,7 @@ export function HistoryPage() {
   const { t } = useTranslation();
   const history = useAppStore((state) => state.history);
   const deleteHistoryEntry = useAppStore((state) => state.deleteHistoryEntry);
+  const integrationInstances = useAppStore((state) => state.integrationInstances);
 
   const handlePlay = (audioUrl?: string) => {
     if (audioUrl) {
@@ -22,8 +23,22 @@ export function HistoryPage() {
 
   const handleSearch = (text: string) => {
     if (!text) return;
-    const url = `https://www.google.com/search?q=${encodeURIComponent(text)}`;
-    window.echotype?.openExternal?.(url);
+    
+    // Trigger Quick Action Window with the history text
+    const enabledInstances = integrationInstances.filter(i => i.enabled);
+    
+    if (enabledInstances.length === 0) {
+      // Fallback to Google Search if no integrations configured
+      const url = `https://www.google.com/search?q=${encodeURIComponent(text)}`;
+      window.echotype?.openExternal?.(url);
+      return;
+    }
+    
+    // Send IPC message to create Quick Action Window
+    window.electron?.ipcRenderer?.send('create-quick-action-window', {
+      text,
+      instances: integrationInstances
+    });
   };
 
   const handleDelete = (id: string) => {
@@ -59,7 +74,7 @@ export function HistoryPage() {
                 onClick={() => handleSearch(entry.text)}
                 title={t("history.actions.search")}
               >
-                <FiSearch />
+                <FiGrid />
               </button>
               <button
                 className="history-action-btn"

@@ -113,8 +113,8 @@ export default function App() {
     console.log('[App] Setting up Quick Action handler');
     
     // Listen for trigger event from hotkey manager
-    const triggerHandler = () => {
-      console.log('[App] Received trigger-quick-action-window event from hotkey');
+    const triggerHandler = (_event: any) => {
+      console.log('[App] ===== TRIGGER QUICK ACTION RECEIVED =====');
       
       // Get current state
       const state = useAppStore.getState();
@@ -122,24 +122,30 @@ export default function App() {
       const instances = state.integrationInstances || [];
       
       console.log('[App] Notifying main process to create window');
-      console.log('[App] Text:', text);
+      console.log('[App] Text:', text.substring(0, 50));
       console.log('[App] Instances:', instances.length);
       
       // Send to main process via IPC
-      window.electron?.ipcRenderer?.send?.('create-quick-action-window', {
-        text,
-        instances
-      });
+      if (window.electron?.ipcRenderer?.send) {
+        window.electron.ipcRenderer.send('create-quick-action-window', {
+          text,
+          instances
+        });
+        console.log('[App] IPC message sent successfully');
+      } else {
+        console.error('[App] window.electron.ipcRenderer.send is not available!');
+      }
     };
     
     // Register listener
-    window.electron?.ipcRenderer?.on?.('trigger-quick-action-window', triggerHandler);
-    
-    console.log('[App] Quick Action trigger handler registered');
-
-    return () => {
-      window.electron?.ipcRenderer?.removeListener?.('trigger-quick-action-window', triggerHandler);
-    };
+    if (window.electron?.ipcRenderer?.on) {
+      const cleanup = window.electron.ipcRenderer.on('trigger-quick-action-window', triggerHandler);
+      console.log('[App] Quick Action trigger handler registered successfully');
+      
+      return cleanup;
+    } else {
+      console.error('[App] window.electron.ipcRenderer.on is not available!');
+    }
   }, []);
 
   // ===== Audio device management =====
