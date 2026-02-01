@@ -12,6 +12,7 @@ from typing import Any, Dict
 from websockets.exceptions import InvalidMessage
 
 from .common.config import BackendConfig, load_config
+from .common.types import ModelNotFoundError
 from .manager import BackendManager
 from .server import BackendServer
 
@@ -116,6 +117,9 @@ async def run_server_async(config: BackendConfig, logger: logging.Logger) -> Non
             await server.broadcast_status("ready")
             # Send capabilities to all clients
             await server.broadcast_capabilities()
+        except ModelNotFoundError as exc:
+            logger.error("Model not found: %s", exc)
+            await server.broadcast_error("MODEL_NOT_FOUND", str(exc))
         except Exception as exc:
             logger.error("Failed to load models: %s", exc)
             await server.broadcast_error("MODEL_LOAD_FAILED", str(exc))

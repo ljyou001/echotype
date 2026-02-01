@@ -44,12 +44,12 @@ export type CatalogEntry = {
   family: string;
   kind: string;
   version?: string;
-  
+
   // Source info
   source?: string;
   repo?: string;
   description?: string;
-  
+
   // Capabilities (from catalog)
   capabilities?: {
     supports_device_selection?: boolean;
@@ -59,7 +59,7 @@ export type CatalogEntry = {
     supports_punctuation?: boolean;
     supports_timestamps?: boolean;
   };
-  
+
   // Defaults (from catalog)
   defaults?: {
     device?: string;
@@ -67,7 +67,7 @@ export type CatalogEntry = {
     streaming?: boolean;
     backend?: string;
   };
-  
+
   // Requirements
   requirements?: {
     min_ram_gb?: number;
@@ -75,23 +75,23 @@ export type CatalogEntry = {
     requires_gpu?: boolean;
     python_packages?: string[];
   };
-  
+
   // Supported options (from catalog)
   devices?: string[];
   languages?: string[];
   sample_rates?: number[];
-  
+
   // Metadata
   tags?: string[];
   status?: string;
   docs_url?: string;
-  
+
   // Legacy/compatibility
   notes?: string;
   performance?: string;
   accuracy?: string;
   streaming_default?: boolean; // Deprecated: use defaults.streaming
-  
+
   // Runtime info (added by backend)
   config?: ModelConfig; // Model-specific configuration from config.ini
   installed?: boolean;
@@ -132,7 +132,7 @@ export type ErrorDetail = {
   message: string;
 };
 
-type AppState = {
+export type AppState = {
   // Connection & Backend
   connectionState: ConnectionState;
   backendStatus: BackendStatus;
@@ -372,7 +372,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const modelDevice: Record<string, string> = {};
     const modelLanguage: Record<string, string> = {};
     const modelBackend: Record<string, string> = {};
-    
+
     for (const entry of state.catalog) {
       if (entry.kind === "asr") {
         // Streaming
@@ -384,19 +384,19 @@ export const useAppStore = create<AppState>((set, get) => ({
         } else if (entry.defaults?.streaming !== undefined) {
           modelStreaming[entry.id] = entry.defaults.streaming;
         }
-        
+
         // Device
         const savedDevice = await window.echotype?.getSetting?.(`modelDevice_${entry.id}`);
         if (savedDevice !== undefined) {
           modelDevice[entry.id] = savedDevice;
         }
-        
+
         // Language
         const savedLanguage = await window.echotype?.getSetting?.(`modelLanguage_${entry.id}`);
         if (savedLanguage !== undefined) {
           modelLanguage[entry.id] = savedLanguage;
         }
-        
+
         // Backend (e.g., qwen_backend)
         const savedBackend = await window.echotype?.getSetting?.(`modelBackend_${entry.id}`);
         if (savedBackend !== undefined) {
@@ -426,7 +426,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     if (appLanguage !== undefined) set({ appLanguage });
     else set({ appLanguage: "system" });
-    
+
     // Load output settings with proper defaults
     if (outputDirectInput !== undefined) {
       set({ outputDirectInput });
@@ -435,7 +435,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ outputDirectInput: true });
       window.echotype?.updateSetting?.("outputDirectInput", true);
     }
-    
+
     if (outputClipboard !== undefined) {
       set({ outputClipboard });
     } else {
@@ -451,18 +451,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ selectedInputId: savedSelectedInputId });
     }
   },
-  
+
   // Quick Action Integration Actions
   setLastTranscribedText: (text) => set({ lastTranscribedText: text }),
-  
+
   setShowQuickActionModal: (show) => set({ showQuickActionModal: show }),
-  
+
   addIntegrationInstance: (instance) => {
     const newInstances = [...get().integrationInstances, instance];
     set({ integrationInstances: newInstances });
     window.echotype?.saveIntegrationsConfig?.(newInstances, get().defaultIntegrationId);
   },
-  
+
   removeIntegrationInstance: (instanceId) => {
     const newInstances = get().integrationInstances.filter(i => i.instanceId !== instanceId);
     const newDefaultId = get().defaultIntegrationId === instanceId ? null : get().defaultIntegrationId;
@@ -472,7 +472,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
     window.echotype?.saveIntegrationsConfig?.(newInstances, newDefaultId);
   },
-  
+
   updateIntegrationInstance: (instanceId, updates) => {
     const newInstances = get().integrationInstances.map(i =>
       i.instanceId === instanceId ? { ...i, ...updates } : i
@@ -480,7 +480,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ integrationInstances: newInstances });
     window.echotype?.saveIntegrationsConfig?.(newInstances, get().defaultIntegrationId);
   },
-  
+
   reorderIntegrationInstances: (instanceIds) => {
     const instanceMap = new Map(
       get().integrationInstances.map(i => [i.instanceId, i])
@@ -489,11 +489,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       .map(id => instanceMap.get(id))
       .filter(Boolean)
       .map((instance, index) => ({ ...instance!, order: index }));
-    
+
     set({ integrationInstances: reordered });
     window.echotype?.saveIntegrationsConfig?.(reordered, get().defaultIntegrationId);
   },
-  
+
   setDefaultIntegration: (instanceId) => {
     const newInstances = get().integrationInstances.map(i => ({
       ...i,
@@ -505,7 +505,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
     window.echotype?.saveIntegrationsConfig?.(newInstances, instanceId);
   },
-  
+
   toggleIntegrationInstance: (instanceId, enabled) => {
     const newInstances = get().integrationInstances.map(i =>
       i.instanceId === instanceId ? { ...i, enabled } : i
@@ -513,7 +513,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ integrationInstances: newInstances });
     window.echotype?.saveIntegrationsConfig?.(newInstances, get().defaultIntegrationId);
   },
-  
+
   initializeIntegrations: async () => {
     const config = await window.echotype?.getIntegrationsConfig?.();
     if (config) {
@@ -561,12 +561,12 @@ export const useAppStore = create<AppState>((set, get) => ({
           outputMode: 'direct'
         }
       ];
-      
+
       set({
         integrationInstances: defaultInstances,
         defaultIntegrationId: defaultInstances[0].instanceId
       });
-      
+
       // Save to file
       await window.echotype?.saveIntegrationsConfig?.(defaultInstances, defaultInstances[0].instanceId);
     }

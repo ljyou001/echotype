@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useAppStore } from "../store/appStore";
+import { useAppStore, type AppState } from "../store/appStore";
 import { MicrophoneSelector } from "./MicrophoneSelector";
 
 type MicStatus = "unknown" | "checking" | "granted" | "denied";
@@ -8,9 +8,14 @@ type MicStatus = "unknown" | "checking" | "granted" | "denied";
 const isMac = typeof navigator !== "undefined" && navigator.platform.toUpperCase().indexOf("MAC") >= 0;
 const isWin = typeof navigator !== "undefined" && navigator.userAgent.indexOf("Windows") >= 0;
 
-export function Onboarding() {
+export function Onboarding({ initialStep = 1 }: { initialStep?: 1 | 2 | 3 }) {
   const { t } = useTranslation();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(initialStep);
+
+  // Update step if initialStep changes (e.g. redirected from App.tsx)
+  useEffect(() => {
+    setStep(initialStep);
+  }, [initialStep]);
   const [micStatus, setMicStatus] = useState<MicStatus>("unknown");
   const [accStatus, setAccStatus] = useState<boolean | null>(null);
 
@@ -18,11 +23,11 @@ export function Onboarding() {
   const [modelStatus, setModelStatus] = useState<Record<string, boolean>>({});
   const [downloadProgress, setDownloadProgress] = useState<Record<string, { progress: number, stage: string, error?: string }>>({});
 
-  const inputDevices = useAppStore((s) => s.inputDevices);
-  const selectedInputId = useAppStore((s) => s.selectedInputId);
-  const setSelectedInputId = useAppStore((s) => s.setSelectedInputId);
-  const setInputDevices = useAppStore((s) => s.setInputDevices);
-  const setOnboardingCompleted = useAppStore((s) => s.setOnboardingCompleted);
+  const inputDevices = useAppStore((s: AppState) => s.inputDevices);
+  const selectedInputId = useAppStore((s: AppState) => s.selectedInputId);
+  const setSelectedInputId = useAppStore((s: AppState) => s.setSelectedInputId);
+  const setInputDevices = useAppStore((s: AppState) => s.setInputDevices);
+  const setOnboardingCompleted = useAppStore((s: AppState) => s.setOnboardingCompleted);
 
   const checkModels = useCallback(async () => {
     if (window.echotype?.getModelsStatus) {

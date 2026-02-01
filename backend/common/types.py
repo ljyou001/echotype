@@ -4,6 +4,11 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Protocol
 
 
+class ModelNotFoundError(Exception):
+    """Raised when a required model file is not found."""
+    pass
+
+
 @dataclass
 class RecognitionTask:
     task_id: str

@@ -9,7 +9,7 @@ from typing import Dict, Optional, Tuple
 import numpy as np
 
 from ..common.config import BackendConfig
-from ..common.types import RecognitionResult, RecognitionTask
+from ..common.types import ModelNotFoundError, RecognitionResult, RecognitionTask
 
 
 @dataclass
@@ -306,6 +306,11 @@ class Qwen3Adapter:
         candidate = Path(self._config.models_dir) / model_id
         if candidate.exists():
             return str(candidate)
+        
+        # If it's a directory we expect to exist but doesn't
+        if "/" not in model_id and "\\" not in model_id:
+            raise ModelNotFoundError(f"Model directory not found: {candidate}")
+        
         return model_id
 
     def _normalize_language(self, lang: Optional[str]) -> Optional[str]:

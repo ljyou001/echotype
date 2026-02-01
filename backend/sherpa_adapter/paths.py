@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List
 
 from ..common.config import BackendConfig
+from ..common.types import ModelNotFoundError
 
 
 @dataclass(frozen=True)
@@ -41,4 +42,4 @@ def validate_paths(paths: ModelPaths) -> None:
 
     if missing:
         message = "Missing model assets:\n" + "\n".join(f"- {path}" for path in missing)
-        raise FileNotFoundError(message)
+        raise ModelNotFoundError(message)

@@ -14,7 +14,7 @@ import { Onboarding } from "./components/Onboarding";
 import { getWebSocketManager, getRecordingManager } from "./services/managers";
 import { MessageRouter } from "./services/messages";
 import { AudioProcessor } from "./services/audio";
-import { useAppStore } from "./store/appStore";
+import { useAppStore, type AppState } from "./store/appStore";
 import { initLogger } from "./services/logger";
 
 const DEFAULT_SEG_DURATION = 15;
@@ -44,48 +44,61 @@ export default function App() {
   // Note: recManager no longer used, recording handled by backend
 
   // Store state (read UI state only)
-  const connectionState = useAppStore((state) => state.connectionState);
-  const backendStatus = useAppStore((state) => state.backendStatus);
-  const selectedInputId = useAppStore((state) => state.selectedInputId);
-  const selectedLanguage = useAppStore((state) => state.selectedLanguage);
-  const recordingMode = useAppStore((state) => state.recordingMode);
+  const connectionState = useAppStore((state: AppState) => state.connectionState);
+  const backendStatus = useAppStore((state: AppState) => state.backendStatus);
+  const selectedInputId = useAppStore((state: AppState) => state.selectedInputId);
+  const selectedLanguage = useAppStore((state: AppState) => state.selectedLanguage);
+  const recordingMode = useAppStore((state: AppState) => state.recordingMode);
 
   // Store actions
-  const setBackendStatus = useAppStore((state) => state.setBackendStatus);
-  const setErrorDetail = useAppStore((state) => state.setErrorDetail);
-  const setInputDevices = useAppStore((state) => state.setInputDevices);
-  const setSelectedInputId = useAppStore((state) => state.setSelectedInputId);
-  const setLastLog = useAppStore((state) => state.setLastLog);
-  const initializeSettings = useAppStore((state) => state.initializeSettings);
-  const initializeIntegrations = useAppStore((state) => state.initializeIntegrations);
-  const setLastTranscribedText = useAppStore((state) => state.setLastTranscribedText);
-  const setShowQuickActionModal = useAppStore((state) => state.setShowQuickActionModal);
-  const onboardingCompleted = useAppStore((state) => state.onboardingCompleted);
+  const setBackendStatus = useAppStore((state: AppState) => state.setBackendStatus);
+  const setErrorDetail = useAppStore((state: AppState) => state.setErrorDetail);
+  const setInputDevices = useAppStore((state: AppState) => state.setInputDevices);
+  const setSelectedInputId = useAppStore((state: AppState) => state.setSelectedInputId);
+  const setLastLog = useAppStore((state: AppState) => state.setLastLog);
+  const initializeSettings = useAppStore((state: AppState) => state.initializeSettings);
+  const initializeIntegrations = useAppStore((state: AppState) => state.initializeIntegrations);
+  const setLastTranscribedText = useAppStore((state: AppState) => state.setLastTranscribedText);
+  const setShowQuickActionModal = useAppStore((state: AppState) => state.setShowQuickActionModal);
+  const onboardingCompleted = useAppStore((state: AppState) => state.onboardingCompleted);
+  const setOnboardingCompleted = useAppStore((state: AppState) => state.setOnboardingCompleted);
+  const errorDetail = useAppStore((state: AppState) => state.errorDetail);
+
+  const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2 | 3>(1);
+
+  // Auto-redirect to onboarding if models are missing
+  useEffect(() => {
+    if (errorDetail?.message?.includes("MODEL_NOT_FOUND")) {
+      console.log("[App] Model not found error detected, redirecting to onboarding step 3");
+      setOnboardingInitialStep(3);
+      setOnboardingCompleted(false);
+    }
+  }, [errorDetail, setOnboardingCompleted]);
 
   // ===== Initialize WebSocket & Settings =====
   useEffect(() => {
     console.log("[App] Initializing WebSocket & Settings");
-    
+
     // Load catalog from local file immediately (before WebSocket connection)
     const loadCatalog = async () => {
       try {
         console.log("[App] Attempting to read catalog via IPC...");
-        
+
         if (!window.echotype?.readCatalog) {
           console.error("[App] window.echotype.readCatalog is not available!");
           return;
         }
-        
+
         const catalogData = await window.echotype.readCatalog();
         console.log("[App] Received catalog data:", catalogData);
-        
+
         if (catalogData) {
           const setCatalog = useAppStore.getState().setCatalog;
           // Handle both old format (array) and new format (object with models array)
           const models = Array.isArray(catalogData) ? catalogData : (catalogData.models ?? []);
           console.log(`[App] Parsed ${models.length} models from catalog`);
           setCatalog(models);
-          
+
           // Initialize settings after catalog is loaded
           await initializeSettings();
           await initializeIntegrations();
@@ -99,7 +112,7 @@ export default function App() {
       }
     };
     void loadCatalog();
-    
+
     wsManager.connect();
 
     // Set up message routing
@@ -113,20 +126,20 @@ export default function App() {
   // ===== Quick Action Modal Handler =====
   useEffect(() => {
     console.log('[App] Setting up Quick Action handler');
-    
+
     // Listen for trigger event from hotkey manager
     const triggerHandler = (_event: any) => {
       console.log('[App] ===== TRIGGER QUICK ACTION RECEIVED =====');
-      
+
       // Get current state
       const state = useAppStore.getState();
       const text = state.lastTranscribedText || state.finalText || '';
       const instances = state.integrationInstances || [];
-      
+
       console.log('[App] Notifying main process to create window');
       console.log('[App] Text:', text.substring(0, 50));
       console.log('[App] Instances:', instances.length);
-      
+
       // Send to main process via IPC
       if (window.electron?.ipcRenderer?.send) {
         window.electron.ipcRenderer.send('create-quick-action-window', {
@@ -138,12 +151,12 @@ export default function App() {
         console.error('[App] window.electron.ipcRenderer.send is not available!');
       }
     };
-    
+
     // Register listener
     if (window.electron?.ipcRenderer?.on) {
       const cleanup = window.electron.ipcRenderer.on('trigger-quick-action-window', triggerHandler);
       console.log('[App] Quick Action trigger handler registered successfully');
-      
+
       return cleanup;
     } else {
       console.error('[App] window.electron.ipcRenderer.on is not available!');
@@ -175,7 +188,7 @@ export default function App() {
 
   // ===== Recording control (backend recording mode) =====
   const [isRecording, setIsRecording] = React.useState(false);
-  
+
   const startRecording = useCallback(async () => {
     if (isRecording) {
       console.warn("[App] Already recording");
@@ -229,7 +242,7 @@ export default function App() {
 
     try {
       console.log("[App] Requesting backend to stop recording");
-      
+
       // Send stop_recording message to backend
       wsManager.send({
         type: "stop_recording",
@@ -260,7 +273,7 @@ export default function App() {
   const connectionStateRef = React.useRef(connectionState);
   const isRecordingRef = React.useRef(isRecording);
   const isProcessingHotkeyRef = React.useRef<boolean>(false);
-  
+
   useEffect(() => {
     recordingModeRef.current = recordingMode;
   }, [recordingMode]);
@@ -334,10 +347,10 @@ export default function App() {
             console.log("[App] Hotkey debounced, ignoring");
             return;
           }
-          
+
           lastHotkeyTrigger.current = now;
           console.log("[App] Hotkey triggered: toggle recording");
-          
+
           isProcessingHotkeyRef.current = true;
           if (isRecordingRef.current) {
             stopRecording();
@@ -399,39 +412,39 @@ export default function App() {
       const lastModelId = store.lastActiveModelId;
       const activeModelId = store.activeModelId;
       const catalog = store.catalog;
-      
+
       // Only restore if:
       // 1. We have a saved last model ID
       // 2. Backend hasn't set an active model yet (or it's different from saved)
       // 3. The model exists in catalog
-      if (lastModelId && lastModelId !== activeModelId && catalog.some(m => m.id === lastModelId)) {
+      if (lastModelId && lastModelId !== activeModelId && catalog.some((m: any) => m.id === lastModelId)) {
         console.log("[App] Auto-restoring last active model:", lastModelId);
-        
-        const entry = catalog.find(e => e.id === lastModelId);
+
+        const entry = catalog.find((e: any) => e.id === lastModelId);
         if (entry) {
           const options: Record<string, unknown> = {};
-          
+
           // Load saved settings
           if (entry.family) {
             options.backend = entry.family;
           }
-          
+
           const savedDevice = store.getModelDevice(lastModelId);
           const deviceToUse = savedDevice !== "auto" ? savedDevice : undefined;
-          
+
           const savedLanguage = store.getModelLanguage(lastModelId);
           if (savedLanguage && savedLanguage !== "auto") {
             options.language = savedLanguage;
           }
-          
+
           const savedBackend = store.getModelBackend(lastModelId);
           if (savedBackend) {
             options.qwen_backend = savedBackend;
           }
-          
+
           const savedStreaming = store.getModelStreaming(lastModelId);
           options.streaming_enabled = savedStreaming;
-          
+
           handleModelSwitch(lastModelId, deviceToUse, options);
         }
       }
@@ -450,7 +463,7 @@ export default function App() {
 
   // ===== Render UI =====
   if (!onboardingCompleted) {
-    return <Onboarding />;
+    return <Onboarding initialStep={onboardingInitialStep} />;
   }
 
   const renderPage = () => {
