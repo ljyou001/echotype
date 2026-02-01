@@ -12,6 +12,7 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+frontend/dist-package/
 downloads/
 eggs/
 .eggs/
@@ -80,4 +81,4 @@ models
 modelsserver/progress.json
 2025
 node_modules
-2026
+test

@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "main": "dist-electron/main.js",
-  "author": "",
+  "description": "Modern Voice-to-Text Application with AI Integration",
+  "author": "ljyou001",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"tsc -p tsconfig.node.json -w\" \"wait-on tcp:5173 && cross-env ELECTRON_RENDERER_URL=http://localhost:5173 electron .\"",
     "build": "tsc -p tsconfig.node.json && tsc -p tsconfig.preload.json && node -e \"require('fs').renameSync('dist-electron/preload.js', 'dist-electron/preload.cjs')\" && vite build",
@@ -45,6 +46,7 @@
   "build": {
     "appId": "com.echotype.app",
     "productName": "EchoType",
+    "copyright": "Copyright © 2026 ljyou001",
     "directories": {
       "output": "dist-package"
     },

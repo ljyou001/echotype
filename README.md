@@ -1,293 +1,330 @@
+# EchoType All-in-One
+
 <div align="center">
-  <img src="assets/icon.png" alt="EchoType Logo" width="128" height="128">
-  
-  # EchoType / 声笔
-  
-  **🎤 Fast · Free · Offline Voice Input Tool**  
-  **🎤 快速 · 免费 · 离线的语音输入工具**
-  
-  [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-  [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey.svg)](#)
-  <!-- [![Release](https://img.shields.io/github/v/release/ljyou001/echotype.svg)](https://github.com/ljyou001/echotype/releases) -->
-  
-  **Languages / 语言**: [English](README.md) | [中文](README_ZH.md)
-  
-  [📥 Download Latest](https://github.com/ljyou001/echotype/releases) · [📖 Documentation](#quick-start) · [🐛 Issues](https://github.com/ljyou001/echotype/issues)  
-  [📥 下载最新版本](https://github.com/ljyou001/echotype/releases) · [📖 使用文档](#快速开始) · [🐛 问题反馈](https://github.com/ljyou001/echotype/issues)
+
+**🎤 Modern Voice-to-Text Application with AI Integration**
+
+Fast · Offline · Intelligent · Cross-platform
+
+[📥 Download](https://github.com/ljyou001/echotype/releases) · [� Documentation](#documentation) · [🛠 Development](#development)
+
 </div>
 
 ---
 
-## 📖 Project Overview
+## 📖 Overview
 
-**EchoType / 声笔** is an intelligent voice input tool for Windows and macOS, enabling you to quickly convert speech to text input. Built upon and optimized from the [CapsWriter-Offline](https://github.com/HaujetZhao/CapsWriter-Offline) project, it provides a completely offline voice recognition experience.
+EchoType All-in-One is a complete rewrite of the original EchoType project, featuring a modern Electron-based frontend and Python backend architecture. It provides real-time voice-to-text transcription with support for multiple AI models and integration with external AI services.
 
-### 🎯 Core Advantages
-- **🔒 Privacy & Security**: Completely offline processing, no data upload
-- **⚡ Lightning Fast**: Local models with millisecond-level recognition
-- **🎨 Simple & Easy**: System tray resident, one-click activation
-- **🛠️ Highly Customizable**: Rich personalization settings
+### Key Features
 
-## ✨ Features
+- **🎤 Real-time Voice Recognition**: Instant speech-to-text with multiple model support
+- **🤖 AI Integration**: Direct integration with OpenClaw, ChatGPT, Claude, and more
+- **⚡ Quick Actions**: Hotkey-triggered quick action window for instant AI interactions
+- **🌍 Multilingual**: Support for English and Chinese with i18n framework
+- **🔒 Privacy-First**: Completely offline processing with local AI models
+- **🎨 Modern UI**: Clean, intuitive interface built with React and TypeScript
 
-### 🎤 Voice Recognition
-- **Real-time Conversion**: Instant speech-to-text with rapid response
-- **High Accuracy**: Based on advanced local AI models
-- **Multiple Input Modes**: Support for press-and-hold and click-to-toggle recording
-- **Custom Hotwords**: Add professional vocabulary to improve recognition accuracy
+## 🏗 Architecture
 
-### 🖥️ User Interface
-- **System Tray Resident**: Real-time status display (idle/connected/recording/error)
-- **Friendly Tooltips**: Intuitive hover information
-- **Graphical Settings**: Intuitive configuration interface
-- **Hotkey Support**: Customizable shortcuts for quick activation
+### Frontend (Electron + React)
+- **Framework**: Electron with React and TypeScript
+- **UI Library**: React with Zustand for state management
+- **Styling**: Custom CSS with modern design system
+- **Build Tool**: Vite for fast development and building
 
-### 🔧 System Integration
-- **Auto-start**: Optional Windows startup item
-- **Audio Devices**: Smart microphone detection and switching
-- **Output Formats**: Multiple text format options
-- **Bubble Notifications**: Real-time desktop feedback
-
-### 📊 Management Tools
-- **Logging System**: Detailed runtime log recording
-- **Error Diagnostics**: Convenient troubleshooting tools
-- **Configuration Backup**: Settings import/export functionality
+### Backend (Python)
+- **Framework**: FastAPI with WebSocket support
+- **Models**: Sherpa-ONNX (Paraformer) and Qwen3-ASR
+- **Audio Processing**: Real-time audio streaming and processing
+- **API**: RESTful API and WebSocket for real-time communication
 
 ## 🚀 Quick Start
 
-### 📥 Installation Steps
+### Prerequisites
 
-1. **Download Program**
-   ```
-   Download the latest EchoType.exe from releases
-   ```
-   [👉 Click to Download](https://github.com/ljyou001/echotype/releases)
+- **Node.js**: v18 or higher
+- **Python**: 3.9 or higher
+- **Operating System**: Windows 10/11 or macOS 10.14+
 
-2. **Launch Program**
-   ```
-   Double-click EchoType.exe to run
-   Program icon will appear in system tray
-   ```
+### Installation
 
-3. **Configure Settings**
-   ```
-   Right-click tray icon → Settings
-   Configure hotkeys and personal preferences
-   ```
-
-4. **Start Using**
-   ```
-   Press the configured hotkey
-   Begin voice input experience
-   ```
-
-### ⌨️ Default Hotkeys
-- **F4**: Start/Stop recording
-- **Right-click tray**: Open menu
-- **Double-click tray**: Quick settings
-
-## 📋 System Requirements
-
-| Item | Requirement |
-|------|-------------|
-| **Operating System** | Windows 10/11 (64-bit) or macOS 10.14+ |
-| **Memory** | Minimum 4GB RAM |
-| **Storage** | At least 2GB available space |
-| **Audio Device** | Supported microphone device |
-| **Network** | No internet connection required |
-
-## 🔧 FAQ
-
-<details>
-<summary><strong>❓ Program won't start?</strong></summary>
-
-1. Check if antivirus software is blocking it
-2. Confirm Windows version compatibility
-3. Check log files for error diagnosis
-4. Try running as administrator
-</details>
-
-<details>
-<summary><strong>❓ Voice recognition inaccurate?</strong></summary>
-
-1. Check microphone device and volume
-2. Use in quiet environment
-3. Add custom hotwords to improve accuracy
-4. Adjust recording sensitivity settings
-</details>
-
-<details>
-<summary><strong>❓ How to add custom hotwords?</strong></summary>
-
-1. Right-click tray icon and select "Settings"
-2. Go to "Hotword Management" tab
-3. Add frequently used professional vocabulary
-4. Save settings and restart program
-</details>
-
-<details>
-<summary><strong>❓ How to run on macOS?</strong></summary>
-
-See [docs/MACOS_SETUP.md](docs/MACOS_SETUP.md) for detailed instructions.
-
-Key points:
-1. Install dependencies: `pip install -r requirements-macos.txt`
-2. Grant accessibility permissions in System Settings
-3. Run: `python run_tray.py`
-4. macOS uses `pynput` library for hotkey support
-</details>
-
-<details>
-<summary><strong>❓ Installation issues with sherpa-onnx?</strong></summary>
-
-**Problem:** `ModuleNotFoundError: No module named 'cmake.cmake_extension'` or compilation errors
-
-**Solution:**
-1. Use precompiled packages instead of building from source:
+1. **Clone the repository**
    ```bash
-   pip install --find-links https://k2-fsa.github.io/sherpa/onnx/install/python.html sherpa-onnx
-   pip install funasr-onnx==0.2.5
+   git clone https://github.com/ljyou001/echotype.git
+   cd echotype/all-in-one
    ```
-2. Make sure Visual Studio Build Tools with C++ support is installed
-3. Install cmake: `pip install cmake`
-4. If still failing, use client-only mode and connect to a remote server
-</details>
 
-## 🛠️ Development & Packaging
+2. **Install backend dependencies**
+   ```bash
+   python -m venv .venv
+   .venv\Scripts\activate  # Windows
+   # source .venv/bin/activate  # macOS/Linux
+   pip install -r requirements-backend.txt
+   ```
 
-<details>
-<summary><strong>🔧 Developer Guide</strong></summary>
+3. **Install frontend dependencies**
+   ```bash
+   cd frontend
+   npm install
+   ```
 
-### Architecture
-
-EchoType uses a client-server architecture:
-- **Client** (run_tray.py): Tray icon, hotkey monitoring, audio recording
-- **Server** (server/): Voice recognition service (requires sherpa-onnx, etc.)
-
-### Environment Setup (Full, with Local Server)
-
-The voice recognition server requires `sherpa-onnx`, `funasr-onnx`, etc.
-
-**Prerequisites:**
-1. Install Visual Studio Build Tools with "Desktop development with C++".
-2. Install CMake.
-
-**Installation Steps:**
-
-```bash
-# 1. Create and activate a virtual environment
-python -m venv .venv
-.venv\Scripts\activate
-
-# 2. Install dependencies
-pip install -r requirements.txt
-```
+4. **Download AI models**
+   - Models are stored in `models/` directory
+   - Paraformer (offline): ~200MB
+   - Qwen3-ASR (offline): ~1.2GB
 
 ### Running in Development
 
+**Option 1: Using launcher (Recommended)**
 ```bash
-# 1. Start the server in the background
-start /B python server/start_server.py
-
-# 2. Run the client
-pythonw run_tray.py
+python launcher.py
 ```
 
-</details>
+**Option 2: Manual start**
 
-<details>
-<summary><strong>📦 Packaging for Distribution</strong></summary>
+Terminal 1 (Backend):
+```bash
+.venv\Scripts\activate
+python -m backend
+```
 
-To package the project into standalone executables, [PyInstaller](https://pyinstaller.org/) is recommended.
+Terminal 2 (Frontend):
+```bash
+cd frontend
+npm run dev
+```
 
-### Prerequisites
-
-1. **Setup Virtual Environment:**
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate
-   pip install -r requirements-simple.txt
-   pip install --find-links https://k2-fsa.github.io/sherpa/onnx/install/python.html sherpa-onnx
-   pip install funasr-onnx==0.2.5
-   pip install kaldi-native-fbank
-   ```
-
-2. **Install PyInstaller:**
-   ```bash
-   pip install pyinstaller
-   ```
-
-### Build Process
-
-**Step 1: Build All Components**
+### Building for Production
 
 ```bash
-# Build client
-call .venv\Scripts\pyinstaller.exe EchoType.spec
-
-# Build server
-call .venv\Scripts\pyinstaller.exe EchoTypeServer.spec
-
-# Build server manager
-call .venv\Scripts\pyinstaller.exe EchoTypeServerManager.spec
+cd frontend
+npm run build
 ```
 
-**Step 2: Merge Distribution**
+The built application will be in `frontend/dist-electron/`.
 
+## 📚 Documentation
+
+### User Guides
+- [Quick Start Guide](QUICKSTART.md) - Get started in 5 minutes
+- [Configuration Guide](design/SETTINGS_EXPLAINED.md) - Detailed settings explanation
+- [Hotkey Configuration](design/HOTKEY_IMPLEMENTATION.md) - Customize your hotkeys
+- [Model Switching](design/MODEL_SWITCHING_GUIDE.md) - Switch between AI models
+
+### Integration Guides
+- [OpenClaw Integration](design/OPENCLAW_INTEGRATION.md) - Connect with OpenClaw AI agent
+- [Quick Actions](design/QUICK_ACTION_INTEGRATION_SYSTEM.md) - Use quick action system
+- [Integrations System](design/QUICK_ACTION_INTEGRATION_IMPLEMENTATION.md) - Add custom integrations
+
+### Technical Documentation
+- [Backend Specification](design/BACKEND_SPEC.md) - Backend API and architecture
+- [Frontend Specification](design/FRONTEND_ELECTRON_SPEC_V2.md) - Frontend architecture
+- [Model Architecture](design/MODEL_SETTINGS_ARCHITECTURE.md) - AI model system
+- [Logging System](design/LOGGING_SYSTEM.md) - Debug and logging
+- [i18n Guide](design/I18N_GUIDE.md) - Internationalization
+
+### Development Guides
+- [Packaging Guide](design/PACKAGING.md) - Build distributable packages
+- [Deployment Guide](design/DEPLOYMENT.md) - Deploy to production
+- [Testing Procedures](design/TESTING_PROCEDURES.md) - Test the application
+- [Troubleshooting](design/TROUBLESHOOTING.md) - Common issues and solutions
+
+## 🎯 Features
+
+### Voice Recognition
+- **Multiple Models**: Sherpa-ONNX (Paraformer) and Qwen3-ASR support
+- **Real-time Processing**: Instant transcription with low latency
+- **High Accuracy**: Advanced AI models for accurate recognition
+- **Offline Support**: Works completely offline with local models
+
+### Quick Actions
+- **Hotkey Activation**: Trigger with customizable hotkey (default: Ctrl+Shift+Space)
+- **AI Integrations**: Send transcribed text to ChatGPT, Claude, OpenClaw, etc.
+- **Reply Display**: View AI responses directly in quick action window
+- **Smart Positioning**: Window appears near cursor with intelligent placement
+
+### Integrations
+- **OpenClaw**: AI agent with WebSocket and HTTP API support
+- **ChatGPT**: Direct integration with OpenAI's ChatGPT
+- **Claude**: Anthropic's Claude AI assistant
+- **Perplexity**: AI-powered search engine
+- **Custom Integrations**: Easy to add new integrations
+
+### User Interface
+- **Modern Design**: Clean, intuitive interface with smooth animations
+- **Dark Mode Ready**: Prepared for dark mode support
+- **Responsive**: Adapts to different screen sizes
+- **Accessible**: Keyboard navigation and screen reader support
+
+### System Integration
+- **System Tray**: Runs in background with tray icon
+- **Auto-start**: Optional startup on system boot
+- **Global Hotkeys**: System-wide hotkey support
+- **Notifications**: Desktop notifications for important events
+
+## 🛠 Development
+
+### Project Structure
+
+```
+all-in-one/
+├── backend/                 # Python backend
+│   ├── common/             # Shared utilities
+│   ├── qwen3/              # Qwen3 model adapter
+│   ├── sherpa_adapter/     # Sherpa-ONNX adapter
+│   ├── app.py              # FastAPI application
+│   ├── manager.py          # Model manager
+│   └── server.py           # WebSocket server
+├── frontend/               # Electron frontend
+│   ├── electron/           # Electron main process
+│   ├── src/                # React application
+│   │   ├── components/     # React components
+│   │   ├── services/       # Business logic
+│   │   ├── store/          # State management
+│   │   └── i18n/           # Internationalization
+│   ├── assets/             # Static assets
+│   └── dist/               # Build output
+├── models/                 # AI models
+│   ├── paraformer-offline/ # Paraformer model
+│   └── Qwen3-ASR-0.6B/     # Qwen3 model
+├── design/                 # Documentation
+├── test/                   # Test files
+└── scripts/                # Utility scripts
+```
+
+### Technology Stack
+
+**Frontend**:
+- Electron 28+
+- React 18
+- TypeScript 5
+- Vite 5
+- Zustand (state management)
+- i18next (internationalization)
+
+**Backend**:
+- Python 3.9+
+- FastAPI
+- WebSocket
+- Sherpa-ONNX
+- FunASR
+- NumPy
+
+### Development Workflow
+
+1. **Make changes** in `frontend/src/` or `backend/`
+2. **Test locally** using `npm run dev` or `python -m backend`
+3. **Build** using `npm run build`
+4. **Test build** by running the built application
+5. **Commit** with clear commit messages
+
+### Code Style
+
+- **Frontend**: ESLint + Prettier
+- **Backend**: Black + isort
+- **Commits**: Conventional Commits format
+
+## 🧪 Testing
+
+### Frontend Testing
 ```bash
-call .venv\Scripts\python.exe build_package_en.py
+cd frontend
+npm run dev  # Development mode with hot reload
 ```
 
-**Step 3: Test Package**
-
+### Backend Testing
 ```bash
-call .venv\Scripts\python.exe test_package.py
+.venv\Scripts\activate
+python -m backend --host 127.0.0.1 --port 6016
 ```
 
-### Final Package Structure
-
-```
-EchoType_Release/
-├── EchoType.exe              (Main client app)
-├── EchoTypeServer.exe        (Backend server)
-├── EchoTypeServerManager.exe (Server Manager UI)
-└── _internal/
-    ├── assets/               (UI resources)
-    ├── hotwords/             (Custom vocabulary)
-    ├── locales/              (Translations)
-    ├── models/               (AI models)
-    └── (all dependencies)
-```
-
-### Notes
-
-- The `.spec` files are pre-configured with correct paths and dependencies
-- `build_package.py` automatically merges all three `dist` folders
-- See [docs/PACKAGING_GUIDE.md](docs/PACKAGING_GUIDE.md) for troubleshooting
-- For macOS packaging, see [docs/MACOS_SETUP.md](docs/MACOS_SETUP.md)
-
-**Note: macOS packaging is still under development. Please use development mode for now:**
-
+### Integration Testing
 ```bash
-# Double-click to run
-open start_echotype.command
+# Test OpenClaw integration
+open test/test_openclaw_api.html
 
-# Or run in terminal
-bash start_echotype.command
+# Test WebSocket connection
+open test/test_ws_simple.html
 ```
 
-</details>
+## 📦 Building & Packaging
+
+### Build Frontend
+```bash
+cd frontend
+npm run build
+```
+
+### Package Application
+```bash
+cd frontend
+npm run build:win  # Windows
+npm run build:mac  # macOS
+```
+
+See [Packaging Guide](design/PACKAGING.md) for detailed instructions.
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Backend won't start**
+- Check Python version (3.9+)
+- Verify virtual environment is activated
+- Install dependencies: `pip install -r requirements-backend.txt`
+
+**Frontend won't build**
+- Check Node.js version (18+)
+- Clear node_modules: `rm -rf node_modules && npm install`
+- Clear cache: `npm run clean`
+
+**Models not loading**
+- Verify models are in `models/` directory
+- Check model paths in `backend/models_catalog.json`
+- Ensure sufficient disk space
+
+**Hotkeys not working**
+- Check hotkey configuration in settings
+- Verify no conflicts with other applications
+- Try different hotkey combinations
+
+See [Troubleshooting Guide](design/TROUBLESHOOTING.md) for more solutions.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Original [CapsWriter-Offline](https://github.com/HaujetZhao/CapsWriter-Offline) project
+- [Sherpa-ONNX](https://github.com/k2-fsa/sherpa-onnx) for offline speech recognition
+- [FunASR](https://github.com/alibaba-damo-academy/FunASR) for Paraformer model
+- [Qwen](https://github.com/QwenLM/Qwen) for Qwen3-ASR model
+- [OpenClaw](https://github.com/openclaw/openclaw) for AI agent integration
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/ljyou001/echotype/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/ljyou001/echotype/discussions)
+- **Documentation**: [Design Docs](design/)
 
 ---
 
 <div align="center">
-  
-  **🌟 If this project helps you, please give it a Star!**
-  
-  [⭐ Star](https://github.com/ljyou001/echotype) · [🍴 Fork](https://github.com/ljyou001/echotype/fork) · [📝 Issues](https://github.com/ljyou001/echotype/issues)
-  
-  ---
-  
-  Made with ❤️ by ljyou001
-  
+
+**⭐ If this project helps you, please give it a Star!**
+
+Made with ❤️ by ljyou001
+
 </div>
