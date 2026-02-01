@@ -251,24 +251,41 @@ class Qwen3Adapter:
     def _resolve_devices(self) -> Tuple[list[str], str]:
         devices = ["cpu"]
         cuda_available = False
+        mps_available = False
+        
         if self._config.allow_gpu:
             try:
                 import torch
-
                 cuda_available = torch.cuda.is_available()
+                if not cuda_available:
+                    # Check for MPS on Mac
+                    try:
+                        mps_available = hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+                    except (AttributeError, Exception):
+                        pass
             except Exception:
-                cuda_available = False
+                pass
 
         if cuda_available:
             devices.append("cuda")
+        if mps_available:
+            devices.append("mps")
 
         preferred = (self._config.device_preference or "auto").lower()
         if preferred == "cuda" and cuda_available:
             default_device = "cuda"
+        elif preferred == "mps" and mps_available:
+            default_device = "mps"
         elif preferred == "cpu":
             default_device = "cpu"
         else:
-            default_device = "cuda" if cuda_available else "cpu"
+            if cuda_available:
+                default_device = "cuda"
+            elif mps_available:
+                default_device = "mps"
+            else:
+                default_device = "cpu"
+                
         return devices, default_device
 
     def _resolve_device_map(self, default_device: str) -> Tuple[str, "object"]:
@@ -276,6 +293,10 @@ class Qwen3Adapter:
 
         if default_device == "cuda":
             return "cuda:0", torch.bfloat16
+        if default_device == "mps":
+            # MPS often works better with float16 or bfloat16, but sometimes float32 is safer
+            # Qwen3 weights are usually bfloat16
+            return "mps", torch.float16
         return "cpu", torch.float32
 
     def _resolve_model_path(self) -> str:

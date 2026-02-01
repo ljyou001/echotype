@@ -15,6 +15,7 @@ class IntegrationRegistry {
   private registerBuiltInPlugins(): void {
     // Search engines
     this.register(new GoogleSearchPlugin());
+    this.register(new ClawbotPlugin()); // OpenClaw / Clawbot at second position
     this.register(new BingSearchPlugin());
     this.register(new BaiduSearchPlugin());
     
@@ -25,7 +26,6 @@ class IntegrationRegistry {
     this.register(new QwenPlugin());
     this.register(new ErniePlugin());
     this.register(new DoubaoPlugin());
-    this.register(new ClawbotPlugin());
     
     // Translation services
     this.register(new GoogleTranslatePlugin());

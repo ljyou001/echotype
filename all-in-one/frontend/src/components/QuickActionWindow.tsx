@@ -39,17 +39,32 @@ export function QuickActionWindow() {
   const handleAction = async (instance: IntegrationInstance) => {
     const plugin = integrationRegistry.get(instance.pluginId);
     
-    if (plugin) {
-      try {
-        console.log('[QuickActionWindow] Executing plugin:', instance.pluginId);
-        // Use edited text and outputMode from instance config
-        const outputMode = instance.outputMode || 'clipboard'; // Default to clipboard
-        await plugin.execute(editedText, instance.config, outputMode);
-        // Close window after execution
+    if (!plugin) {
+      console.error('[QuickActionWindow] Plugin not found:', instance.pluginId);
+      alert(`Plugin not found: ${instance.pluginId}`);
+      return;
+    }
+    
+    try {
+      console.log('[QuickActionWindow] Executing plugin:', instance.pluginId, 'with config:', instance.config);
+      console.log('[QuickActionWindow] Text to send:', editedText);
+      
+      // Use edited text and outputMode from instance config
+      const outputMode = instance.outputMode || 'clipboard'; // Default to clipboard
+      console.log('[QuickActionWindow] Output mode:', outputMode);
+      
+      await plugin.execute(editedText, instance.config, outputMode);
+      
+      console.log('[QuickActionWindow] Plugin execution completed');
+      
+      // Close window after execution (with small delay for API plugins)
+      setTimeout(() => {
         window.echotype?.closeQuickActionWindow?.();
-      } catch (error) {
-        console.error('[QuickActionWindow] Integration execution error:', error);
-      }
+      }, 500);
+    } catch (error) {
+      console.error('[QuickActionWindow] Integration execution error:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Integration error: ${errorMsg}`);
     }
   };
 

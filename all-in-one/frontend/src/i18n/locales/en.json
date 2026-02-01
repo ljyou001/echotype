@@ -189,13 +189,16 @@
       "outputModeDescUnsupported": "This service doesn't support direct input. Text will be copied to clipboard for manual pasting.",
       "cancel": "Cancel",
       "add": "Add",
+      "prevPage": "Previous",
+      "nextPage": "Next",
       "save": "Save",
+      "confirmRemoveTitle": "Remove integration?",
       "confirmRemove": "Are you sure you want to remove this integration?",
       "manualPasteRequired": "⚠️ Manual paste required"
     },
     "items": {
       "clawbot": {
-        "name": "Clawbot",
+        "name": "OpenClaw / Clawbot",
         "description": "AI-powered search and automation workflows"
       },
       "search": {

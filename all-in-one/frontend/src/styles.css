@@ -2084,9 +2084,21 @@ body {
   font-size: 13px;
 }
 
+.btn-danger {
+  background: transparent;
+  color: #dc3545;
+  border: 1px solid #dc3545;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
 .btn-danger:hover {
-  background: #dc3545;
-  color: white;
+  background: rgba(220, 53, 69, 0.1);
+  border-color: #c82333;
+  color: #c82333;
 }
 
 .empty-state {
@@ -2142,6 +2154,11 @@ body {
   backdrop-filter: blur(4px);
 }
 
+/* Modal rendered via portal (above sidebar/navbar in all layouts) */
+.modal-overlay-portal {
+  z-index: 10001;
+}
+
 .modal-dialog {
   background: var(--background);
   border-radius: 16px;
@@ -2172,6 +2189,36 @@ body {
   padding: 20px;
   max-height: 60vh;
   overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+/* Single scrollbar - WebKit (Chrome, Edge, Safari) */
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: rgba(90, 39, 153, 0.06);
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: rgba(90, 39, 153, 0.25);
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(90, 39, 153, 0.4);
+}
+
+.modal-body::-webkit-scrollbar-thumb:active {
+  background: var(--primary);
+}
+
+/* Firefox */
+.modal-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(90, 39, 153, 0.35) rgba(90, 39, 153, 0.06);
 }
 
 .modal-footer {
@@ -2180,6 +2227,86 @@ body {
   gap: 8px;
   padding: 20px;
   border-top: 1px solid var(--border);
+}
+
+.modal-dialog-add-integration {
+  width: 560px;
+}
+
+/* Confirm dialog (e.g. remove integration) */
+.modal-dialog-confirm {
+  width: 400px;
+  max-width: 90vw;
+}
+
+.modal-dialog-confirm .confirm-message {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+/* Plugin grid (宫格图标) in Add Integration dialog - no inner scroll, modal-body scrolls only */
+.plugin-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.plugin-grid-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--background);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  font-size: 12px;
+  color: var(--text);
+  text-align: center;
+}
+
+.plugin-grid-item:hover {
+  border-color: var(--primary);
+  background: rgba(90, 39, 153, 0.06);
+}
+
+.plugin-grid-item.selected {
+  border-color: var(--primary);
+  background: rgba(90, 39, 153, 0.1);
+  font-weight: 600;
+}
+
+.plugin-grid-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.plugin-grid-name {
+  line-height: 1.3;
+  word-break: break-word;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.plugin-grid-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.plugin-grid-page-info {
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .form-group {

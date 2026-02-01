@@ -410,8 +410,9 @@ ipcMain.handle("type-text", async (_event, text) => {
         const previousClipboard = clipboard.readText();
         // 2. Write text to clipboard
         clipboard.writeText(text);
-        // 3. Simulate Ctrl+V to paste
-        robot.keyTap('v', ['control']);
+        // 3. Simulate Ctrl+V (Win) or Cmd+V (Mac) to paste
+        const modifier = process.platform === 'darwin' ? 'command' : 'control';
+        robot.keyTap('v', [modifier]);
         // 4. Wait a bit for paste to complete
         await new Promise(resolve => setTimeout(resolve, 100));
         // 5. Restore previous clipboard content

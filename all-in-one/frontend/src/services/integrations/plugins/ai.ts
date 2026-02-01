@@ -215,10 +215,10 @@ export class DoubaoPlugin implements IntegrationPlugin {
   }
 }
 
-// Clawbot Plugin - Custom integration
+// OpenClaw / Clawbot Plugin - Custom integration
 export class ClawbotPlugin implements IntegrationPlugin {
   id = 'clawbot';
-  name = 'Clawbot';
+  name = 'OpenClaw / Clawbot';
   category = 'ai' as const;
   icon = '🦾';
   requiresAuth = true;
@@ -228,32 +228,114 @@ export class ClawbotPlugin implements IntegrationPlugin {
     const shouldCopy = outputMode === 'clipboard' || outputMode === 'both';
     const shouldDirect = outputMode === 'direct' || outputMode === 'both';
 
+    console.log('[ClawbotPlugin] Executing with:', { text, config, outputMode, shouldCopy, shouldDirect });
+
     if (shouldCopy) {
       await copyToClipboard(text);
+      console.log('[ClawbotPlugin] Text copied to clipboard');
     }
 
     if (shouldDirect) {
-      const endpoint = config?.endpoint || 'http://localhost:8080/clawbot';
-      const apiKey = config?.apiKey;
+      const endpoint = config?.endpoint || 'http://localhost:18789';
+      const token = config?.apiKey;
+      const session = config?.session || 'agent:main:main';
+      
+      // OpenClaw uses /chat endpoint with session parameter
+      const chatUrl = `${endpoint}/chat?session=${encodeURIComponent(session)}`;
+      
+      console.log('[ClawbotPlugin] Sending message to:', chatUrl);
+      console.log('[ClawbotPlugin] Message:', text);
       
       try {
-        const response = await fetch(endpoint, {
+        // Try to send message via POST
+        const response = await fetch(chatUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
+            'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({ query: text })
+          body: JSON.stringify({ 
+            message: text,
+            text: text,
+            content: text
+          })
         });
         
-        const data = await response.json();
-        if (data.result) {
-          console.log('Clawbot Response:', data.result);
-          // TODO: Show notification with response
+        console.log('[ClawbotPlugin] Response status:', response.status);
+        console.log('[ClawbotPlugin] Response headers:', Object.fromEntries(response.headers.entries()));
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[ClawbotPlugin] Error response:', errorText);
+          
+          // If POST fails, try opening the web interface with the message
+          console.log('[ClawbotPlugin] POST failed, opening web interface instead');
+          const webUrl = `${endpoint}/chat?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`;
+          window.echotype?.openExternal?.(webUrl);
+          
+          // Copy to clipboard so user can paste
+          await copyToClipboard(text);
+          
+          if (window.echotype?.showNotification) {
+            window.echotype.showNotification({
+              title: 'OpenClaw',
+              body: 'Web interface opened. Message copied to clipboard - paste it in the chat.',
+              type: 'info'
+            });
+          } else {
+            alert('OpenClaw web interface opened.\nMessage copied to clipboard - paste it in the chat.');
+          }
+          return;
+        }
+        
+        const responseText = await response.text();
+        console.log('[ClawbotPlugin] Response:', responseText);
+        
+        // Show success notification
+        if (window.echotype?.showNotification) {
+          window.echotype.showNotification({
+            title: 'OpenClaw',
+            body: 'Message sent successfully!',
+            type: 'success'
+          });
+        } else {
+          alert('Message sent to OpenClaw successfully!');
+        }
+        
+        // Optionally open the web interface
+        if (config?.openInterface !== false) {
+          const webUrl = `${endpoint}/chat?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`;
+          window.echotype?.openExternal?.(webUrl);
         }
       } catch (error) {
-        console.error('Clawbot error:', error);
+        console.error('[ClawbotPlugin] Request error:', error);
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        
+        // Fallback: open web interface
+        console.log('[ClawbotPlugin] Falling back to web interface');
+        const webUrl = `${endpoint}/chat?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`;
+        window.echotype?.openExternal?.(webUrl);
+        
+        // Copy to clipboard
+        await copyToClipboard(text);
+        
+        if (window.echotype?.showNotification) {
+          window.echotype.showNotification({
+            title: 'OpenClaw',
+            body: 'Could not send via API. Web interface opened with message in clipboard.',
+            type: 'warning'
+          });
+        } else {
+          alert(`Could not connect to OpenClaw API: ${errorMsg}\n\nOpening web interface instead.\nMessage copied to clipboard - paste it in the chat.`);
+        }
       }
+    } else {
+      // If not direct mode, just open the web interface
+      const endpoint = config?.endpoint || 'http://localhost:18789';
+      const token = config?.apiKey;
+      const session = config?.session || 'agent:main:main';
+      const webUrl = `${endpoint}/chat?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token)}`;
+      window.echotype?.openExternal?.(webUrl);
     }
   }
 
@@ -265,23 +347,39 @@ export class ClawbotPlugin implements IntegrationPlugin {
     return [
       {
         key: 'endpoint',
-        label: 'Clawbot Endpoint',
+        label: 'OpenClaw Endpoint',
         type: 'text',
         required: true,
-        placeholder: 'http://localhost:8080/clawbot',
-        description: 'Clawbot service endpoint URL'
+        placeholder: 'http://localhost:18789',
+        description: 'OpenClaw service base URL (e.g., http://localhost:18789)'
       },
       {
         key: 'apiKey',
-        label: 'API Key',
+        label: 'Token',
         type: 'password',
         required: true,
-        description: 'Your Clawbot API key'
+        placeholder: 'bddb3bed8dcc619a49ce9ed36f976ad0028122aad56aeebb',
+        description: 'Your OpenClaw access token'
+      },
+      {
+        key: 'session',
+        label: 'Session ID',
+        type: 'text',
+        required: false,
+        placeholder: 'agent:main:main',
+        description: 'OpenClaw session ID (default: agent:main:main)'
+      },
+      {
+        key: 'openInterface',
+        label: 'Open web interface after sending',
+        type: 'checkbox',
+        required: false,
+        description: 'Automatically open OpenClaw web interface after sending the request'
       }
     ];
   }
 
   getDefaultName(): string {
-    return 'Clawbot';
+    return 'OpenClaw';
   }
 }

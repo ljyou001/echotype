@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw API Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.secondary {
+            background: #6c757d;
+        }
+        button.secondary:hover {
+            background: #545b62;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .result.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .hint {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🦾 OpenClaw API Test</h1>
+        
+        <div class="hint">
+            <strong>提示：</strong>这个页面用于测试 OpenClaw 的 API 连接。填写你的 OpenClaw 配置信息，然后点击测试按钮。
+        </div>
+
+        <div class="form-group">
+            <label>OpenClaw Endpoint (不包含 /chat)</label>
+            <input type="text" id="endpoint" value="http://localhost:18789" placeholder="http://localhost:18789">
+        </div>
+
+        <div class="form-group">
+            <label>Token</label>
+            <input type="text" id="token" value="bddb3bed8dcc619a49ce9ed36f976ad0028122aad56aeebb" placeholder="your-token-here">
+        </div>
+
+        <div class="form-group">
+            <label>Session ID</label>
+            <input type="text" id="session" value="agent:main:main" placeholder="agent:main:main">
+        </div>
+
+        <div class="form-group">
+            <label>测试消息</label>
+            <textarea id="message" placeholder="输入要发送的测试消息...">你好，这是一条测试消息。请回复确认收到。</textarea>
+        </div>
+
+        <button onclick="testConnection()">🔍 测试连接</button>
+        <button onclick="testOpenInterface()" class="secondary">🌐 打开 Web 界面</button>
+        <button onclick="testSendMessage()">📤 发送消息</button>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function showResult(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = message;
+        }
+
+        function getConfig() {
+            return {
+                endpoint: document.getElementById('endpoint').value.trim(),
+                token: document.getElementById('token').value.trim(),
+                session: document.getElementById('session').value.trim(),
+                message: document.getElementById('message').value.trim()
+            };
+        }
+
+        function testOpenInterface() {
+            const config = getConfig();
+            const url = `${config.endpoint}/chat?session=${encodeURIComponent(config.session)}&token=${encodeURIComponent(config.token)}`;
+            showResult(`正在打开: ${url}`, 'info');
+            window.open(url, '_blank');
+        }
+
+        async function testConnection() {
+            const config = getConfig();
+            
+            if (!config.endpoint || !config.token) {
+                showResult('错误：请填写 Endpoint 和 Token', 'error');
+                return;
+            }
+
+            showResult('正在测试连接...', 'info');
+
+            try {
+                // Test 1: Simple GET request
+                const getUrl = `${config.endpoint}?token=${encodeURIComponent(config.token)}`;
+                showResult(`测试 1: GET ${getUrl}\n等待响应...`, 'info');
+                
+                const getResponse = await fetch(getUrl, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+
+                const getResult = `GET 请求结果:
+状态码: ${getResponse.status} ${getResponse.statusText}
+Content-Type: ${getResponse.headers.get('content-type')}
+
+响应内容:
+${await getResponse.text()}`;
+
+                showResult(getResult, getResponse.ok ? 'success' : 'error');
+
+            } catch (error) {
+                showResult(`连接失败:\n${error.message}\n\n可能的原因:\n1. OpenClaw 服务未运行\n2. 端口号不正确\n3. Token 不正确\n4. CORS 限制`, 'error');
+            }
+        }
+
+        async function testSendMessage() {
+            const config = getConfig();
+            
+            if (!config.endpoint || !config.token || !config.message) {
+                showResult('错误：请填写所有字段', 'error');
+                return;
+            }
+
+            showResult('正在发送消息...', 'info');
+
+            // Try different API formats
+            const attempts = [
+                {
+                    name: 'POST with token in URL',
+                    url: `${config.endpoint}?token=${encodeURIComponent(config.token)}`,
+                    options: {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: config.message })
+                    }
+                },
+                {
+                    name: 'POST with query field',
+                    url: `${config.endpoint}?token=${encodeURIComponent(config.token)}`,
+                    options: {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: config.message })
+                    }
+                },
+                {
+                    name: 'POST with prompt field',
+                    url: `${config.endpoint}?token=${encodeURIComponent(config.token)}`,
+                    options: {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: config.message })
+                    }
+                },
+                {
+                    name: 'POST with text field',
+                    url: `${config.endpoint}?token=${encodeURIComponent(config.token)}`,
+                    options: {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: config.message })
+                    }
+                }
+            ];
+
+            let results = '尝试不同的 API 格式:\n\n';
+
+            for (const attempt of attempts) {
+                try {
+                    results += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    results += `尝试: ${attempt.name}\n`;
+                    results += `URL: ${attempt.url}\n`;
+                    results += `Body: ${attempt.options.body}\n\n`;
+
+                    const response = await fetch(attempt.url, attempt.options);
+                    const responseText = await response.text();
+
+                    results += `状态: ${response.status} ${response.statusText}\n`;
+                    results += `响应: ${responseText}\n`;
+
+                    if (response.ok) {
+                        results += `✅ 成功!\n`;
+                        showResult(results, 'success');
+                        return;
+                    } else {
+                        results += `❌ 失败\n`;
+                    }
+                } catch (error) {
+                    results += `❌ 错误: ${error.message}\n`;
+                }
+            }
+
+            results += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            results += `\n所有尝试都失败了。请检查:\n`;
+            results += `1. OpenClaw 是否正在运行\n`;
+            results += `2. Endpoint 和 Token 是否正确\n`;
+            results += `3. 查看浏览器控制台的详细错误信息\n`;
+
+            showResult(results, 'error');
+        }
+
+        // Auto-fill from URL parameters
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('endpoint')) {
+                document.getElementById('endpoint').value = params.get('endpoint');
+            }
+            if (params.has('token')) {
+                document.getElementById('token').value = params.get('token');
+            }
+        });
+    </script>
+</body>
+</html>

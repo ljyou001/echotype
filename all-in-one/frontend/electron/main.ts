@@ -468,8 +468,9 @@ ipcMain.handle("type-text", async (_event, text: string) => {
     // 2. Write text to clipboard
     clipboard.writeText(text);
 
-    // 3. Simulate Ctrl+V to paste
-    robot.keyTap('v', ['control']);
+    // 3. Simulate Ctrl+V (Win) or Cmd+V (Mac) to paste
+    const modifier = process.platform === 'darwin' ? 'command' : 'control';
+    robot.keyTap('v', [modifier]);
 
     // 4. Wait a bit for paste to complete
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -562,7 +563,7 @@ ipcMain.on("create-quick-action-window", (_event, data: { text: string; instance
     console.log("[Main] Received create-quick-action-window event");
     console.log("[Main] Text:", data.text);
     console.log("[Main] Instances count:", data.instances.length);
-    
+
     createQuickActionWindow(data.text, data.instances);
   } catch (error) {
     console.error("[Main] Failed to create quick action window:", error);

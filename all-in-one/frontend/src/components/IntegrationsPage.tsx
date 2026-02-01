@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../store/appStore";
 import { integrationRegistry } from "../services/integrations";
@@ -26,11 +27,12 @@ function SortableIntegrationItem({ instance }: { instance: IntegrationInstance }
   const setDefault = useAppStore(state => state.setDefaultIntegration);
   const removeInstance = useAppStore(state => state.removeIntegrationInstance);
   const [showConfig, setShowConfig] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
-  const handleRemove = () => {
-    if (confirm(t('integrations.dialog.confirmRemove'))) {
-      removeInstance(instance.instanceId);
-    }
+  const handleRemoveClick = () => setShowRemoveConfirm(true);
+  const handleRemoveConfirm = () => {
+    removeInstance(instance.instanceId);
+    setShowRemoveConfirm(false);
   };
 
   return (
@@ -59,7 +61,7 @@ function SortableIntegrationItem({ instance }: { instance: IntegrationInstance }
         <button className="btn-ghost btn-sm" onClick={() => setShowConfig(true)}>
           ⚙️ {t('integrations.actions.configure')}
         </button>
-        <button className="btn-ghost btn-sm btn-danger" onClick={handleRemove}>
+        <button className="btn-ghost btn-sm btn-danger" onClick={handleRemoveClick}>
           🗑️ {t('integrations.actions.remove')}
         </button>
       </div>
@@ -69,6 +71,29 @@ function SortableIntegrationItem({ instance }: { instance: IntegrationInstance }
           instance={instance}
           onClose={() => setShowConfig(false)}
         />
+      )}
+
+      {showRemoveConfirm && createPortal(
+        <div className="modal-overlay modal-overlay-portal" onClick={() => setShowRemoveConfirm(false)}>
+          <div className="modal-dialog modal-dialog-confirm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{t('integrations.dialog.confirmRemoveTitle')}</h3>
+              <button type="button" className="close-btn" onClick={() => setShowRemoveConfirm(false)} aria-label="Close">×</button>
+            </div>
+            <div className="modal-body">
+              <p className="confirm-message">{t('integrations.dialog.confirmRemove')}</p>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn-ghost" onClick={() => setShowRemoveConfirm(false)}>
+                {t('integrations.dialog.cancel')}
+              </button>
+              <button type="button" className="btn-danger" onClick={handleRemoveConfirm}>
+                🗑️ {t('integrations.actions.remove')}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -223,22 +248,24 @@ function AddIntegrationDialog({ onClose }: { onClose: () => void }) {
   const [selectedPluginId, setSelectedPluginId] = useState('');
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('');
+  const [config, setConfig] = useState<Record<string, any>>({});
+  const [outputMode, setOutputMode] = useState<'clipboard' | 'direct' | 'both'>('clipboard');
 
   const plugins = integrationRegistry.getAll();
   const selectedPlugin = selectedPluginId ? integrationRegistry.get(selectedPluginId) : null;
+  const configSchema = selectedPlugin ? selectedPlugin.getConfigSchema() : [];
 
   React.useEffect(() => {
     if (selectedPlugin) {
       setName(selectedPlugin.getDefaultName());
       setIcon(selectedPlugin.icon);
+      setConfig({});
+      setOutputMode(selectedPlugin.supportsDirectInput ? 'direct' : 'clipboard');
     }
   }, [selectedPlugin]);
 
   const handleAdd = () => {
     if (!selectedPluginId || !name) return;
-
-    // Set default outputMode based on plugin capabilities
-    const defaultOutputMode = selectedPlugin?.supportsDirectInput ? 'direct' : 'clipboard';
 
     const newInstance: IntegrationInstance = {
       instanceId: crypto.randomUUID(),
@@ -248,17 +275,17 @@ function AddIntegrationDialog({ onClose }: { onClose: () => void }) {
       order: instances.length,
       enabled: true,
       isDefault: instances.length === 0,
-      config: {},
-      outputMode: defaultOutputMode
+      config: { ...config },
+      outputMode
     };
 
     addInstance(newInstance);
     onClose();
   };
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-dialog" onClick={e => e.stopPropagation()}>
+  const modalContent = (
+    <div className="modal-overlay modal-overlay-portal" onClick={onClose}>
+      <div className="modal-dialog modal-dialog-add-integration" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{t('integrations.dialog.addTitle')}</h3>
           <button className="close-btn" onClick={onClose}>×</button>
@@ -267,18 +294,19 @@ function AddIntegrationDialog({ onClose }: { onClose: () => void }) {
         <div className="modal-body">
           <div className="form-group">
             <label>{t('integrations.dialog.selectPlugin')}</label>
-            <select
-              value={selectedPluginId}
-              onChange={e => setSelectedPluginId(e.target.value)}
-              className="form-select"
-            >
-              <option value="">-- Select --</option>
+            <div className="plugin-grid">
               {plugins.map(plugin => (
-                <option key={plugin.id} value={plugin.id}>
-                  {plugin.icon} {plugin.name}
-                </option>
+                <button
+                  key={plugin.id}
+                  type="button"
+                  className={`plugin-grid-item ${selectedPluginId === plugin.id ? 'selected' : ''}`}
+                  onClick={() => setSelectedPluginId(plugin.id)}
+                >
+                  <span className="plugin-grid-icon">{plugin.icon}</span>
+                  <span className="plugin-grid-name">{plugin.name}</span>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           {selectedPlugin && !selectedPlugin.supportsDirectInput && (
@@ -306,20 +334,95 @@ function AddIntegrationDialog({ onClose }: { onClose: () => void }) {
                   value={icon}
                   onChange={e => setIcon(e.target.value)}
                   className="form-input"
+                  placeholder="🔍"
                 />
               </div>
+
+              <div className="form-group">
+                <label>{t('integrations.dialog.outputMode')}</label>
+                <p className="form-description">
+                  {selectedPlugin.supportsDirectInput
+                    ? t('integrations.dialog.outputModeDescSupported')
+                    : t('integrations.dialog.outputModeDescUnsupported')}
+                </p>
+                <select
+                  value={outputMode}
+                  onChange={e => setOutputMode(e.target.value as 'clipboard' | 'direct' | 'both')}
+                  className="form-select"
+                  disabled={!selectedPlugin.supportsDirectInput}
+                >
+                  <option value="clipboard">{t('integrations.outputMode.clipboard')}</option>
+                  {selectedPlugin.supportsDirectInput && (
+                    <>
+                      <option value="direct">{t('integrations.outputMode.direct')}</option>
+                      <option value="both">{t('integrations.outputMode.both')}</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              {configSchema.map(field => (
+                <div key={field.key} className="form-group">
+                  <label>{field.label}</label>
+                  {field.description && <p className="form-description">{field.description}</p>}
+                  {field.type === 'text' && (
+                    <input
+                      type="text"
+                      value={config[field.key] ?? ''}
+                      onChange={e => setConfig({ ...config, [field.key]: e.target.value })}
+                      placeholder={field.placeholder}
+                      className="form-input"
+                    />
+                  )}
+                  {field.type === 'password' && (
+                    <input
+                      type="password"
+                      value={config[field.key] ?? ''}
+                      onChange={e => setConfig({ ...config, [field.key]: e.target.value })}
+                      placeholder={field.placeholder}
+                      className="form-input"
+                    />
+                  )}
+                  {field.type === 'checkbox' && (
+                    <label className="form-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={!!config[field.key]}
+                        onChange={e => setConfig({ ...config, [field.key]: e.target.checked })}
+                      />
+                      {field.label}
+                    </label>
+                  )}
+                  {field.type === 'select' && (
+                    <select
+                      value={config[field.key] ?? ''}
+                      onChange={e => setConfig({ ...config, [field.key]: e.target.value })}
+                      className="form-select"
+                    >
+                      {field.options?.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              ))}
             </>
           )}
         </div>
 
         <div className="modal-footer">
-          <button className="btn-ghost" onClick={onClose}>
+          <button type="button" className="btn-ghost" onClick={onClose}>
             {t('integrations.dialog.cancel')}
           </button>
           <button 
+            type="button"
             className="btn-primary" 
             onClick={handleAdd}
-            disabled={!selectedPluginId || !name}
+            disabled={
+              !selectedPluginId ||
+              !name ||
+              (configSchema.length > 0 && selectedPlugin && !selectedPlugin.validateConfig(config))
+            }
           >
             {t('integrations.dialog.add')}
           </button>
@@ -327,6 +430,8 @@ function AddIntegrationDialog({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
 
 export function IntegrationsPage() {
