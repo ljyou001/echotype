@@ -44,6 +44,9 @@ const api = {
   getMediaAccessStatus: (): Promise<string> => {
     return ipcRenderer.invoke("get-media-access-status");
   },
+  getAccessibilityStatus: (): Promise<boolean> => {
+    return ipcRenderer.invoke("get-accessibility-status");
+  },
   getHotkey: (key: string): Promise<string> => {
     return ipcRenderer.invoke("hotkey-get", key);
   },

@@ -57,25 +57,34 @@
     ],
     "extraResources": [
       {
-        "from": "../dist/echotype-backend.exe",
-        "to": "backend/echotype-backend.exe"
-      },
-      {
         "from": "../models",
         "to": "models"
       }
     ],
     "win": {
       "target": [
-        "nsis"
+        "nsis",
+        "zip"
       ],
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "extraResources": [
+        {
+          "from": "../dist/echotype-backend.exe",
+          "to": "backend/echotype-backend.exe"
+        }
+      ]
     },
     "mac": {
       "target": [
         "dmg"
       ],
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "extraResources": [
+        {
+          "from": "../dist/echotype-backend",
+          "to": "backend/echotype-backend"
+        }
+      ]
     }
   }
 }

@@ -28,6 +28,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+dist-all-in-one
 
 # PyInstaller
 #  Usually these files are created by PyInstaller. More information see:

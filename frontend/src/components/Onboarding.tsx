@@ -12,6 +12,7 @@ export function Onboarding() {
   const { t } = useTranslation();
   const [step, setStep] = useState<1 | 2>(1);
   const [micStatus, setMicStatus] = useState<MicStatus>("unknown");
+  const [accStatus, setAccStatus] = useState<boolean | null>(null);
 
   const inputDevices = useAppStore((s) => s.inputDevices);
   const selectedInputId = useAppStore((s) => s.selectedInputId);
@@ -19,15 +20,17 @@ export function Onboarding() {
   const setInputDevices = useAppStore((s) => s.setInputDevices);
   const setOnboardingCompleted = useAppStore((s) => s.setOnboardingCompleted);
 
-  const checkMicPermission = useCallback(async () => {
-    setMicStatus("checking");
+  const checkMicPermissionMac = useCallback(async () => {
+    if (!window.echotype?.getMediaAccessStatus) return;
+    const status = await window.echotype.getMediaAccessStatus();
+    // macOS returns: granted, denied, not-determined, restricted
+    if (status === "granted") setMicStatus("granted");
+    else if (status === "denied" || status === "restricted") setMicStatus("denied");
+    else setMicStatus("unknown");
+  }, []);
+
+  const checkMicPermissionWin = useCallback(async () => {
     try {
-      if (isMac && window.echotype?.getMediaAccessStatus) {
-        const status = await window.echotype.getMediaAccessStatus();
-        setMicStatus(status === "granted" ? "granted" : "denied");
-        return;
-      }
-      // Windows or fallback: try getUserMedia (no stream kept)
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((t) => t.stop());
       setMicStatus("granted");
@@ -36,11 +39,42 @@ export function Onboarding() {
     }
   }, []);
 
+  const checkMicPermission = useCallback(async () => {
+    setMicStatus("checking");
+    if (isMac) {
+      await checkMicPermissionMac();
+    } else {
+      await checkMicPermissionWin();
+    }
+  }, [checkMicPermissionMac, checkMicPermissionWin]);
+
+  const checkAccessibilityPermission = useCallback(async () => {
+    if (isMac) {
+      if (window.echotype?.getAccessibilityStatus) {
+        const isTrusted = await window.echotype.getAccessibilityStatus();
+        setAccStatus(isTrusted);
+      }
+    } else {
+      // Windows doesn't require TCC accessibility for hotkeys in the same way
+      setAccStatus(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (step === 1) {
       void checkMicPermission();
+      void checkAccessibilityPermission();
+
+      // Mac requires polling as system settings change don't push notifications to app
+      if (isMac) {
+        const interval = setInterval(() => {
+          void checkMicPermissionMac();
+          void checkAccessibilityPermission();
+        }, 2000);
+        return () => clearInterval(interval);
+      }
     }
-  }, [step, checkMicPermission]);
+  }, [step, checkMicPermission, checkMicPermissionMac, checkAccessibilityPermission]);
 
   useEffect(() => {
     const refresh = async () => {
@@ -90,7 +124,7 @@ export function Onboarding() {
                     {micStatus === "checking" && t("onboarding.permissions.checking")}
                     {micStatus === "granted" && t("onboarding.permissions.granted")}
                     {micStatus === "denied" && t("onboarding.permissions.denied")}
-                    {micStatus === "unknown" && "—"}
+                    {micStatus === "unknown" && (isMac ? "Not Determined" : "—")}
                   </span>
                   <button type="button" className="btn-ghost btn-sm" onClick={checkMicPermission} disabled={micStatus === "checking"}>
                     {t("onboarding.permissions.recheck")}
@@ -105,6 +139,18 @@ export function Onboarding() {
                 <p className="onboarding-desc">
                   {isMac ? t("onboarding.permissions.accessibilityDescMac") : t("onboarding.permissions.accessibilityDescWin")}
                 </p>
+                <div className="onboarding-status-row">
+                  <span className={`onboarding-status onboarding-status--${accStatus === true ? 'granted' : accStatus === false ? 'denied' : 'unknown'}`}>
+                    {accStatus === true && t("onboarding.permissions.granted")}
+                    {accStatus === false && t("onboarding.permissions.denied")}
+                    {accStatus === null && "—"}
+                  </span>
+                  {isMac && (
+                    <button type="button" className="btn-ghost btn-sm" onClick={checkAccessibilityPermission}>
+                      {t("onboarding.permissions.recheck")}
+                    </button>
+                  )}
+                </div>
                 <button type="button" className="btn-secondary" onClick={openAccessibilitySettings}>
                   {t("onboarding.permissions.openAccessibility")}
                 </button>

@@ -18,6 +18,7 @@ declare global {
       openExternal?: (url: string) => void;
       openSystemPermission?: (type: "microphone" | "accessibility") => Promise<void>;
       getMediaAccessStatus?: () => Promise<string>;
+      getAccessibilityStatus?: () => Promise<boolean>;
       getHotkey?: (key: string) => Promise<string>;
       updateHotkey?: (key: string, accelerator: string) => Promise<{ success: boolean; error?: string }>;
       validateHotkey?: (accelerator: string) => Promise<{ valid: boolean; error?: string }>;

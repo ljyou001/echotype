@@ -87,10 +87,19 @@ function resolvePythonPath(): string {
   if (process.env.ECHOTYPE_PYTHON) {
     return process.env.ECHOTYPE_PYTHON;
   }
-  const candidate = path.resolve(getWorkspaceRoot(), ".venv", "Scripts", "python.exe");
-  if (fs.existsSync(candidate)) {
-    return candidate;
+
+  const workspaceRoot = getWorkspaceRoot();
+  const candidates = [
+    path.resolve(workspaceRoot, ".venv", "Scripts", "python.exe"), // Windows
+    path.resolve(workspaceRoot, ".venv", "bin", "python"),         // macOS/Linux
+  ];
+
+  for (const pkg of candidates) {
+    if (fs.existsSync(pkg)) {
+      return pkg;
+    }
   }
+
   return "python";
 }
 
@@ -428,9 +437,22 @@ ipcMain.handle("open-system-permission", (_event, type: "microphone" | "accessib
 // Get microphone permission status (macOS: native; Windows: not available, renderer uses getUserMedia)
 ipcMain.handle("get-media-access-status", () => {
   if (process.platform === "darwin") {
-    return systemPreferences.getMediaAccessStatus("microphone");
+    const status = systemPreferences.getMediaAccessStatus("microphone");
+    console.log(`[Permission] Microphone status: ${status}`);
+    return status;
   }
   return "unknown";
+});
+
+// Check if app has accessibility permissions (macOS only)
+ipcMain.handle("get-accessibility-status", () => {
+  if (process.platform === "darwin") {
+    // Passing false means only check, don't prompt for permission
+    const isTrusted = systemPreferences.isTrustedAccessibilityClient(false);
+    console.log(`[Permission] Accessibility trusted: ${isTrusted}`);
+    return isTrusted;
+  }
+  return true; // Assume true for Windows as it doesn't use the same TCC mechanism
 });
 
 ipcMain.handle("hotkey-get", (_event, key: string) => {
@@ -614,29 +636,29 @@ ipcMain.handle("resize-quick-action-window", (_event, newHeight: number) => {
 // Move quick action window (for dragging)
 ipcMain.on("move-quick-action-window", (_event, delta: { deltaX: number; deltaY: number }) => {
   console.log('[Main] Received move-quick-action-window:', delta);
-  
+
   const window = getQuickActionWindow();
   if (!window) {
     console.log('[Main] No quick action window found');
     return;
   }
-  
+
   if (window.isDestroyed()) {
     console.log('[Main] Quick action window is destroyed');
     return;
   }
-  
+
   const currentBounds = window.getBounds();
   console.log('[Main] Current bounds:', currentBounds);
-  
+
   const newX = currentBounds.x + delta.deltaX;
   const newY = currentBounds.y + delta.deltaY;
   console.log('[Main] New position (before clamp):', newX, newY);
-  
+
   // Get screen bounds to prevent moving off screen
   const display = screen.getDisplayNearestPoint({ x: newX, y: newY });
   const margin = 20;
-  
+
   // Clamp position to screen bounds
   const clampedX = Math.max(
     display.bounds.x + margin,
@@ -646,7 +668,7 @@ ipcMain.on("move-quick-action-window", (_event, delta: { deltaX: number; deltaY:
     display.bounds.y + margin,
     Math.min(newY, display.bounds.y + display.bounds.height - currentBounds.height - margin)
   );
-  
+
   console.log('[Main] Clamped position:', clampedX, clampedY);
   window.setPosition(clampedX, clampedY);
   console.log('[Main] Window position updated');
@@ -661,23 +683,23 @@ ipcMain.handle("copy-to-clipboard", (_event, text: string) => {
 // HTTP request handler (bypasses CORS)
 ipcMain.handle("http-request", async (_event, url: string, options: { method: string; headers: Record<string, string>; body?: string }) => {
   console.log(`[HTTP] ${options.method} ${url}`);
-  
+
   try {
     const response = await fetch(url, {
       method: options.method,
       headers: options.headers,
       body: options.body
     });
-    
+
     const responseHeaders: Record<string, string> = {};
     response.headers.forEach((value, key) => {
       responseHeaders[key] = value;
     });
-    
+
     const body = await response.text();
-    
+
     console.log(`[HTTP] Response: ${response.status} ${response.statusText}`);
-    
+
     return {
       ok: response.ok,
       status: response.status,
