@@ -99,6 +99,18 @@ const api = {
     // HTTP request (bypasses CORS)
     httpRequest: (url, options) => {
         return electron_1.ipcRenderer.invoke("http-request", url, options);
+    },
+    // Model management
+    getModelsStatus: () => {
+        return electron_1.ipcRenderer.invoke("get-models-status");
+    },
+    downloadModel: (id, url) => {
+        return electron_1.ipcRenderer.invoke("download-model", { id, url });
+    },
+    onModelDownloadProgress: (handler) => {
+        const listener = (_event, payload) => handler(payload);
+        electron_1.ipcRenderer.on("model-download-progress", listener);
+        return () => electron_1.ipcRenderer.removeListener("model-download-progress", listener);
     }
 };
 electron_1.contextBridge.exposeInMainWorld("echotype", api);
