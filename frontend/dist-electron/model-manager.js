@@ -3,12 +3,19 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import extract from "extract-zip";
+let handlersRegistered = false;
+let modelManagerWindow = null;
 export function setupModelManager(mainWindow) {
+    modelManagerWindow = mainWindow;
     const modelsDir = path.join(os.homedir(), ".echotype", "models");
     // Ensure models directory exists
     if (!fs.existsSync(modelsDir)) {
         fs.mkdirSync(modelsDir, { recursive: true });
     }
+    if (handlersRegistered) {
+        return;
+    }
+    handlersRegistered = true;
     ipcMain.handle("get-models-status", async () => {
         const status = {
             "paraformer-offline": fs.existsSync(path.join(modelsDir, "paraformer-offline")),
@@ -18,6 +25,12 @@ export function setupModelManager(mainWindow) {
         return status;
     });
     ipcMain.handle("download-model", async (_event, { id, url }) => {
+        const sendProgress = (payload) => {
+            const win = modelManagerWindow;
+            if (win && !win.isDestroyed()) {
+                win.webContents.send("model-download-progress", payload);
+            }
+        };
         const tempDir = path.join(os.tmpdir(), "echotype-downloads");
         if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir, { recursive: true });
@@ -37,7 +50,7 @@ export function setupModelManager(mainWindow) {
                     receivedBytes += chunk.length;
                     fileStream.write(chunk);
                     const progress = totalBytes ? Math.round((receivedBytes / totalBytes) * 100) : 0;
-                    mainWindow.webContents.send("model-download-progress", {
+                    sendProgress({
                         id,
                         progress,
                         stage: 'downloading'
@@ -47,7 +60,7 @@ export function setupModelManager(mainWindow) {
                     fileStream.end();
                     console.log(`[ModelManager] Download complete: ${id}`);
                     try {
-                        mainWindow.webContents.send("model-download-progress", {
+                        sendProgress({
                             id,
                             progress: 100,
                             stage: 'extracting'
@@ -57,7 +70,7 @@ export function setupModelManager(mainWindow) {
                         console.log(`[ModelManager] Extraction complete: ${id}`);
                         // Clean up zip
                         fs.unlinkSync(zipPath);
-                        mainWindow.webContents.send("model-download-progress", {
+                        sendProgress({
                             id,
                             progress: 100,
                             stage: 'done'
@@ -66,7 +79,7 @@ export function setupModelManager(mainWindow) {
                     }
                     catch (err) {
                         console.error(`[ModelManager] Extraction error:`, err);
-                        mainWindow.webContents.send("model-download-progress", {
+                        sendProgress({
                             id,
                             stage: 'error',
                             error: err instanceof Error ? err.message : String(err)
@@ -81,7 +94,7 @@ export function setupModelManager(mainWindow) {
             });
             request.on('error', (err) => {
                 console.error(`[ModelManager] Download error:`, err);
-                mainWindow.webContents.send("model-download-progress", {
+                sendProgress({
                     id,
                     stage: 'error',
                     error: err.message

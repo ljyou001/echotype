@@ -66,6 +66,49 @@ export default function App() {
 
   const [onboardingInitialStep, setOnboardingInitialStep] = useState<1 | 2 | 3>(1);
 
+  // Listen for backend process status (IPC) to apply startup grace
+  const startupRetryRef = React.useRef<number | null>(null);
+  useEffect(() => {
+    const handleBackendStatus = (payload: { state: string; detail?: string; host?: string; port?: number }) => {
+      console.log("[App] Backend status:", payload);
+      if (payload.host && payload.port) {
+        wsManager.setBackendEndpoint(payload.host, payload.port);
+      }
+      if (payload.state === "starting") {
+        wsManager.setStartupGrace(30000);
+        setBackendStatus("starting");
+        setErrorDetail(null);
+
+        if (startupRetryRef.current) {
+          window.clearTimeout(startupRetryRef.current);
+        }
+        startupRetryRef.current = window.setTimeout(() => {
+          const store = useAppStore.getState();
+          if (store.connectionState !== "open") {
+            console.warn("[App] Startup timeout reached, restarting backend");
+            window.echotype?.restartBackend?.();
+          }
+        }, 30000);
+      } else if (payload.state === "stopped") {
+        setBackendStatus("stopped");
+      }
+    };
+
+    const cleanup = window.echotype?.onBackendStatus?.(handleBackendStatus);
+    void window.echotype?.getBackendStatus?.().then((payload) => {
+      if (payload) {
+        handleBackendStatus(payload);
+      }
+    });
+
+    return () => {
+      if (startupRetryRef.current) {
+        window.clearTimeout(startupRetryRef.current);
+      }
+      cleanup?.();
+    };
+  }, [setBackendStatus, setErrorDetail, wsManager]);
+
   // Auto-redirect to onboarding if models are missing
   useEffect(() => {
     if (errorDetail?.message?.includes("MODEL_NOT_FOUND")) {

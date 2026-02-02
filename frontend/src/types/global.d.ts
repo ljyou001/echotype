@@ -11,10 +11,11 @@ declare global {
     };
     echotype?: {
       onHotkey: (handler: (payload: { action: string; keyDown?: boolean }) => void) => (() => void) | undefined;
-      onBackendStatus: (handler: (payload: { state: string; detail?: string }) => void) => (() => void) | undefined;
+      onBackendStatus: (handler: (payload: { state: string; detail?: string; host?: string; port?: number }) => void) => (() => void) | undefined;
       onBackendLog: (handler: (payload: { level: string; message: string }) => void) => (() => void) | undefined;
       requestWindowAction: (action: "show" | "hide" | "toggle") => void;
       restartBackend?: () => void;
+      getBackendStatus?: () => Promise<{ state: string; detail?: string; host?: string; port?: number } | null>;
       openExternal?: (url: string) => void;
       openSystemPermission?: (type: "microphone" | "accessibility") => Promise<void>;
       getMediaAccessStatus?: () => Promise<string>;

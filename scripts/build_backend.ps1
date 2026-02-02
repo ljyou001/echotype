@@ -44,7 +44,6 @@ Write-Host "Starting PyInstaller build (this will take several minutes due to to
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Backend build successful! Folder is at dist\$BackendName" -ForegroundColor Green
-}
-else {
+} else {
     Write-Error "Backend build failed."
 }

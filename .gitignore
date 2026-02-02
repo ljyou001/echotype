@@ -12,7 +12,10 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-frontend/dist-package/
+**/dist-package*/
+frontend/dist/
+frontend/dist-electron/
+frontend/out/
 downloads/
 eggs/
 .eggs/
@@ -29,6 +32,10 @@ share/python-wheels/
 *.egg
 MANIFEST
 dist-all-in-one
+
+# Local runtime environments
+.node-*/
+.python-*/
 
 # PyInstaller
 #  Usually these files are created by PyInstaller. More information see:
@@ -54,12 +61,16 @@ coverage.xml
 
 # Environments
 .env
+.env.*
 .venv
+.venv/
+.venv-*/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+*.env
 
 # IDEs
 .idea/
@@ -76,10 +87,23 @@ Pipfile.lock
 .DS_Store
 Thumbs.db
 
+# Node.js
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.npm
+.yarn
+*.node
+
+# Build outputs
+*.tsbuildinfo
+.cache/
+.temp/
+.tmp/
+
 # Other
 *.log
-models
+models/
 modelsserver/progress.json
 2025
-node_modules
-test

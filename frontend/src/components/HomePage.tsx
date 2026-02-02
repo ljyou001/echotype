@@ -72,6 +72,15 @@ export function HomePage({ onNavigate, onRestartBackend }: HomePageProps) {
     return t("home.statusMessage.standby");
   }, [backendStatus, canRestart, errorDetail, t, isLoading, loadingMessageKey]);
 
+  const heroTitleKey = React.useMemo(() => {
+    if (canRestart) {
+      return backendStatus === "offline" ? "status.offline" : "status.error";
+    }
+    if (isLoading) return "status.loading";
+    if (backendStatus === "ready") return "status.ready";
+    return "status.standby";
+  }, [backendStatus, canRestart, isLoading]);
+
   const currentInputDevice = React.useMemo(() => {
     if (!inputDevices.length) {
       return t("common.defaultMicrophone");
@@ -97,7 +106,7 @@ export function HomePage({ onNavigate, onRestartBackend }: HomePageProps) {
         <div className="home-hero">
           <OrbAnimation />
           <div className="home-status">
-            <h1>{backendStatus === "ready" ? t("status.ready") : t("status.loading")}</h1>
+            <h1>{t(heroTitleKey)}</h1>
             <p>{statusMessage}</p>
           </div>
         </div>

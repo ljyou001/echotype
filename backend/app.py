@@ -5,6 +5,8 @@ import asyncio
 import logging
 import os
 import sys
+import threading
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
@@ -15,6 +17,47 @@ from .common.config import BackendConfig, load_config
 from .common.types import ModelNotFoundError
 from .manager import BackendManager
 from .server import BackendServer
+
+
+def is_process_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        import ctypes  # noqa: PLC0415
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        SYNCHRONIZE = 0x00100000
+        WAIT_TIMEOUT = 0x00000102
+        handle = ctypes.windll.kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, False, pid)
+        if not handle:
+            return False
+        result = ctypes.windll.kernel32.WaitForSingleObject(handle, 0)
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return result == WAIT_TIMEOUT
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def start_parent_watch(parent_pid: int, logger: logging.Logger) -> None:
+    if parent_pid <= 1 or parent_pid == os.getpid():
+        return
+
+    def _watch() -> None:
+        while True:
+            time.sleep(2.0)
+            if not is_process_alive(parent_pid):
+                logger.warning("Parent process %s exited. Shutting down backend.", parent_pid)
+                os._exit(0)
+
+    thread = threading.Thread(target=_watch, name="parent-watchdog", daemon=True)
+    thread.start()
+    logger.info("Parent watchdog enabled (parent pid=%s)", parent_pid)
 
 
 def setup_logging(level: str, enable_file_logging: bool = True) -> Path | None:
@@ -158,6 +201,7 @@ def main() -> int:
     parser.add_argument("--runtime-mode", type=str, help="Runtime mode: in_process | external")
     parser.add_argument("--log-level", type=str, default="DEBUG", help="Logging level (default: DEBUG)")
     parser.add_argument("--no-log-file", action="store_true", help="Disable file logging")
+    parser.add_argument("--parent-pid", type=int, help="Parent process id to monitor")
 
     args = parser.parse_args()
     
@@ -177,6 +221,18 @@ def main() -> int:
         logger.info("File logging disabled (console only)")
     logger.info("Log level: %s", args.log_level.upper())
     logger.info("=" * 80)
+
+    parent_pid: int | None = args.parent_pid
+    if parent_pid is None:
+        env_parent_pid = os.environ.get("ECHOTYPE_PARENT_PID")
+        if env_parent_pid:
+            try:
+                parent_pid = int(env_parent_pid)
+            except ValueError:
+                logger.warning("Invalid ECHOTYPE_PARENT_PID value: %s", env_parent_pid)
+
+    if parent_pid:
+        start_parent_watch(parent_pid, logger)
 
     config = load_config(Path(args.config) if args.config else None)
     config = config.with_overrides(build_overrides(args))

@@ -46,6 +46,7 @@ class Qwen3Adapter:
         try:
             from qwen_asr import Qwen3ASRModel  # noqa: F401
         except Exception as exc:
+            self._logger.exception("Qwen3 dependency import failed")
             raise RuntimeError(
                 f"Qwen3 backend dependencies are not installed: {exc}. "
                 "Install qwen-asr and its runtime first."

@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import net from "node:net";
 import HotkeyManager from "./hotkey-manager.js";
 import { createQuickActionWindow, closeQuickActionWindow, resizeQuickActionWindow, getQuickActionWindow } from "./quick-action-window.js";
 import os from "node:os";
@@ -14,17 +15,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const BACKEND_HOST = process.env.ECHOTYPE_BACKEND_HOST ?? "127.0.0.1";
-const BACKEND_PORT = Number(process.env.ECHOTYPE_BACKEND_PORT ?? "6016");
+const DEFAULT_BACKEND_PORT = Number(process.env.ECHOTYPE_BACKEND_PORT ?? "0");
+const DEFAULT_PORT_RANGE = { min: 6200, max: 6999 };
 const DEFAULT_BACKEND = process.env.ECHOTYPE_BACKEND ?? "sherpa_onnx";
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let backendProcess: ReturnType<typeof spawn> | null = null;
 let hotkeyManager: HotkeyManager | null = null;
+let currentBackendPort: number | null = null;
+let lastBackendStatus: { state: string; detail?: string; host?: string; port?: number } | null = null;
 let frontendLogFile: string | null = null;
 let frontendLogStream: fs.WriteStream | null = null;
 let enableFileLogging: boolean = true; // File logging enabled by default
-let isQuitting: boolean = false;
 
 // Check if environment variable disables file logging
 if (process.env.ECHOTYPE_NO_LOG_FILE === "1") {
@@ -100,6 +103,43 @@ function closeFrontendLog(): void {
   }
 }
 
+function resolveSettingsPath(): string {
+  const userDataPath = path.join(app.getPath("userData"), "settings.json");
+  const homePath = path.join(os.homedir(), ".echotype", "settings.json");
+  if (!fs.existsSync(homePath) && fs.existsSync(userDataPath)) {
+    try {
+      fs.mkdirSync(path.dirname(homePath), { recursive: true });
+      fs.copyFileSync(userDataPath, homePath);
+      writeFrontendLog(`[Settings] Migrated settings from ${userDataPath} to ${homePath}`);
+    } catch (error) {
+      console.error("[Settings] Failed to migrate settings:", error);
+      writeFrontendLog(`[Settings] Failed to migrate settings: ${String(error)}`);
+    }
+  }
+
+  return homePath;
+}
+
+function ensureSettingsFile(settingsPath: string): void {
+  try {
+    const dir = path.dirname(settingsPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+    if (!fs.existsSync(settingsPath)) {
+      const seed = {
+        app: {
+          lastActiveModelId: "paraformer-offline"
+        }
+      };
+      fs.writeFileSync(settingsPath, JSON.stringify(seed, null, 2), "utf-8");
+      writeFrontendLog(`[Settings] Created settings file at ${settingsPath}`);
+    }
+  } catch (error) {
+    console.error("[Settings] Failed to create settings file:", error);
+    writeFrontendLog(`[Settings] Failed to create settings file: ${String(error)}`);
+  }
+}
+
 function getFrontendRoot(): string {
   return path.resolve(__dirname, "..");
 }
@@ -165,13 +205,13 @@ function resolveModelsDir(): string | null {
     // Default to user dir so backend has a stable path to check
     return userModelsDir;
   }
-
   return null;
 }
 
 function resolveBackendArgs(): string[] {
   const { args: baseArgs } = resolveBackendCommand();
-  const args: string[] = [...baseArgs, "--host", BACKEND_HOST, "--port", String(BACKEND_PORT)];
+  const port = currentBackendPort ?? (DEFAULT_BACKEND_PORT || 6016);
+  const args: string[] = [...baseArgs, "--host", BACKEND_HOST, "--port", String(port)];
 
   if (DEFAULT_BACKEND) {
     args.push("--backend", DEFAULT_BACKEND);
@@ -182,8 +222,13 @@ function resolveBackendArgs(): string[] {
     args.push("--models-dir", modelsDir);
   }
 
-  if (process.env.ECHOTYPE_BACKEND_ARGS) {
-    args.push(...process.env.ECHOTYPE_BACKEND_ARGS.split(" "));
+  const extraArgs = process.env.ECHOTYPE_BACKEND_ARGS ? process.env.ECHOTYPE_BACKEND_ARGS.split(" ") : [];
+  const hasParentPid = args.includes("--parent-pid") || extraArgs.includes("--parent-pid");
+  if (!hasParentPid) {
+    args.push("--parent-pid", String(process.pid));
+  }
+  if (extraArgs.length > 0) {
+    args.push(...extraArgs);
   }
   return args;
 }
@@ -257,11 +302,73 @@ function sendToRenderer(channel: string, payload: unknown): void {
   }
 }
 
-function startBackend(): void {
+function updateBackendStatus(payload: { state: string; detail?: string; host?: string; port?: number }): void {
+  lastBackendStatus = payload;
+  sendToRenderer("backend-status", payload);
+}
+
+function parsePortRange(): { min: number; max: number } {
+  const raw = process.env.ECHOTYPE_BACKEND_PORT_RANGE;
+  if (!raw) return DEFAULT_PORT_RANGE;
+  const match = raw.match(/^(\d+)\s*-\s*(\d+)$/);
+  if (!match) return DEFAULT_PORT_RANGE;
+  const min = Number(match[1]);
+  const max = Number(match[2]);
+  if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max <= 0 || min >= max) {
+    return DEFAULT_PORT_RANGE;
+  }
+  return { min, max };
+}
+
+function isPortAvailable(host: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once("error", () => resolve(false));
+    server.once("listening", () => {
+      server.close(() => resolve(true));
+    });
+    server.listen(port, host);
+  });
+}
+
+async function pickAvailablePort(host: string): Promise<number | null> {
+  if (DEFAULT_BACKEND_PORT) {
+    const ok = await isPortAvailable(host, DEFAULT_BACKEND_PORT);
+    if (ok) return DEFAULT_BACKEND_PORT;
+    return null;
+  }
+
+  const range = parsePortRange();
+  const maxAttempts = 20;
+  for (let i = 0; i < maxAttempts; i += 1) {
+    const port = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+    if (await isPortAvailable(host, port)) {
+      return port;
+    }
+  }
+
+  for (let port = range.min; port <= range.max; port += 1) {
+    if (await isPortAvailable(host, port)) {
+      return port;
+    }
+  }
+  return null;
+}
+
+async function startBackend(): Promise<void> {
   if (backendProcess) {
     console.log("Backend already running");
     return;
   }
+  const pickedPort = await pickAvailablePort(BACKEND_HOST);
+  if (!pickedPort) {
+    const message = "No available backend port found in range";
+    console.error(message);
+    writeFrontendLog(`[Backend] ${message}`);
+    updateBackendStatus({ state: "error", detail: "port_unavailable" });
+    return;
+  }
+  currentBackendPort = pickedPort;
   const { command } = resolveBackendCommand();
   const cwd = resolveBackendCwd();
   const args = resolveBackendArgs();
@@ -277,7 +384,9 @@ function startBackend(): void {
       ...process.env,
       PYTHONUNBUFFERED: "1"
     },
-    stdio: ["ignore", "pipe", "pipe"]
+    stdio: ["ignore", "pipe", "pipe"],
+    detached: false,
+    windowsHide: true
   });
 
   console.log("Backend process spawned, PID:", backendProcess.pid);
@@ -298,7 +407,7 @@ function startBackend(): void {
 
   backendProcess.on("exit", (code, signal) => {
     console.log("Backend exited:", { code, signal });
-    sendToRenderer("backend-status", { state: "stopped", detail: `code=${code} signal=${signal}` });
+    updateBackendStatus({ state: "stopped", detail: `code=${code} signal=${signal}` });
     backendProcess = null;
   });
 
@@ -307,7 +416,7 @@ function startBackend(): void {
     sendToRenderer("backend-log", { level: "error", message: `Failed to start: ${error.message}` });
   });
 
-  sendToRenderer("backend-status", { state: "starting" });
+  updateBackendStatus({ state: "starting", host: BACKEND_HOST, port: currentBackendPort });
 }
 
 function stopBackend(): void {
@@ -331,7 +440,7 @@ function stopBackend(): void {
 function restartBackend(): void {
   stopBackend();
   setTimeout(() => {
-    startBackend();
+    void startBackend();
   }, 500);
 }
 
@@ -352,10 +461,6 @@ function createWindow(): void {
     }
   });
 
-  // Hide the menu bar
-  mainWindow.setMenu(null);
-  mainWindow.setMenuBarVisibility(false);
-
   const rendererUrl = process.env.ELECTRON_RENDERER_URL;
   if (rendererUrl) {
     void mainWindow.loadURL(rendererUrl);
@@ -363,16 +468,14 @@ function createWindow(): void {
     void mainWindow.loadFile(path.resolve(__dirname, "..", "dist", "index.html"));
   }
 
-  mainWindow.once("ready-to-show", () => {
-    mainWindow?.show();
+  mainWindow.webContents.on("did-finish-load", () => {
+    if (lastBackendStatus) {
+      sendToRenderer("backend-status", lastBackendStatus);
+    }
   });
 
-  mainWindow.on("close", (event) => {
-    if (!isQuitting) {
-      event.preventDefault();
-      mainWindow?.hide();
-      return false;
-    }
+  mainWindow.once("ready-to-show", () => {
+    mainWindow?.show();
   });
 
   mainWindow.on("closed", () => {
@@ -422,10 +525,7 @@ async function createTray(): Promise<void> {
     },
     {
       label: "Quit",
-      click: () => {
-        isQuitting = true;
-        app.quit();
-      }
+      click: () => app.quit()
     }
   ]);
   tray.setToolTip("Echotype");
@@ -435,11 +535,14 @@ async function createTray(): Promise<void> {
 
 function registerHotkeys(): void {
   try {
-    // Unify settings path to ~/.echotype/settings.json as requested
-    const settingsPath = path.join(os.homedir(), ".echotype", "settings.json");
+    // Use ~/.echotype on all platforms
+    const settingsPath = resolveSettingsPath();
+    ensureSettingsFile(settingsPath);
     console.log(`[Main] Initializing HotkeyManager with settings at: ${settingsPath}`);
 
-    hotkeyManager = new HotkeyManager(settingsPath);
+    hotkeyManager = new HotkeyManager(settingsPath, (level, message) => {
+      writeFrontendLog(`[Hotkey][${level.toUpperCase()}] ${message}`);
+    });
 
     // Set mainWindow reference for quick action support
     if (mainWindow) {
@@ -450,7 +553,8 @@ function registerHotkeys(): void {
     }
 
     hotkeyManager.registerAll((action: string, keyDown: boolean) => {
-      console.log(`[Main] Hotkey triggered: action=${action} keyDown=${keyDown}`);
+      writeFrontendLog(`[Hotkey] action=${action} keyDown=${keyDown}`);
+      console.log("Hotkey triggered:", action, "keyDown:", keyDown);
       if (action === "toggle_recording") {
         sendToRenderer("hotkey", { action: "toggle", keyDown });
       }
@@ -481,6 +585,10 @@ ipcMain.on("window-action", (_event, action: string) => {
 
 ipcMain.handle("backend-restart", () => {
   restartBackend();
+});
+
+ipcMain.handle("backend-status-get", () => {
+  return lastBackendStatus;
 });
 
 ipcMain.handle("open-external", (_event, url: string) => {
@@ -808,18 +916,44 @@ app.whenReady().then(async () => {
   }
 
   initFrontendLog();
-  // Remove global menu bar
-  Menu.setApplicationMenu(null);
   createWindow();
   await createTray();
   registerHotkeys();
-  startBackend();
+  void startBackend();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });
+});
+
+function handleProcessExit(reason: string): void {
+  console.error(`[Process] Exiting: ${reason}`);
+  writeFrontendLog(`[Process] Exiting: ${reason}`);
+  stopBackend();
+  closeFrontendLog();
+}
+
+process.on("exit", () => {
+  handleProcessExit("process exit");
+});
+
+process.on("SIGINT", () => {
+  handleProcessExit("SIGINT");
+  app.quit();
+});
+
+process.on("SIGTERM", () => {
+  handleProcessExit("SIGTERM");
+  app.quit();
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("[Process] Uncaught exception:", error);
+  writeFrontendLog(`[Process] Uncaught exception: ${error?.stack ?? error}`);
+  handleProcessExit("uncaughtException");
+  app.quit();
 });
 
 app.on("before-quit", () => {

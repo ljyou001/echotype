@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import type { IntegrationInstance } from "../services/integrations/types";
 
+const DEFAULT_ASR_MODEL_ID = "paraformer-offline";
+
 export type BackendStatus =
   | "loading"
   | "ready"
@@ -362,6 +364,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   initializeSettings: async () => {
     const recordingMode = await window.echotype?.getSetting?.("recordingMode");
+    const recordingModeManuallySet = await window.echotype?.getSetting?.("recordingMode_manuallySet");
     const appLanguage = await window.echotype?.getSetting?.("appLanguage");
     const lastActiveModelId = await window.echotype?.getSetting?.("lastActiveModelId");
     const outputDirectInput = await window.echotype?.getSetting?.("outputDirectInput");
@@ -420,11 +423,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (Object.keys(modelBackend).length > 0) {
       set({ modelBackend });
     }
-    if (lastActiveModelId !== undefined) {
-      set({ lastActiveModelId });
+    const catalogHasModel = (id?: string) =>
+      !!id && state.catalog.some((entry) => entry.id === id);
+
+    let resolvedLastActive = lastActiveModelId;
+    if (!resolvedLastActive || resolvedLastActive === "Qwen3-ASR-0.6B" || !catalogHasModel(resolvedLastActive)) {
+      const preferred = catalogHasModel(DEFAULT_ASR_MODEL_ID)
+        ? DEFAULT_ASR_MODEL_ID
+        : state.catalog.find((entry) => entry.kind === "asr")?.id;
+      if (preferred) {
+        resolvedLastActive = preferred;
+      }
     }
 
-    const recordingModeManuallySet = await window.echotype?.getSetting?.("recordingMode_manuallySet");
+    if (resolvedLastActive) {
+      set({ lastActiveModelId: resolvedLastActive });
+      if (resolvedLastActive !== lastActiveModelId) {
+        window.echotype?.updateSetting?.("lastActiveModelId", resolvedLastActive);
+      }
+    }
+
     if (recordingModeManuallySet && recordingMode !== undefined && !state._userHasSetRecordingMode) {
       set({ recordingMode, _recordingModeManuallySet: true });
     }

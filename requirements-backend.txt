@@ -1,4 +1,4 @@
-websockets==16.0
+websockets>=14.0
 numpy
 jieba
 sherpa_onnx==1.8.11

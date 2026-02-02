@@ -176,7 +176,7 @@ export function DebugPage() {
         <section className="debug-section">
           <h2>Settings File</h2>
           <p className="debug-hint">
-            Settings are stored in: <code>~/.echotype/settings.json</code>
+            Settings are stored in: <code>~/.echotype/settings.json</code>.
           </p>
           <p className="debug-hint">
             Check console logs for file read/write operations.

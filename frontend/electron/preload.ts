@@ -35,6 +35,9 @@ const api = {
   restartBackend: () => {
     ipcRenderer.invoke("backend-restart");
   },
+  getBackendStatus: (): Promise<{ state: string; detail?: string; host?: string; port?: number } | null> => {
+    return ipcRenderer.invoke("backend-status-get");
+  },
   openExternal: (url: string) => {
     ipcRenderer.invoke("open-external", url);
   },

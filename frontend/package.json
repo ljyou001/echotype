@@ -1,7 +1,7 @@
 {
   "name": "echotype-frontend",
   "private": true,
-  "version": "2.0.0",
+  "version": "0.1.0",
   "type": "module",
   "main": "dist-electron/main.js",
   "description": "Modern Voice-to-Text Application with AI Integration",
@@ -56,20 +56,30 @@
       "dist-electron/**/*",
       "assets/**/*"
     ],
-    "extraResources": [],
+    "asarUnpack": [
+      "node_modules/uiohook-napi/**/*",
+      "node_modules/@hurdlegroup/robotjs/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../models",
+        "to": "models"
+      },
+      {
+        "from": "../backend/models_catalog.json",
+        "to": "backend/models_catalog.json"
+      }
+    ],
     "win": {
       "target": [
+        "nsis",
         "zip"
       ],
-      "icon": "assets/icon.png",
+      "icon": "assets/icon-white.png",
       "extraResources": [
         {
           "from": "../dist/echotype-backend",
           "to": "backend"
-        },
-        {
-          "from": "../backend/models_catalog.json",
-          "to": "backend/models_catalog.json"
         }
       ]
     },
@@ -77,15 +87,11 @@
       "target": [
         "dmg"
       ],
-      "icon": "assets/icon.png",
+      "icon": "assets/icon-white.png",
       "extraResources": [
         {
           "from": "../dist/echotype-backend",
           "to": "backend"
-        },
-        {
-          "from": "../backend/models_catalog.json",
-          "to": "backend/models_catalog.json"
         }
       ]
     }

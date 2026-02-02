@@ -36,6 +36,9 @@ const api = {
     restartBackend: () => {
         electron_1.ipcRenderer.invoke("backend-restart");
     },
+    getBackendStatus: () => {
+        return electron_1.ipcRenderer.invoke("backend-status-get");
+    },
     openExternal: (url) => {
         electron_1.ipcRenderer.invoke("open-external", url);
     },

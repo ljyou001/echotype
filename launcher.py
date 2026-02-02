@@ -2,16 +2,18 @@ import sys
 import os
 import traceback
 
+
 def log(msg):
     """Log to both stdout and stderr for maximum visibility"""
     print(msg, flush=True)
     try:
         sys.stderr.write(f"{msg}\n")
         sys.stderr.flush()
-    except:
+    except Exception:
         pass
 
-log("="*40)
+
+log("=" * 40)
 log("EchoType Launcher Starting")
 log(f"sys.executable: {sys.executable}")
 log(f"sys.argv: {sys.argv}")
@@ -22,9 +24,9 @@ try:
         base_path = sys._MEIPASS
     else:
         base_path = os.path.dirname(os.path.abspath(__file__))
-    
+
     log(f"Base path: {base_path}")
-    
+
     # Add base path to sys.path
     if base_path not in sys.path:
         sys.path.insert(0, base_path)
@@ -35,7 +37,7 @@ try:
         log(f"Adding _internal to sys.path: {internal_path}")
         if internal_path not in sys.path:
             sys.path.insert(0, internal_path)
-        
+
         # Critical fix for nagisa's internal unqualified imports (like 'import prepro')
         nagisa_path = os.path.join(internal_path, "nagisa")
         if os.path.exists(nagisa_path):
@@ -61,10 +63,10 @@ try:
     log("Verifying dependencies...")
     import torch
     log(f"torch version: {torch.__version__}")
-    
+
     import transformers
     log(f"transformers version: {transformers.__version__}")
-    
+
     import websockets
     log("websockets imported")
 
@@ -77,12 +79,12 @@ try:
     # Start the main app
     log("Starting backend.app.main")
     from backend.app import main
-    log("="*40)
+    log("=" * 40)
     sys.exit(main())
 
 except Exception as e:
-    log("!"*40)
+    log("!" * 40)
     log(f"CRITICAL ERROR in Launcher: {e}")
     log(traceback.format_exc())
-    log("!"*40)
+    log("!" * 40)
     sys.exit(1)

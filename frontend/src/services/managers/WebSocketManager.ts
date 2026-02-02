@@ -11,8 +11,10 @@
 import { useAppStore } from "../../store/appStore";
 import type { ConnectionState } from "../types";
 
-const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://127.0.0.1:6016";
+const DEFAULT_WS_URL = import.meta.env.VITE_WS_URL
+  ?? (import.meta.env.PROD ? "" : "ws://127.0.0.1:6016");
 const RECONNECT_DELAY = 2000;
+const STARTUP_GRACE_MS = 30000;
 const WINDOW_KEY = "__echotype_ws_manager__";
 
 type MessageCallback = (data: string) => void;
@@ -29,6 +31,9 @@ export class WebSocketManager {
     private isConnecting = false;
     private connectionId = 0;
     private messageCallbacks: Set<MessageCallback> = new Set();
+    private graceUntil = 0;
+    private hasOpenedOnce = false;
+    private wsUrl: string = DEFAULT_WS_URL;
 
     private constructor() {
         console.log("[WebSocketManager] Instance created");
@@ -46,6 +51,10 @@ export class WebSocketManager {
      * 连接到WebSocket服务器
      */
     connect(): void {
+        if (!this.wsUrl) {
+            console.log("[WebSocketManager] WS URL not set yet; waiting for backend-status");
+            return;
+        }
         if (this.isConnecting) {
             console.log("[WebSocketManager] Already connecting");
             return;
@@ -63,7 +72,7 @@ export class WebSocketManager {
 
         this.connectionId++;
         const currentConnectionId = this.connectionId;
-        console.log(`[WebSocketManager] Starting connection #${currentConnectionId}`);
+        console.log(`[WebSocketManager] Starting connection #${currentConnectionId} (${this.wsUrl})`);
         this.isConnecting = true;
 
         // Clean up old connection
@@ -81,8 +90,13 @@ export class WebSocketManager {
         const store = useAppStore.getState();
         store.setConnectionState("connecting");
 
+        if (!this.hasOpenedOnce && this.graceUntil === 0) {
+            this.graceUntil = Date.now() + STARTUP_GRACE_MS;
+            console.log(`[WebSocketManager] Initial startup grace: ${STARTUP_GRACE_MS}ms`);
+        }
+
         // Create new connection
-        const ws = new WebSocket(WS_URL, "binary");
+        const ws = new WebSocket(this.wsUrl, "binary");
 
         ws.onopen = () => {
             if (currentConnectionId !== this.connectionId) {
@@ -97,6 +111,8 @@ export class WebSocketManager {
             const store = useAppStore.getState();
             store.setConnectionState("open");
             store.setErrorDetail(null);
+            this.hasOpenedOnce = true;
+            this.graceUntil = 0;
         };
 
         ws.onmessage = (event) => {
@@ -123,11 +139,16 @@ export class WebSocketManager {
 
             const store = useAppStore.getState();
             store.setConnectionState("closed");
-            store.setBackendStatus("offline");
-            store.setErrorDetail({
-                title: "Connection lost",
-                message: "Model connection closed"
-            });
+            if (this.isWithinGrace()) {
+                store.setBackendStatus("starting");
+                store.setErrorDetail(null);
+            } else {
+                store.setBackendStatus("offline");
+                store.setErrorDetail({
+                    title: "Connection lost",
+                    message: "Model connection closed"
+                });
+            }
 
             this.ws = null;
             this.scheduleReconnect();
@@ -142,10 +163,12 @@ export class WebSocketManager {
             console.error("[WebSocketManager] WebSocket error:", error);
 
             const store = useAppStore.getState();
-            store.setErrorDetail({
-                title: "WebSocket error",
-                message: "Failed to connect to model"
-            });
+            if (!this.isWithinGrace()) {
+                store.setErrorDetail({
+                    title: "WebSocket error",
+                    message: "Failed to connect to model"
+                });
+            }
         };
 
         this.ws = ws;
@@ -199,6 +222,15 @@ export class WebSocketManager {
     }
 
     /**
+     * 设置启动缓冲期（用于后端启动耗时，避免过早报错）
+     */
+    setStartupGrace(ms: number = STARTUP_GRACE_MS): void {
+        this.graceUntil = Date.now() + ms;
+        this.hasOpenedOnce = false;
+        console.log(`[WebSocketManager] Startup grace set: ${ms}ms`);
+    }
+
+    /**
      * 获取当前连接状态
      */
     getConnectionState(): ConnectionState {
@@ -219,6 +251,25 @@ export class WebSocketManager {
      */
     isConnected(): boolean {
         return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+    }
+
+    /**
+     * 更新 WebSocket URL（用于随机端口）
+     */
+    setWsUrl(url: string): void {
+        if (!url || this.wsUrl === url) return;
+        console.log(`[WebSocketManager] Updating WS URL: ${this.wsUrl} -> ${url}`);
+        this.wsUrl = url;
+        this.disconnect();
+        this.connect();
+    }
+
+    /**
+     * 使用 host/port 设置 WS URL
+     */
+    setBackendEndpoint(host: string, port: number): void {
+        if (!host || !port) return;
+        this.setWsUrl(`ws://${host}:${port}`);
     }
 
     private scheduleReconnect(): void {
@@ -243,6 +294,10 @@ export class WebSocketManager {
         } catch (error) {
             console.error("[WebSocketManager] Error cleaning up WebSocket:", error);
         }
+    }
+
+    private isWithinGrace(): boolean {
+        return !this.hasOpenedOnce && this.graceUntil > 0 && Date.now() < this.graceUntil;
     }
 }
 

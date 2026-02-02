@@ -124,6 +124,94 @@ cd C:\My\Dev\echotype\all-in-one\scripts
 
 ---
 
+## Bash 脚本 (macOS/Linux)
+
+### build_backend.sh
+打包后端为目录版可执行（PyInstaller onedir）。
+
+**运行**:
+```bash
+./scripts/build_backend.sh
+```
+
+**可选环境变量**:
+- `ECHO_INSTALL_DEPS=0` 跳过 `pip install -r requirements-backend.txt`
+
+**输出**:
+- `dist/echotype-backend/`
+
+---
+
+### build_frontend.sh
+打包前端（electron-builder），并可同步模型目录。
+
+**运行**:
+```bash
+./scripts/build_frontend.sh
+```
+
+**可选环境变量**:
+- `ECHO_COPY_MODELS=0` 跳过模型同步（默认会从 `~/.echotype/models` 同步）
+- `ECHO_MODELS_SRC=/path/to/models` 指定模型源目录
+
+**输出**:
+- `frontend/dist-package/`
+
+---
+
+### build_full_package.sh
+一键执行后端 + 前端打包。
+
+**运行**:
+```bash
+./scripts/build_full_package.sh
+```
+
+---
+
+### build_backend_mac_arm64.sh
+macOS Apple Silicon (arm64) 专用后端打包脚本（onedir）。
+
+**运行**:
+```bash
+./scripts/build_backend_mac_arm64.sh
+```
+
+**前置**:
+- 使用 arm64 Python 创建的 venv（可通过 `ECHO_VENV_PY` 指定）
+- 脚本会绕过 sherpa-onnx 对 `sentencepiece==0.1.96` 的限制并强制安装 `sentencepiece==0.1.99`（修复 0.1.96 在 arm64 上的加载失败）
+
+**输出**:
+- `dist/echotype-backend/`
+
+---
+
+### build_frontend_mac_arm64.sh
+macOS Apple Silicon (arm64) 专用前端打包脚本（确保 uiohook 使用 arm64 预编译）。
+
+**运行**:
+```bash
+./scripts/build_frontend_mac_arm64.sh
+```
+
+**前置**:
+- Node.js 为 arm64（脚本会检查）
+
+**输出**:
+- `frontend/dist-package-mac-arm64/`
+
+---
+
+### build_full_package_mac_arm64.sh
+macOS Apple Silicon (arm64) 一键打包。
+
+**运行**:
+```bash
+./scripts/build_full_package_mac_arm64.sh
+```
+
+---
+
 ## Batch 脚本
 
 ### start_backend_test.bat
