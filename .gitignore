@@ -29,6 +29,7 @@ share/python-wheels/
 *.egg
 MANIFEST
 dist-all-in-one
+scripts/Output
 
 # PyInstaller
 #  Usually these files are created by PyInstaller. More information see:

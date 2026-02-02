@@ -3,14 +3,14 @@
 
 $ErrorActionPreference = "Stop"
 
-# Get project root (parent of scripts directory)
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$projectRoot = Split-Path -Parent $scriptDir
+# Get script directory and resolve project root (two levels up)
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ProjectRoot = (Get-Item "$ScriptDir\..\..").FullName
 
-Push-Location $projectRoot
+Push-Location $ProjectRoot
 
 Write-Host "Syncing config.ini files to user directory..." -ForegroundColor Cyan
-Write-Host "Project root: $projectRoot" -ForegroundColor Gray
+Write-Host "Project root: $ProjectRoot" -ForegroundColor Gray
 Write-Host ""
 
 $models = @(
@@ -52,7 +52,8 @@ foreach ($model in $models) {
         Copy-Item $src $dst -Force
         Write-Host " ✓ OK" -ForegroundColor Green
         $successCount++
-    } catch {
+    }
+    catch {
         Write-Host " ✗ FAILED: $_" -ForegroundColor Red
         $failCount++
     }

@@ -24,7 +24,8 @@ Get-ChildItem -Path $configDir -Recurse | ForEach-Object {
     $relativePath = $_.FullName.Substring($configDir.Length + 1)
     if ($_.PSIsContainer) {
         Write-Host "  [DIR]  $relativePath" -ForegroundColor Blue
-    } else {
+    }
+    else {
         $size = "{0:N2} KB" -f ($_.Length / 1KB)
         Write-Host "  [FILE] $relativePath ($size)" -ForegroundColor White
     }
@@ -39,7 +40,8 @@ if (Test-Path $settingsFile) {
     Write-Host "-" * 80 -ForegroundColor Cyan
     Get-Content $settingsFile | ConvertFrom-Json | ConvertTo-Json -Depth 10 | Write-Host
     Write-Host ""
-} else {
+}
+else {
     Write-Host "settings.json not found" -ForegroundColor Yellow
     Write-Host ""
 }
@@ -52,7 +54,8 @@ if (Test-Path $integrationsFile) {
     Write-Host "-" * 80 -ForegroundColor Cyan
     Get-Content $integrationsFile | ConvertFrom-Json | ConvertTo-Json -Depth 10 | Write-Host
     Write-Host ""
-} else {
+}
+else {
     Write-Host "integrations.json not found" -ForegroundColor Yellow
     Write-Host ""
 }
@@ -68,7 +71,8 @@ if (Test-Path $logsDir) {
     
     if ($logFiles.Count -eq 0) {
         Write-Host "No log files found" -ForegroundColor Yellow
-    } else {
+    }
+    else {
         Write-Host "Total log files: $($logFiles.Count)" -ForegroundColor White
         Write-Host ""
         Write-Host "Recent log files:" -ForegroundColor White
@@ -86,5 +90,5 @@ Write-Host "Commands:" -ForegroundColor Cyan
 Write-Host "  Open config directory: explorer $configDir" -ForegroundColor White
 Write-Host "  Edit settings:         notepad $settingsFile" -ForegroundColor White
 Write-Host "  Edit integrations:     notepad $integrationsFile" -ForegroundColor White
-Write-Host "  View latest logs:      .\scripts\view_latest_logs.ps1" -ForegroundColor White
+Write-Host "  View latest logs:      .\scripts\windows\test-view-logs.ps1" -ForegroundColor White
 Write-Host "=" * 80 -ForegroundColor Cyan

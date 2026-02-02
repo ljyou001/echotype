@@ -126,12 +126,26 @@ class Qwen3Adapter:
         state.time_start = task.time_start
         state.time_submit = task.time_submit
 
-        audio = np.frombuffer(state.buffer, dtype=np.float32)
+        audio_full = np.frombuffer(state.buffer, dtype=np.float32)
+        
+        # For non-final (streaming) tasks, use a sliding window if audio is too long.
+        # This keeps the model context manageable and inference fast.
+        MAX_STREAMING_SEC = 15.0
+        audio = audio_full
+        if not task.is_final:
+            total_sec = len(audio_full) / state.sample_rate
+            if total_sec > MAX_STREAMING_SEC:
+                # Keep last 15 seconds
+                start_idx = int((total_sec - MAX_STREAMING_SEC) * state.sample_rate)
+                audio = audio_full[start_idx:]
+                # Note: This means partial results only reflect the last 15s, 
+                # but the final result will still use the full buffer.
+
         language = self._normalize_language(task.lang)
         return_time_stamps = False
 
         if not task.is_final:
-            if not self._should_transcribe_streaming(state, len(audio), state.sample_rate):
+            if not self._should_transcribe_streaming(state, len(audio_full), state.sample_rate):
                 return RecognitionResult(
                     task_id=task.task_id,
                     client_id=task.client_id,
@@ -164,7 +178,7 @@ class Qwen3Adapter:
             detected_lang = getattr(entry, "language", detected_lang)
 
         state.last_transcribe_time = time.time()
-        state.last_transcribe_samples = len(audio)
+        state.last_transcribe_samples = len(audio_full)
 
         result = RecognitionResult(
             task_id=task.task_id,
@@ -223,15 +237,13 @@ class Qwen3Adapter:
         new_samples = total_samples - state.last_transcribe_samples
         elapsed = time.time() - state.last_transcribe_time if state.last_transcribe_time else 0.0
         
-        # Limit: don't let audio get too long to avoid slowdown
-        # If accumulated audio exceeds 10 seconds, force transcription
+        # Audio duration
         total_duration = total_samples / sample_rate if sample_rate else 0.0
-        if total_duration > 10.0:
-            self._logger.warning(
-                f"Audio too long ({total_duration:.1f}s), forcing transcription. "
-                f"Consider using Paraformer for long recordings."
-            )
-            return True
+        
+        # For long recordings, enforce a minimum interval (e.g., 0.8s) to prevent CPU overload.
+        # The previous logic forced transcription for every chunk (>3 times/sec) after 10s.
+        if total_duration > 10.0 and elapsed < 0.8:
+            return False
 
         if state.last_transcribe_samples == 0:
             target_sec = min_sec

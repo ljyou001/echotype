@@ -25,6 +25,8 @@ class RecognitionState:
     timestamps: list[float] = field(default_factory=list)
     duration: float = 0.0
     accumulated_audio: bytes = b""  # Store all audio data for saving
+    last_transcribe_time: float = 0.0
+    last_transcribe_samples: int = 0
 
 
 class SherpaOnnxAdapter:
@@ -208,13 +210,53 @@ class SherpaOnnxAdapter:
                 lang=task.lang,
             )
         
-        state.duration = len(samples) / effective_rate
+        samples_full = np.frombuffer(state.accumulated_audio, dtype=np.float32)
+        
+        # For non-final (streaming) tasks, use a sliding window if audio is too long.
+        # This keeps the model context manageable and inference fast.
+        MAX_STREAMING_SEC = 30.0
+        samples = samples_full
+        
+        if not task.is_final:
+            total_sec = len(samples_full) / effective_rate
+            
+            # 1. Interval Check: Don't transcribe too frequently
+            new_samples = len(samples_full) - state.last_transcribe_samples
+            elapsed = time.time() - state.last_transcribe_time
+            # For Paraformer (fast), we target ~500ms chunks or at least 500ms since last run
+            if new_samples < int(0.5 * effective_rate) and elapsed < 0.5:
+                # Return previous result or empty if first time
+                return RecognitionResult(
+                    task_id=task.task_id,
+                    client_id=task.client_id,
+                    source=task.source,
+                    text=" ".join(state.tokens).replace("@@ ", ""),
+                    tokens=list(state.tokens),
+                    timestamps=list(state.timestamps),
+                    is_final=False,
+                    duration=len(samples_full) / effective_rate,
+                    time_start=task.time_start,
+                    time_submit=task.time_submit,
+                    time_complete=time.time(),
+                    lang=task.lang,
+                )
+
+            # 2. Sliding Window
+            if total_sec > MAX_STREAMING_SEC:
+                # Keep last 30 seconds
+                start_idx = int((total_sec - MAX_STREAMING_SEC) * effective_rate)
+                samples = samples_full[start_idx:]
+
+        state.duration = len(samples_full) / effective_rate
 
         t0_asr = time.perf_counter()
         stream = self._recognizer.create_stream()
         stream.accept_waveform(effective_rate, samples)
         self._recognizer.decode_stream(stream)
         asr_seconds = time.perf_counter() - t0_asr
+
+        state.last_transcribe_time = time.time()
+        state.last_transcribe_samples = len(samples_full)
 
         # For offline model, we replace the state with the full transcription of current buffer
         state.timestamps = [ts for ts in stream.result.timestamps]
