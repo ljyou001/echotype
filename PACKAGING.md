@@ -19,7 +19,8 @@ powershell -ExecutionPolicy Bypass -File scripts\windows\deploy-99-full-release.
 4.  **制作安装包**: `scripts\windows\deploy-03-make-installer.ps1`
 
 打包完成后，结果将保存在以下目录：
-*   **安装程序**: `scripts\Output\EchoType_v2.0.0_Setup.exe`
+*   **安装程序 (分卷)**: `scripts\Output\EchoType_v2.0.0_Setup.exe` (Inno Setup)
+*   **单文件 EXE (推荐)**: `scripts\Output\EchoType_v2.0.0_Single.exe` (基于 7-Zip SFX，无 2GB 限制)
 *   **便捷版/ZIP**: `frontend\dist-package`
 
 ---
@@ -52,7 +53,15 @@ powershell -ExecutionPolicy Bypass -File scripts\windows\deploy-99-full-release.
 由于整体体积通常超过 4GB，Electron 默认的 NSIS 无法处理。我们使用 Inno Setup 的分卷压缩功能制作 `.exe` 安装包。
 
 *   **脚本**: `scripts\windows\deploy-extras-installer-config.iss`
-*   **编译**: 使用 `ISCC.exe` 编译该脚本（通常由 `deploy-02-full-release.ps1` 自动触发）。
+*   **编译**: 使用 `ISCC.exe` 编译该脚本（通常由 `deploy-99-full-release.ps1` 自动触发）。
+
+### 4. 单文件 EXE 制作 (7-Zip SFX - 推荐)
+
+这是绕过 2GB 限制最简单且效率最高的方法。
+
+*   **脚本**: `scripts\windows\deploy-03-make-single-exe.ps1`
+*   **原理**: 使用 7-Zip 的 64 位自解压模块（7z.sfx），将前端、后端和所有模型文件封装成一个巨大的单体 `.exe`。
+*   **优点**: 只有一个文件，下载和传播最方便，解压速度极快。
 
 #### 资源集成 (Package.json 配置)
 `electron-builder` 会将构建好的 `dist\echotype-backend` 目录整体放入应用的 `resources` 文件夹中。

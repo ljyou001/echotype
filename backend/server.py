@@ -518,7 +518,7 @@ class BackendServer:
             duration = 0.0
             threshold = 0.5  # Accumulate first 500ms before sending
             last_sent_bytes = 0  # Track how many bytes we've sent to avoid re-sending
-            streaming_interval = 0.3  # Send streaming tasks every 300ms (reduced from 500ms)
+            streaming_interval = max(0.1, float(self._config.streaming_interval_sec))
             last_stream_time = 0.0
             
             while True:
@@ -645,4 +645,3 @@ class BackendServer:
             self._logger.info("Audio sender task cancelled")
         except Exception as e:
             self._logger.exception(f"Audio sender loop error: {e}")
-

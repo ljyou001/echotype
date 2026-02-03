@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { formatHotkeyLabel } from "../utils/hotkey";
 
 interface HotkeyConfigModalProps {
   isOpen: boolean;
@@ -204,30 +206,25 @@ export function HotkeyConfigModal({ isOpen, currentHotkey, onClose, onSave, onVa
   if (!isOpen) return null;
 
   const displayValue = isRecording
-    ? (pressedKeys.size > 0 ? formatHotkey(pressedKeys) : t("settings.hotkey.pressKeys"))
-    : recordedHotkey;
+    ? (pressedKeys.size > 0
+      ? formatHotkeyLabel(formatHotkey(pressedKeys), t)
+      : t("settings.hotkey.pressKeys"))
+    : formatHotkeyLabel(recordedHotkey, t);
 
-  // Quick button configuration (human-readable key names)
-  const quickKeys = isMac ? [
-    { label: "Right Command ⌘", value: "RCmd", description: "Right Command key" },
-    { label: "Right Option ⌥", value: "RAlt", description: "Right Option key" },
-    { label: "Right Control ⌃", value: "RCtrl", description: "Right Control key" },
-    { label: "Fn Function", value: "Fn", description: "Function key" },
-    { label: "F13", value: "F13", description: "F13 function key" },
-    { label: "F14", value: "F14", description: "F14 function key" },
-    { label: "F15", value: "F15", description: "F15 function key" }
-  ] : [
-    { label: "Right Ctrl", value: "RCtrl", description: "Right Control key" },
-    { label: "Right Alt", value: "RAlt", description: "Right Alt key" },
-    { label: "Right Win ⊞", value: "RWin", description: "Right Windows key" },
-    { label: "Scroll Lock", value: "ScrollLock", description: "Scroll Lock key" },
-    { label: "Pause", value: "Pause", description: "Pause key" },
-    { label: "Print Screen", value: "PrtSc", description: "Print Screen key" },
-    { label: "Caps Lock", value: "CapsLock", description: "Caps Lock key" }
-  ];
+  const quickKeys = (isMac
+    ? ["RCmd", "RAlt", "RCtrl", "Fn", "F13", "F14", "F15"]
+    : ["RCtrl", "RAlt", "RWin", "ScrollLock", "Pause", "PrtSc", "CapsLock"]
+  ).map((value) => {
+    const label = formatHotkeyLabel(value, t, { isMac });
+    const descKey = isMac
+      ? `settings.hotkey.quickKeyDescMac.${value}`
+      : `settings.hotkey.quickKeyDescWin.${value}`;
+    const description = t(descKey, { defaultValue: label });
+    return { value, label, description };
+  });
 
-  return (
-    <div className="modal-overlay" onClick={handleCancel}>
+  const modalContent = (
+    <div className="modal-overlay modal-overlay-portal" onClick={handleCancel}>
       <div className="modal-content" ref={modalRef} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{t("settings.hotkey.configure")}</h2>
@@ -267,9 +264,9 @@ export function HotkeyConfigModal({ isOpen, currentHotkey, onClose, onSave, onVa
           <div className="hotkey-quick-section">
             <h3>{t("settings.hotkey.quickSelect")}</h3>
             <p className="hotkey-quick-description">
-              {isMac 
-                ? "Right-side modifier keys or function keys are recommended to avoid conflicts with system shortcuts" 
-                : "Right-side modifier keys or special lock keys are recommended to avoid conflicts with system shortcuts"}
+              {isMac
+                ? t("settings.hotkey.quickSelectDescMac")
+                : t("settings.hotkey.quickSelectDescWin")}
             </p>
             <div className="hotkey-quick-grid">
               {quickKeys.map((qk) => (
@@ -308,4 +305,6 @@ export function HotkeyConfigModal({ isOpen, currentHotkey, onClose, onSave, onVa
       </div>
     </div>
   );
+
+  return typeof document === "undefined" ? null : createPortal(modalContent, document.body);
 }

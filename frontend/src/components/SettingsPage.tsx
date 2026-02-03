@@ -5,6 +5,7 @@ import { resolveAppLanguage } from "../i18n/config";
 import i18n from "../i18n/config";
 import { HotkeyConfigModal } from "./HotkeyConfigModal";
 import { MicrophoneSelector } from "./MicrophoneSelector";
+import { formatHotkeyLabel } from "../utils/hotkey";
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -26,6 +27,7 @@ export function SettingsPage() {
     return isMac ? "RCmd" : "RCtrl";
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const hotkeyDisplay = React.useMemo(() => formatHotkeyLabel(recordingHotkey, t), [recordingHotkey, t]);
 
   useEffect(() => {
     // Load current hotkey from Electron
@@ -77,7 +79,7 @@ export function SettingsPage() {
           <div className="hotkey-display-card">
             <div className="hotkey-current">
               <span className="hotkey-label">{t("settings.hotkey.current")}:</span>
-              <span className="hotkey-value">{recordingHotkey}</span>
+              <span className="hotkey-value">{hotkeyDisplay}</span>
             </div>
             <button
               className="btn-ghost"

@@ -117,6 +117,7 @@ Key fields:
 - `device_preference`: `cpu` | `cuda` | `auto`.
 - `allow_gpu`: boolean (default true if CUDA runtime exists).
 - `runtime_mode`: `in_process` | `external` (controls adapter isolation).
+- `streaming_interval_sec`: backend streaming task dispatch interval (seconds).
 - `qwen_backend`: `transformers` (default) or `vllm`.
 - `qwen_model_path`: explicit path for Qwen3 ASR model (optional).
 - `qwen_streaming_chunk_sec`: streaming throttle window in seconds.
