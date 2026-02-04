@@ -61,6 +61,8 @@ echo "Building backend (arm64) with PyInstaller..."
   --collect-all torch \
   --collect-all qwen_asr \
   --collect-all soynlp \
+  --collect-all dynet \
+  --collect-all accelerate \
   --copy-metadata six \
   --hidden-import websockets \
   --hidden-import qwen_asr \
@@ -72,6 +74,9 @@ echo "Building backend (arm64) with PyInstaller..."
   --hidden-import nagisa.utils \
   --hidden-import six \
   --hidden-import six.moves \
+  --hidden-import dynet \
+  --hidden-import dynet_config \
+  --hidden-import accelerate \
   launcher.py
 
 # Manually copy six.py (PyInstaller doesn't collect single-file modules well)
@@ -82,6 +87,16 @@ if [[ -f "$SIX_PY" ]]; then
   echo "✓ six.py copied"
 else
   echo "✗ Warning: six.py not found at $SIX_PY"
+fi
+
+# Manually copy dynet_config.py
+echo "Copying dynet_config.py manually..."
+DYNET_CONFIG="$($VENV_PY -c 'import dynet_config; print(dynet_config.__file__)' 2>/dev/null || echo '')"
+if [[ -f "$DYNET_CONFIG" ]]; then
+  cp "$DYNET_CONFIG" "$ROOT/dist/$BACKEND_NAME/_internal/"
+  echo "✓ dynet_config.py copied"
+else
+  echo "✗ Warning: dynet_config.py not found"
 fi
 
 echo "Backend build complete: dist/$BACKEND_NAME/"
