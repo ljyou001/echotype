@@ -48,6 +48,7 @@ export type CatalogEntry = {
   // Source info
   source?: string;
   repo?: string;
+  url?: string;
   description?: string;
 
   // Capabilities (from catalog)

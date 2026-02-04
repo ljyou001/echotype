@@ -10,6 +10,7 @@
       "kind": "asr",
       "version": "1.0.0",
       "source": "builtin",
+      "url": "https://github.com/ljyou001/echotype/releases/download/v2.0-model/paraformer.zip",
       "description": "Quick and high performance, requires low resources. Supports Chinese and English. Supports offline recognition.",
       "capabilities": {
         "supports_device_selection": true,
@@ -56,6 +57,7 @@
       "kind": "punctuation",
       "version": "1.0.0",
       "source": "builtin",
+      "url": "https://github.com/ljyou001/echotype/releases/download/v2.0-model/punc_ct-transformer_cn-en.zip",
       "description": "Punctuation model used automatically with Paraformer. Adds punctuation marks to recognized text.",
       "capabilities": {
         "supports_device_selection": false,
@@ -100,6 +102,7 @@
       "version": "0.6.0",
       "source": "hf",
       "repo": "Qwen/Qwen3-ASR-0.6B",
+      "url": "https://github.com/ljyou001/echotype/releases/download/v2.0-model/Qwen3-ASR-0.6B.zip",
       "description": "Advanced multilingual model with superior accuracy. Built-in punctuation support (no external model needed). Supports 30 languages and 22 Chinese dialects. Requires more resources than Paraformer.",
       "capabilities": {
         "supports_device_selection": true,

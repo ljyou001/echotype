@@ -1,7 +1,7 @@
 import React from "react";
-import { FiSettings, FiCheck } from "react-icons/fi";
+import { FiSettings, FiCheck, FiDownload, FiLoader, FiAlertTriangle, FiFolder } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
-import { useAppStore, type CatalogEntry } from "../store/appStore";
+import { useAppStore, type CatalogEntry, type AppState } from "../store/appStore";
 
 type ModelsPageProps = {
   onModelSwitch: (modelId: string, device?: string, options?: Record<string, unknown>) => void;
@@ -29,6 +29,7 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
   const setModelBackend = useAppStore((state) => state.setModelBackend);
   const getModelBackend = useAppStore((state) => state.getModelBackend);
   const setLastActiveModelId = useAppStore((state) => state.setLastActiveModelId);
+  const setErrorDetail = useAppStore((state: AppState) => state.setErrorDetail);
 
   const [selectedModelId, setSelectedModelId] = React.useState<string | undefined>(activeModelId);
   const [expandedSettings, setExpandedSettings] = React.useState<string | null>(null);
@@ -36,6 +37,50 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
   const [selectedDevice, setSelectedDevice] = React.useState<string>("auto");
   const [localLanguage, setLocalLanguage] = React.useState<string>("auto");
   const [localQwenBackend, setLocalQwenBackend] = React.useState<string>("transformers");
+
+  // Download state
+  const [modelStatus, setModelStatus] = React.useState<Record<string, boolean>>({});
+  const [downloadProgress, setDownloadProgress] = React.useState<Record<string, { progress: number, stage: string, error?: string }>>({});
+
+  const checkModels = React.useCallback(async () => {
+    if (window.echotype?.getModelsStatus) {
+      const status = await window.echotype.getModelsStatus();
+      setModelStatus(status);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void checkModels();
+  }, [checkModels]);
+
+  React.useEffect(() => {
+    const cleanup = window.echotype?.onModelDownloadProgress?.((payload) => {
+      setDownloadProgress(prev => ({
+        ...prev,
+        [payload.id]: {
+          progress: payload.progress,
+          stage: payload.stage,
+          error: payload.error
+        }
+      }));
+      if (payload.stage === 'done') {
+        void checkModels();
+        // Also trigger a backend restart or similar if needed? 
+        // For now just refresh local installation status
+      }
+    });
+    return cleanup;
+  }, [checkModels]);
+
+  const handleDownload = async (id: string, url: string) => {
+    if (!window.echotype?.downloadModel) return;
+    try {
+      setErrorDetail(null);
+      await window.echotype.downloadModel(id, url);
+    } catch (err) {
+      console.error("Download failed:", err);
+    }
+  };
 
   React.useEffect(() => {
     if (activeModelId && !selectedModelId) {
@@ -271,7 +316,7 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
         )}
         {visibleCatalog.map((entry) => {
           const isActive = entry.id === activeModelId;
-          const isInstalled = installedIds.has(entry.id);
+          const isInstalled = installedIds.has(entry.id) || modelStatus[entry.id];
           const isSelected = entry.id === selectedModelId;
           const isASR = entry.kind === "asr";
           const isAuxiliary = !isASR;
@@ -347,6 +392,54 @@ export function ModelsPage({ onModelSwitch }: ModelsPageProps) {
                   <p className="model-auxiliary-note">
                     {t("models.status.auxiliaryNote")}
                   </p>
+                )}
+
+                {/* Download Section */}
+                {!isInstalled && (
+                  <div className="model-download-section">
+                    {downloadProgress[entry.id] && (downloadProgress[entry.id].stage === 'downloading' || downloadProgress[entry.id].stage === 'extracting') ? (
+                      <div className="download-progress-area">
+                        <div className="download-progress-text">
+                          {downloadProgress[entry.id].stage === 'extracting'
+                            ? t("onboarding.models.extracting")
+                            : `${t("onboarding.models.downloading")} ${downloadProgress[entry.id].progress}%`}
+                        </div>
+                        <div className="download-progress-bar">
+                          <div
+                            className="download-progress-fill"
+                            style={{ width: `${downloadProgress[entry.id].progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="model-download-actions">
+                        {entry.url ? (
+                          <button
+                            type="button"
+                            className="btn-download"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload(entry.id, entry.url!);
+                            }}
+                          >
+                            <FiDownload />
+                            {t("onboarding.models.download")}
+                          </button>
+                        ) : (
+                          <span className="no-url-hint">
+                            <FiAlertTriangle />
+                            {t("models.status.comingSoon")}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {downloadProgress[entry.id]?.stage === 'error' && (
+                      <div className="download-error-msg">
+                        <FiAlertTriangle />
+                        {downloadProgress[entry.id].error}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 

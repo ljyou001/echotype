@@ -793,6 +793,85 @@ body {
   color: var(--text);
 }
 
+/* Model Download Section in Models Page */
+.model-download-section {
+  margin-top: 12px;
+  padding: 16px;
+  background: rgba(90, 39, 153, 0.04);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border);
+}
+
+.model-download-actions {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.btn-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: var(--secondary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.btn-download:hover {
+  background: #3376d8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(65, 139, 243, 0.25);
+}
+
+.download-progress-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.download-progress-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--secondary);
+}
+
+.download-progress-bar {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.download-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--secondary), var(--accent));
+  transition: width 0.3s ease;
+}
+
+.download-error-msg {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.no-url-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .model-setting-item {
   display: flex;
   flex-direction: column;
