@@ -79,7 +79,8 @@ export function createQuickActionWindow(text, instances) {
         webPreferences: {
             preload: path.resolve(__dirname, "preload.cjs"),
             contextIsolation: true,
-            nodeIntegration: false
+            nodeIntegration: false,
+            backgroundThrottling: false
         }
     });
     // Load the quick action page

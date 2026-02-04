@@ -59,7 +59,8 @@
     "extraResources": [],
     "win": {
       "target": [
-        "zip"
+        "zip",
+        "appx"
       ],
       "icon": "assets/icon.png",
       "extraResources": [
@@ -71,6 +72,17 @@
           "from": "../backend/models_catalog.json",
           "to": "backend/models_catalog.json"
         }
+      ]
+    },
+    "appx": {
+      "identityName": "${env.APPX_IDENTITY_NAME}",
+      "publisher": "${env.WINDOWS_PUBLISHER_ID}",
+      "publisherDisplayName": "${env.APPX_PUBLISHER_DISPLAY_NAME}",
+      "applicationId": "EchoType",
+      "displayName": "EchoType",
+      "languages": [
+        "en-US",
+        "zh-CN"
       ]
     },
     "mac": {

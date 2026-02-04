@@ -79,6 +79,19 @@ powershell -ExecutionPolicy Bypass -File scripts\windows\deploy-99-full-release.
 ]
 ```
 
+### 5. Microsoft Store (AppX) 打包 (正式发布)
+
+EchoType 支持打包为 `.msix` / `.appx` 格式以发布到微软商店。我们通过 `.env` 文件来安全地管理开发者 ID。
+
+*   **资源文件**: 已通过 `frontend\scripts\generate-icons.cjs` 自动生成到 `frontend\build\appx`。
+*   **隐私配置**: 在根目录创建 `.env` 文件（可参考 `.env.example`），填入你的 `WINDOWS_PUBLISHER_ID` 等信息。
+*   **一键打包**:
+    ```powershell
+    # 运行专门的脚本来加载环境变量并打包
+    powershell -ExecutionPolicy Bypass -File scripts\windows\deploy-04-make-appx.ps1
+    ```
+*   **输出**: 打包后的文件位于 `frontend\dist-package\EchoType_xxx.appx`。
+
 ---
 
 ## ⚠️ 常见问题修复
