@@ -14,12 +14,12 @@ export function createQuickActionWindow(text, instances) {
     const display = screen.getDisplayNearestPoint(cursorPoint);
     // Window dimensions - calculate height based on number of instances
     const width = 520;
-    const baseHeight = 180; // Header + text area + hint
+    const baseHeight = 260; // Header + text area + hint (increased for better initial display)
     const iconsPerRow = 8; // Max icons per row
     const iconSize = 58; // Icon button size + gap
     const rows = Math.ceil(instances.length / iconsPerRow);
     const iconsHeight = rows * iconSize + 16; // Add padding
-    const initialHeight = Math.min(baseHeight + iconsHeight, 400); // Cap at 400px
+    const initialHeight = Math.min(baseHeight + iconsHeight, 500); // Cap at 500px (increased from 400px)
     console.log('[QuickActionWindow] Creating window:', {
         width,
         initialHeight,
@@ -79,7 +79,8 @@ export function createQuickActionWindow(text, instances) {
         webPreferences: {
             preload: path.resolve(__dirname, "preload.cjs"),
             contextIsolation: true,
-            nodeIntegration: false
+            nodeIntegration: false,
+            backgroundThrottling: false
         }
     });
     // Load the quick action page

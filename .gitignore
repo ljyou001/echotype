@@ -32,6 +32,7 @@ share/python-wheels/
 *.egg
 MANIFEST
 dist-all-in-one
+scripts/Output
 
 # Local runtime environments
 .node-*/

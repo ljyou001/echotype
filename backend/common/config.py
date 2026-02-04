@@ -54,15 +54,16 @@ class BackendConfig:
     allow_gpu: bool = True
     runtime_mode: str = "in_process"
     streaming_default: bool = False  # Default to offline mode, streaming disabled
+    streaming_interval_sec: float = 0.8  # Interval for backend streaming task dispatch
 
     qwen_backend: str = "transformers"
     qwen_model_path: Optional[str] = None
     qwen_max_new_tokens: int = 256
     qwen_max_inference_batch_size: int = 8
     qwen_gpu_memory_utilization: float = 0.7
-    qwen_streaming_chunk_sec: float = 0.5  # Base chunk duration (500ms)
-    qwen_streaming_min_sec: float = 0.3    # Min for fast speech (300ms)
-    qwen_streaming_max_sec: float = 1.5    # Max for slow speech (1.5s)
+    qwen_streaming_chunk_sec: float = 1.0  # Base chunk duration (1000ms)
+    qwen_streaming_min_sec: float = 0.8    # Min for fast speech (800ms)
+    qwen_streaming_max_sec: float = 2.0    # Max for slow speech (2.0s)
     qwen_streaming_fast_ratio: float = 0.8 # Threshold for fast speech detection
     qwen_streaming_slow_ratio: float = 0.3 # Threshold for slow speech detection
     models_catalog_path: Optional[str] = None

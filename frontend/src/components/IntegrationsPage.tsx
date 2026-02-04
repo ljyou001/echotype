@@ -176,10 +176,16 @@ function ConfigDialog({ instance, onClose }: { instance: IntegrationInstance; on
             </select>
           </div>
 
-          {schema.map(field => (
+          {schema.map(field => {
+            const labelKey = `integrations.plugins.${instance.pluginId}.config.${field.key}.label`;
+            const descKey = `integrations.plugins.${instance.pluginId}.config.${field.key}.description`;
+            const label = t(labelKey, { defaultValue: field.label });
+            const description = field.description ? t(descKey, { defaultValue: field.description }) : undefined;
+
+            return (
             <div key={field.key} className="form-group">
-              <label>{field.label}</label>
-              {field.description && <p className="form-description">{field.description}</p>}
+              <label>{label}</label>
+              {description && <p className="form-description">{description}</p>}
               
               {field.type === 'text' && (
                 <input
@@ -224,7 +230,8 @@ function ConfigDialog({ instance, onClose }: { instance: IntegrationInstance; on
                 </select>
               )}
             </div>
-          ))}
+          );
+          })}
         </div>
 
         <div className="modal-footer">

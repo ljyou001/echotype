@@ -1,17 +1,27 @@
 # EchoType Packaging Guide (Windows)
 
-本指南介绍了如何将 EchoType 打包为适用于 Windows 的独立运行包（绿色版）。
+本指南介绍了如何将 EchoType 打包为适用于 Windows 的安装程序或独立运行包。
 
-## 🚀 一键打包 (推荐)
+## 🚀 部署流程 (推荐)
 
-我们提供了一个自动化脚本，可以自动完成从 Python 后端编译到 Electron 前端封装的全过程：
+我们现在将打包流程拆分为模块化脚本，你可以按顺序执行，或直接运行一键发布脚本：
 
+### A. 一键全量发布 (Master Release)
 ```powershell
 # 在根目录下运行
-powershell -ExecutionPolicy Bypass -File scripts\release_windows.ps1
+powershell -ExecutionPolicy Bypass -File scripts\windows\deploy-99-full-release.ps1
 ```
 
-打包完成后，结果将保存在 `frontend\dist-package` 目录中。
+### B. 分步手动执行
+1.  **同步配置**: `scripts\windows\deploy-00-sync-configs.ps1`
+2.  **构建后端**: `scripts\windows\deploy-01-build-backend.ps1`
+3.  **构建前端**: `scripts\windows\deploy-02-build-frontend.ps1`
+4.  **制作安装包**: `scripts\windows\deploy-03-make-installer.ps1`
+
+打包完成后，结果将保存在以下目录：
+*   **安装程序 (分卷)**: `scripts\Output\EchoType_v2.0.0_Setup.exe` (Inno Setup)
+*   **单文件 EXE (推荐)**: `scripts\Output\EchoType_v2.0.0_Single.exe` (基于 7-Zip SFX，无 2GB 限制)
+*   **便捷版/ZIP**: `frontend\dist-package`
 
 ---
 
@@ -24,7 +34,7 @@ powershell -ExecutionPolicy Bypass -File scripts\release_windows.ps1
 由于项目包含 `torch`, `transformers` 以及 `qwen_asr` 等大型复杂依赖，我们采用 `onedir` 模式进行打包，以确保启动速度。
 
 *   **入口点**: `launcher.py` (包含对 `nagisa` 等库寻址问题的修复)。
-*   **构建脚本**: `scripts\build_backend.ps1`
+*   **构建脚本**: `scripts\windows\deploy-01-build-backend.ps1`
 *   **关键配置**:
     *   使用 `--collect-all` 显式收集 `qwen_asr`, `nagisa`, `torch`, `transformers`。
     *   对 `nagisa` 内部不规范导入进行路径修复 (`--paths`)。
@@ -35,8 +45,23 @@ powershell -ExecutionPolicy Bypass -File scripts\release_windows.ps1
 使用 `electron-builder` 进行封装。
 
 *   **配置文件**: `frontend/package.json`
-*   **打包目标**: `portable` (绿色版目录) 和 `zip` (压缩包)。
-*   **注意**: **不要使用 NSIS (安装程序)**，因为打包后的资源体积通常超过 2GB，NSIS 暂不支持此类超大包。
+*   **打包目标**: `zip` (为安装程序提供基础包)。
+*   **执行**: 在 `frontend` 目录下运行 `npm run package`。
+
+### 3. 安装包制作 (Inno Setup)
+
+由于整体体积通常超过 4GB，Electron 默认的 NSIS 无法处理。我们使用 Inno Setup 的分卷压缩功能制作 `.exe` 安装包。
+
+*   **脚本**: `scripts\windows\deploy-extras-installer-config.iss`
+*   **编译**: 使用 `ISCC.exe` 编译该脚本（通常由 `deploy-99-full-release.ps1` 自动触发）。
+
+### 4. 单文件 EXE 制作 (7-Zip SFX - 推荐)
+
+这是绕过 2GB 限制最简单且效率最高的方法。
+
+*   **脚本**: `scripts\windows\deploy-03-make-single-exe.ps1`
+*   **原理**: 使用 7-Zip 的 64 位自解压模块（7z.sfx），将前端、后端和所有模型文件封装成一个巨大的单体 `.exe`。
+*   **优点**: 只有一个文件，下载和传播最方便，解压速度极快。
 
 #### 资源集成 (Package.json 配置)
 `electron-builder` 会将构建好的 `dist\echotype-backend` 目录整体放入应用的 `resources` 文件夹中。
@@ -53,6 +78,19 @@ powershell -ExecutionPolicy Bypass -File scripts\release_windows.ps1
   }
 ]
 ```
+
+### 5. Microsoft Store (AppX) 打包 (正式发布)
+
+EchoType 支持打包为 `.msix` / `.appx` 格式以发布到微软商店。我们通过 `.env` 文件来安全地管理开发者 ID。
+
+*   **资源文件**: 已通过 `frontend\scripts\generate-icons.cjs` 自动生成到 `frontend\build\appx`。
+*   **隐私配置**: 在根目录创建 `.env` 文件（可参考 `.env.example`），填入你的 `WINDOWS_PUBLISHER_ID` 等信息。
+*   **一键打包**:
+    ```powershell
+    # 运行专门的脚本来加载环境变量并打包
+    powershell -ExecutionPolicy Bypass -File scripts\windows\deploy-04-make-appx.ps1
+    ```
+*   **输出**: 打包后的文件位于 `frontend\dist-package\EchoType_xxx.appx`。
 
 ---
 

@@ -8,8 +8,6 @@ from typing import Any, Dict, List, Optional
 from .common.config import BackendConfig
 from .common.protocol import build_progress
 from .common.types import BackendAdapter
-from .qwen3.adapter import Qwen3Adapter
-from .sherpa_adapter.adapter import SherpaOnnxAdapter
 
 
 class BackendManager:
@@ -182,8 +180,10 @@ class BackendManager:
     def _build_adapter(self, config: BackendConfig) -> BackendAdapter:
         backend = (config.backend or "").strip().lower()
         if backend in {"sherpa_onnx", "sherpa-onnx", "paraformer"}:
+            from .sherpa_adapter.adapter import SherpaOnnxAdapter
             return SherpaOnnxAdapter(config, progress_callback=self.record_progress, logger=self._logger)
         if backend in {"qwen3", "qwen-asr", "qwen_asr"}:
+            from .qwen3.adapter import Qwen3Adapter
             return Qwen3Adapter(config, progress_callback=self.record_progress, logger=self._logger)
         raise ValueError(f"Unknown backend: {config.backend}")
 

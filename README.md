@@ -299,11 +299,12 @@ Contributions are welcome! Please read our contributing guidelines before submit
 2. Create a feature branch
 3. Make your changes
 4. Test thoroughly
-5. Submit a pull request
+5. **Sign the [Contributor License Agreement (CLA)](CLA.md)** if you are a first-time contributor (see [CONTRIBUTING.md](CONTRIBUTING.md))
+6. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)**. See the [LICENSE](LICENSE) file for details. Contributions are governed by the [Contributor License Agreement (CLA)](CLA.md).
 
 ## 🙏 Acknowledgments
 

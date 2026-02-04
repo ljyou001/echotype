@@ -1,6 +1,14 @@
 # Build script for EchoType Backend
 # This script bundles the Python backend into a single executable for Windows.
 
+# Get the script directory and resolve project root
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $ScriptDir
+$ProjectRoot = (Get-Item "..\..").FullName
+
+# Always run from Project Root
+Set-Location $ProjectRoot
+
 $BackendName = "echotype-backend"
 $VenvPath = ".\.venv"
 $PythonExe = "$VenvPath\Scripts\python.exe"

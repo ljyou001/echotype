@@ -24,6 +24,12 @@
     "F15": "F15",
     "Fn": "Fn"
   },
+  "hotkeyLabelMac": {
+    "RAlt": "Right Option ⌥",
+    "LAlt": "Left Option ⌥",
+    "RCmd": "Right Command ⌘",
+    "LCmd": "Left Command ⌘"
+  },
   "nav": {
     "home": "Home",
     "history": "History",
@@ -267,6 +273,26 @@
       "pressKeys": "Press any key...",
       "clickToRecord": "Click to record a new hotkey",
       "quickSelect": "Quick Select",
+      "quickSelectDescMac": "Right-side modifier keys or function keys are recommended to avoid conflicts with system shortcuts",
+      "quickSelectDescWin": "Right-side modifier keys or special lock keys are recommended to avoid conflicts with system shortcuts",
+      "quickKeyDescMac": {
+        "RCmd": "Right Command key",
+        "RAlt": "Right Option key",
+        "RCtrl": "Right Control key",
+        "Fn": "Function key",
+        "F13": "F13 function key",
+        "F14": "F14 function key",
+        "F15": "F15 function key"
+      },
+      "quickKeyDescWin": {
+        "RCtrl": "Right Control key",
+        "RAlt": "Right Alt key",
+        "RWin": "Right Windows key",
+        "ScrollLock": "Scroll Lock key",
+        "Pause": "Pause key",
+        "PrtSc": "Print Screen key",
+        "CapsLock": "Caps Lock key"
+      },
       "description": "Set a global hotkey to toggle recording. Default is a single key (right-side modifier), but key combinations are also supported.",
       "note": "Important Notes",
       "noteItem1": "Default uses single key (Right Ctrl/Cmd) to avoid conflicts",

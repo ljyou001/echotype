@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { OrbAnimation } from "./OrbAnimation";
 import { useAppStore } from "../store/appStore";
 import type { PageKey } from "./Sidebar";
+import { formatHotkeyLabel } from "../utils/hotkey";
 
 const DEFAULT_HOTKEY = "RCtrl";
 
@@ -89,15 +90,10 @@ export function HomePage({ onNavigate, onRestartBackend }: HomePageProps) {
     return match?.label || inputDevices[0]?.label || t("common.defaultMicrophone");
   }, [inputDevices, selectedInputId, t]);
 
-  const hotkeyDisplay = React.useMemo(() => {
-    const parts = recordingHotkey.split("+");
-    const labels = parts.map((p) => {
-      const key = `hotkeyLabel.${p.trim()}`;
-      const label = t(key);
-      return label === key ? p : label;
-    });
-    return labels.join(" + ");
-  }, [recordingHotkey, t]);
+  const hotkeyDisplay = React.useMemo(
+    () => formatHotkeyLabel(recordingHotkey, t),
+    [recordingHotkey, t]
+  );
 
   return (
     <div className={`page home-page ${showCards ? 'ready-state' : ''}`}>

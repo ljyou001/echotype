@@ -1,0 +1,134 @@
+name: CLA Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+
+jobs:
+  cla:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR committers
+        id: committers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          COMMITTERS=$(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/commits --jq '.[].author.login // empty' | grep -v '^$' | sort -u)
+          # Format for GITHUB_OUTPUT multiline string
+          echo "committers<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITTERS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Check CLA signatures
+        id: check
+        run: |
+          # Read signature file, ignore comments and empty lines, convert to lowercase for case-insensitive comparison
+          if [ ! -f .github/cla-signatures.txt ]; then
+            echo "Error: .github/cla-signatures.txt not found!"
+            exit 1
+          fi
+          
+          SIGNATURES=$(grep -v '^#' .github/cla-signatures.txt | grep -v '^[[:space:]]*$' | tr '[:upper:]' '[:lower:]')
+          MISSING=""
+          
+          while IFS= read -r user; do
+            user_lower=$(echo "$user" | tr '[:upper:]' '[:lower:]')
+            if [ -z "$user_lower" ]; then continue; fi
+            
+            # Check if user is in the signatures list
+            if ! echo "$SIGNATURES" | grep -qFx "$user_lower"; then
+              if [ -n "$MISSING" ]; then MISSING="$MISSING, "; fi
+              MISSING="${MISSING}@${user}"
+            fi
+          done <<< "${{ steps.committers.outputs.committers }}"
+          
+          echo "missing=$MISSING" >> $GITHUB_OUTPUT
+          if [ -n "$MISSING" ]; then
+            echo "signed=false" >> $GITHUB_OUTPUT
+          else
+            echo "signed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on PR when CLA not signed
+        if: steps.check.outputs.signed == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## ❌ CLA Check Failed / CLA 检查未通过
+
+            The following contributor(s) have not signed the **Contributor License Agreement (CLA)**:
+            以下贡献者尚未签署 CLA：
+
+            👉 **${{ steps.check.outputs.missing }}**
+
+            ---
+            
+            ### How to fix? / 如何修复？
+            
+            1. **Read / 阅读**: [CLA.md](https://github.com/${{ github.repository }}/blob/main/CLA.md)
+            2. **Sign / 签署**: Open an Issue with title \`[CLA] I agree\` stating you accept the terms.
+               (请开一个标题为 \`[CLA] I agree\` 的 Issue 声明同意条款)
+            3. **Wait / 等待**: The maintainer will add you to the signature list manually.
+               (维护者会手动将你加入白名单)
+            
+            Once added, this check will pass automatically on your next commit or re-run.
+            `;
+            
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const botComment = comments.find(c => c.user.type === 'Bot' && (c.body.includes('CLA Check Failed') || c.body.includes('CLA 检查未通过')));
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Remove CLA comment when signed
+        if: steps.check.outputs.signed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const botComment = comments.find(c => c.user.type === 'Bot' && (c.body.includes('CLA Check Failed') || c.body.includes('CLA 检查未通过')));
+            
+            if (botComment) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+              });
+            }
+
+      - name: Fail if CLA not signed
+        if: steps.check.outputs.signed == 'false'
+        run: |
+          echo "::error::Contributors not signed: ${{ steps.check.outputs.missing }}"
+          exit 1

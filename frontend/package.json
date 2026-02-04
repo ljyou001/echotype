@@ -72,8 +72,8 @@
     ],
     "win": {
       "target": [
-        "nsis",
-        "zip"
+        "zip",
+        "appx"
       ],
       "icon": "assets/icon-white.png",
       "extraResources": [
@@ -81,6 +81,17 @@
           "from": "../dist/echotype-backend",
           "to": "backend"
         }
+      ]
+    },
+    "appx": {
+      "identityName": "${env.APPX_IDENTITY_NAME}",
+      "publisher": "${env.WINDOWS_PUBLISHER_ID}",
+      "publisherDisplayName": "${env.APPX_PUBLISHER_DISPLAY_NAME}",
+      "applicationId": "EchoType",
+      "displayName": "EchoType",
+      "languages": [
+        "en-US",
+        "zh-CN"
       ]
     },
     "mac": {

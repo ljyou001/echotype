@@ -1,0 +1,6 @@
+;!@Install@!UTF-8!
+Title="EchoType v2.0.0 Setup"
+BeginPrompt="Welcome to EchoType! This will extract EchoType to a folder of your choice. Do you want to continue?"
+Progress="yes"
+RunProgram="powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File deploy-extras-smart-logic.ps1"
+!@InstallEnd@!

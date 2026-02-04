@@ -1,4 +1,5 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell, clipboard, systemPreferences, screen } from "electron";
+import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell, clipboard, systemPreferences, screen, powerSaveBlocker } from "electron";
+import os from "node:os";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -6,7 +7,6 @@ import { fileURLToPath } from "node:url";
 import net from "node:net";
 import HotkeyManager from "./hotkey-manager.js";
 import { createQuickActionWindow, closeQuickActionWindow, resizeQuickActionWindow, getQuickActionWindow } from "./quick-action-window.js";
-import os from "node:os";
 import robot from "@hurdlegroup/robotjs";
 import Jimp from "jimp";
 import { setupModelManager } from "./model-manager.js";
@@ -29,6 +29,24 @@ let enableFileLogging = true; // File logging enabled by default
 if (process.env.ECHOTYPE_NO_LOG_FILE === "1") {
     enableFileLogging = false;
 }
+// Optimization: Disable background throttling for the app
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+// Set main process priority to Above Normal
+try {
+    os.setPriority(os.constants.priority.PRIORITY_ABOVE_NORMAL);
+    console.log("[Main] Main process priority set to Above Normal");
+}
+catch (error) {
+    console.error("[Main] Failed to set main process priority:", error);
+}
+// macOS Specific: Disable App Nap to prevent background throttling
+if (process.platform === 'darwin') {
+    app.setAppNapAllowed?.(false);
+    console.log("[Main] macOS: App Nap disabled");
+}
+let powerSaveBlockerId = null;
 // Initialize frontend log
 function initFrontendLog() {
     if (!enableFileLogging) {
@@ -338,6 +356,7 @@ async function startBackend() {
         detached: false,
         windowsHide: true
     });
+    // No global high priority at startup - we'll bump it dynamically during recording
     console.log("Backend process spawned, PID:", backendProcess.pid);
     backendProcess.stdout?.on("data", (data) => {
         const message = data.toString();
@@ -397,7 +416,8 @@ function createWindow() {
         webPreferences: {
             preload: path.resolve(__dirname, "preload.cjs"),
             contextIsolation: true,
-            nodeIntegration: false
+            nodeIntegration: false,
+            backgroundThrottling: true // Allow main window to throttle when hidden
         }
     });
     const rendererUrl = process.env.ELECTRON_RENDERER_URL;
@@ -488,6 +508,19 @@ function registerHotkeys() {
             writeFrontendLog(`[Hotkey] action=${action} keyDown=${keyDown}`);
             console.log("Hotkey triggered:", action, "keyDown:", keyDown);
             if (action === "toggle_recording") {
+                // Manage PowerSaveBlocker during recording
+                if (keyDown) {
+                    if (powerSaveBlockerId === null) {
+                        powerSaveBlockerId = powerSaveBlocker.start('prevent-app-suspension');
+                        console.log("[Main] PowerSaveBlocker started (recording)");
+                    }
+                }
+                else {
+                    // In toggle mode, we might want to keep it on until the process finishes
+                    // For now, let's keep it simple: stop it when key is released 
+                    // if we are in push-to-talk.
+                    // However, the actual recording state is managed in the renderer/backend.
+                }
                 sendToRenderer("hotkey", { action: "toggle", keyDown });
             }
         });
@@ -643,6 +676,37 @@ ipcMain.handle("type-text", async (_event, text) => {
 // Add catalog reading IPC handler
 ipcMain.on("tray-status", (_event, status) => {
     updateTrayIcon(status);
+    // Dynamic Resource Management
+    const pid = backendProcess?.pid;
+    if (status === "recording" || status === "loading") {
+        // ACTIVE STATE: Boost priority and prevent suspension
+        if (pid) {
+            try {
+                os.setPriority(pid, os.constants.priority.PRIORITY_HIGH);
+                console.log(`[Main] Boosted backend (PID ${pid}) to HIGH priority`);
+            }
+            catch (e) { }
+        }
+        if (powerSaveBlockerId === null) {
+            powerSaveBlockerId = powerSaveBlocker.start('prevent-app-suspension');
+            console.log("[Main] PowerSaveBlocker active");
+        }
+    }
+    else {
+        // IDLE STATE: Return to normal to save resources
+        if (pid) {
+            try {
+                os.setPriority(pid, os.constants.priority.PRIORITY_NORMAL);
+                console.log(`[Main] Restored backend (PID ${pid}) to NORMAL priority`);
+            }
+            catch (e) { }
+        }
+        if (powerSaveBlockerId !== null) {
+            powerSaveBlocker.stop(powerSaveBlockerId);
+            powerSaveBlockerId = null;
+            console.log("[Main] PowerSaveBlocker released");
+        }
+    }
 });
 ipcMain.handle("read-catalog", async () => {
     try {

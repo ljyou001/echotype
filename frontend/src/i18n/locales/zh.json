@@ -24,6 +24,12 @@
     "F15": "F15",
     "Fn": "Fn"
   },
+  "hotkeyLabelMac": {
+    "RAlt": "右 Option ⌥",
+    "LAlt": "左 Option ⌥",
+    "RCmd": "右 Command ⌘",
+    "LCmd": "左 Command ⌘"
+  },
   "nav": {
     "home": "主页",
     "history": "历史记录",
@@ -267,6 +273,26 @@
       "pressKeys": "按下任意键...",
       "clickToRecord": "点击录制新快捷键",
       "quickSelect": "快速选择",
+      "quickSelectDescMac": "建议使用右侧修饰键或功能键，避免与系统快捷键冲突",
+      "quickSelectDescWin": "建议使用右侧修饰键或特殊锁定键，避免与系统快捷键冲突",
+      "quickKeyDescMac": {
+        "RCmd": "右 Command 键",
+        "RAlt": "右 Option 键",
+        "RCtrl": "右 Control 键",
+        "Fn": "功能键",
+        "F13": "F13 功能键",
+        "F14": "F14 功能键",
+        "F15": "F15 功能键"
+      },
+      "quickKeyDescWin": {
+        "RCtrl": "右 Ctrl 键",
+        "RAlt": "右 Alt 键",
+        "RWin": "右 Windows 键",
+        "ScrollLock": "滚动锁定键",
+        "Pause": "暂停键",
+        "PrtSc": "打印屏幕键",
+        "CapsLock": "大写锁定键"
+      },
       "description": "设置全局快捷键来切换录音。默认使用单键（右侧修饰键），也支持组合键配置。",
       "note": "重要提示",
       "noteItem1": "默认使用单键（右Ctrl/右Cmd），避免冲突",
