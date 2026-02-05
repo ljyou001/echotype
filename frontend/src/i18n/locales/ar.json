@@ -1,0 +1,65 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "أكثر من مجرد إدخال صوتي"
+    },
+    "hotkeyLabel": {
+        "RCtrl": "Ctrl الأيمن",
+        "LCtrl": "Ctrl الأيسر",
+        "RAlt": "Alt الأيمن",
+        "LAlt": "Alt الأيسر",
+        "RShift": "Shift الأيمن",
+        "LShift": "Shift الأيسر",
+        "CapsLock": "Caps Lock",
+        "ScrollLock": "Scroll Lock",
+        "NumLock": "Num Lock"
+    },
+    "nav": {
+        "home": "الرئيسية",
+        "history": "السجل",
+        "models": "النماذج",
+        "integrations": "التكاملات",
+        "settings": "الإعدادات",
+        "debug": "تصحيح"
+    },
+    "status": {
+        "loading": "جاري التحميل",
+        "ready": "جاهز",
+        "capturing": "جاري الالتقاط",
+        "recording": "جاري التسجيل",
+        "error": "خطأ",
+        "connected": "متصل",
+        "disconnected": "غير متصل"
+    },
+    "home": {
+        "statusMessage": {
+            "unavailable": "النموذج غير متوفر",
+            "listening": "جاري الاستماع",
+            "ready": "جاهز للتحويل",
+            "backendReady": "النموذج جاهز!"
+        },
+        "cards": {
+            "model": "النموذج",
+            "hotkey": "مفتاح الاختصار",
+            "mode": "الوضع",
+            "input": "الإدخال"
+        }
+    },
+    "history": {
+        "title": "السجل",
+        "empty": "لا يوجد سجل بعد."
+    },
+    "settings": {
+        "title": "الإعدادات",
+        "language": {
+            "title": "اللغة",
+            "systemDefault": "افتراضي النظام",
+            "ar": "العربية"
+        }
+    },
+    "onboarding": {
+        "title": "مرحباً بكم في EchoType",
+        "next": "التالي",
+        "back": "السابق"
+    }
+}

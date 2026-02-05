@@ -1,0 +1,24 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Ses girişinden daha fazlası"
+    },
+    "nav": {
+        "home": "Ana Sayfa",
+        "history": "Geçmiş",
+        "models": "Modeller",
+        "settings": "Ayarlar"
+    },
+    "status": {
+        "loading": "Yükleniyor",
+        "ready": "Hazır",
+        "recording": "Kaydediliyor",
+        "error": "Hata"
+    },
+    "settings": {
+        "language": {
+            "title": "Dil",
+            "tr": "Türkçe"
+        }
+    }
+}

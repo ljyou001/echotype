@@ -1,0 +1,24 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "เป็นมากกว่าแค่การพิมพ์ด้วยเสียง"
+    },
+    "nav": {
+        "home": "หน้าแรก",
+        "history": "ประวัติ",
+        "models": "รุ่น",
+        "settings": "การตั้งค่า"
+    },
+    "status": {
+        "loading": "กำลังโหลด",
+        "ready": "พร้อม",
+        "recording": "กำลังบันทึก",
+        "error": "ข้อผิดพลาด"
+    },
+    "settings": {
+        "language": {
+            "title": "ภาษา",
+            "th": "ไทย"
+        }
+    }
+}

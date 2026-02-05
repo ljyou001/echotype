@@ -1,0 +1,104 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Más que solo entrada de voz"
+    },
+    "hotkeyLabel": {
+        "RCtrl": "Ctrl Derecho",
+        "LCtrl": "Ctrl Izquierdo",
+        "RAlt": "Alt Derecho",
+        "LAlt": "Alt Izquierdo",
+        "RShift": "Shift Derecho",
+        "LShift": "Shift Izquierdo",
+        "RCmd": "⌘ Derecho",
+        "LCmd": "⌘ Izquierdo",
+        "CapsLock": "Bloq Mayús",
+        "ScrollLock": "Bloq Despl",
+        "NumLock": "Bloq Num"
+    },
+    "nav": {
+        "home": "Inicio",
+        "history": "Historial",
+        "models": "Modelos",
+        "integrations": "Integraciones",
+        "settings": "Ajustes",
+        "debug": "Depurar"
+    },
+    "status": {
+        "loading": "Cargando",
+        "ready": "Listo",
+        "capturing": "Capturando",
+        "recording": "Grabando",
+        "error": "Error",
+        "connected": "Conectado",
+        "disconnected": "Desconectado"
+    },
+    "home": {
+        "statusMessage": {
+            "unavailable": "Modelo no disponible",
+            "listening": "Escuchando",
+            "ready": "Listo para transcribir",
+            "backendReady": "¡Modelo listo!"
+        },
+        "cards": {
+            "model": "Modelo",
+            "hotkey": "Atajo",
+            "mode": "Modo",
+            "input": "Entrada"
+        },
+        "modes": {
+            "streaming": "Continuo",
+            "offline": "Local"
+        },
+        "voiceHint": {
+            "pushToTalkPrefix": "Mantén pulsado ",
+            "pushToTalkSuffix": " para hablar",
+            "togglePrefix": "Pulsa ",
+            "toggleSuffix": " para empezar; pulsa de nuevo para parar"
+        }
+    },
+    "history": {
+        "title": "Historial",
+        "description": "Resultados recientes de dictado.",
+        "empty": "No hay historial aún.",
+        "actions": {
+            "play": "Reproducir audio",
+            "search": "Buscar",
+            "delete": "Eliminar"
+        }
+    },
+    "models": {
+        "title": "Modelos",
+        "description": "Cambiar modelos y revisar capacidades.",
+        "status": {
+            "running": "Ejecutando",
+            "installed": "Instalado",
+            "auxiliary": "Modelo auxiliar"
+        }
+    },
+    "settings": {
+        "title": "Ajustes",
+        "description": "Configuración global de la aplicación.",
+        "language": {
+            "title": "Idioma",
+            "systemDefault": "Sistema",
+            "es": "Español"
+        }
+    },
+    "onboarding": {
+        "title": "Bienvenido a EchoType",
+        "subtitle": "La entrada de voz necesita acceso al micrófono y atajos.",
+        "permissions": {
+            "microphone": "Micrófono",
+            "granted": "Concedido",
+            "denied": "Denegado"
+        },
+        "models": {
+            "title": "Descargar modelos de IA",
+            "installed": "Instalado",
+            "download": "Descargar"
+        },
+        "next": "Siguiente",
+        "back": "Atrás"
+    }
+}

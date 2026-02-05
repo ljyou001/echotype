@@ -1,0 +1,33 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Больше, чем просто голосовой ввод"
+    },
+    "hotkeyLabel": {
+        "RCtrl": "Правый Ctrl",
+        "LCtrl": "Левый Ctrl",
+        "RAlt": "Правый Alt",
+        "LAlt": "Левый Alt",
+        "RShift": "Правый Shift",
+        "LShift": "Левый Shift",
+        "CapsLock": "Caps Lock"
+    },
+    "nav": {
+        "home": "Главная",
+        "history": "История",
+        "models": "Модели",
+        "settings": "Настройки"
+    },
+    "status": {
+        "loading": "Загрузка",
+        "ready": "Готово",
+        "recording": "Запись",
+        "error": "Ошибка"
+    },
+    "settings": {
+        "language": {
+            "title": "Язык",
+            "ru": "Русский"
+        }
+    }
+}

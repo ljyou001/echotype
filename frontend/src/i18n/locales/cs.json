@@ -1,0 +1,18 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Víc než jen hlasový vstup"
+    },
+    "nav": {
+        "home": "Domů",
+        "history": "Historie",
+        "models": "Modely",
+        "settings": "Nastavení"
+    },
+    "settings": {
+        "language": {
+            "title": "Jazyk",
+            "cs": "Čeština"
+        }
+    }
+}

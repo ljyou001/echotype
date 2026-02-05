@@ -1,0 +1,18 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Több mint hangalapú bevitel"
+    },
+    "nav": {
+        "home": "Főoldal",
+        "history": "Előzmények",
+        "models": "Modellek",
+        "settings": "Beállítások"
+    },
+    "settings": {
+        "language": {
+            "title": "Nyelv",
+            "hu": "Magyar"
+        }
+    }
+}

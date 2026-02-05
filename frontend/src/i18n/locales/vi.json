@@ -1,0 +1,24 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Không chỉ là nhập liệu bằng giọng nói"
+    },
+    "nav": {
+        "home": "Trang chủ",
+        "history": "Lịch sử",
+        "models": "Mô hình",
+        "settings": "Cài đặt"
+    },
+    "status": {
+        "loading": "Đang tải",
+        "ready": "Sẵn sàng",
+        "recording": "Đang ghi âm",
+        "error": "Lỗi"
+    },
+    "settings": {
+        "language": {
+            "title": "Ngôn ngữ",
+            "vi": "Tiếng Việt"
+        }
+    }
+}

@@ -1,0 +1,29 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Più di un semplice inserimento vocale"
+    },
+    "nav": {
+        "home": "Home",
+        "history": "Cronologia",
+        "models": "Modelli",
+        "settings": "Impostazioni"
+    },
+    "status": {
+        "loading": "Caricamento",
+        "ready": "Pronto",
+        "recording": "Registrazione",
+        "error": "Errore"
+    },
+    "settings": {
+        "language": {
+            "title": "Lingua",
+            "it": "Italiano"
+        }
+    },
+    "onboarding": {
+        "title": "Benvenuto in EchoType",
+        "next": "Avanti",
+        "back": "Indietro"
+    }
+}

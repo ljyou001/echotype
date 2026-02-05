@@ -1,0 +1,18 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Mer än bara röstinmatning"
+    },
+    "nav": {
+        "home": "Hem",
+        "history": "Historik",
+        "models": "Modeller",
+        "settings": "Inställningar"
+    },
+    "settings": {
+        "language": {
+            "title": "Språk",
+            "sv": "Svenska"
+        }
+    }
+}

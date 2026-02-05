@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../store/appStore";
-import { resolveAppLanguage } from "../i18n/config";
+import { resolveAppLanguage, SUPPORTED_LANGUAGES } from "../i18n/config";
 import i18n from "../i18n/config";
 import { HotkeyConfigModal } from "./HotkeyConfigModal";
 import { MicrophoneSelector } from "./MicrophoneSelector";
@@ -96,15 +96,16 @@ export function SettingsPage() {
           <select
             value={appLanguage}
             onChange={(e) => {
-              const value = e.target.value as "system" | "en" | "zh";
+              const value = e.target.value;
               setAppLanguage(value);
               i18n.changeLanguage(resolveAppLanguage(value));
             }}
             className="settings-select"
           >
             <option value="system">{t("settings.language.systemDefault")}</option>
-            <option value="en">{t("settings.language.en")}</option>
-            <option value="zh">{t("settings.language.zh")}</option>
+            {SUPPORTED_LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>{l.name}</option>
+            ))}
           </select>
         </div>
 
@@ -155,8 +156,8 @@ export function SettingsPage() {
           <h3>{t("settings.output.title")}</h3>
           <div className="settings-item">
             <label>
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={outputDirectInput}
                 onChange={(e) => setOutputDirectInput(e.target.checked)}
               />
@@ -165,8 +166,8 @@ export function SettingsPage() {
           </div>
           <div className="settings-item">
             <label>
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={outputClipboard}
                 onChange={(e) => setOutputClipboard(e.target.checked)}
               />

@@ -1,0 +1,318 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Plus que de la simple saisie vocale"
+    },
+    "hotkeyLabel": {
+        "RCtrl": "Ctrl Droite",
+        "LCtrl": "Ctrl Gauche",
+        "RAlt": "Alt Droite",
+        "LAlt": "Alt Gauche",
+        "RShift": "Maj Droite",
+        "LShift": "Maj Gauche",
+        "RCmd": "⌘ Droite",
+        "LCmd": "⌘ Gauche",
+        "RWin": "⊞ Droite",
+        "LWin": "⊞ Gauche",
+        "CapsLock": "Verr. Maj",
+        "ScrollLock": "Arrêt défil",
+        "NumLock": "Verr. Num",
+        "Pause": "Pause",
+        "PrtSc": "Impr. Écran",
+        "F13": "F13",
+        "F14": "F14",
+        "F15": "F15",
+        "Fn": "Fn"
+    },
+    "hotkeyLabelMac": {
+        "RAlt": "Option Droite ⌥",
+        "LAlt": "Option Gauche ⌥",
+        "RCmd": "Command Droite ⌘",
+        "LCmd": "Command Gauche ⌘"
+    },
+    "nav": {
+        "home": "Accueil",
+        "history": "Historique",
+        "models": "Modèles",
+        "integrations": "Intégrations",
+        "settings": "Paramètres",
+        "debug": "Debug"
+    },
+    "status": {
+        "loading": "Chargement",
+        "ready": "Prêt",
+        "capturing": "Capture",
+        "recording": "Enregistrement",
+        "error": "Erreur",
+        "offline": "Hors ligne",
+        "standby": "Veille",
+        "connected": "Connecté",
+        "disconnected": "Déconnecté"
+    },
+    "home": {
+        "statusMessage": {
+            "unavailable": "Modèle indisponible",
+            "listening": "À l'écoute",
+            "ready": "Prêt à transcrire",
+            "preparing": "Préparation des modèles",
+            "standby": "En attente",
+            "startingBackend": "Connexion au modèle...",
+            "loadingModules": "Chargement du modèle...",
+            "loadingSpeechModel": "Chargement du modèle vocal...",
+            "loadingPuncModel": "Chargement du modèle de ponctuation...",
+            "backendReady": "Modèle prêt !"
+        },
+        "cards": {
+            "model": "Modèle",
+            "hotkey": "Raccourci",
+            "mode": "Mode",
+            "input": "Entrée",
+            "recordingMode": "Mode d'enregistrement"
+        },
+        "modes": {
+            "streaming": "Streaming",
+            "offline": "Hors ligne"
+        },
+        "recordingModes": {
+            "toggle": "Bascule",
+            "pushToTalk": "Maintenir pour parler"
+        },
+        "error": {
+            "title": "Erreur de modèle",
+            "restart": "Redémarrer le modèle"
+        },
+        "transcript": {
+            "live": "Direct",
+            "final": "Final",
+            "placeholder": "Parlez pour commencer la transcription.",
+            "waiting": "..."
+        },
+        "voiceHint": {
+            "pushToTalkPrefix": "Appuyez sur ",
+            "pushToTalkSuffix": " pour parler",
+            "togglePrefix": "Appuyez sur ",
+            "toggleSuffix": " pour démarrer ; réappuyez pour arrêter",
+            "integrationShortPressPrefix": "Appuyez brièvement sur ",
+            "integrationShortPressSuffix": " pour l'intégration",
+            "integrationLongPressPrefix": "Appuyez longuement sur ",
+            "integrationLongPressSuffix": " pour l'intégration"
+        }
+    },
+    "history": {
+        "title": "Historique",
+        "description": "Résultats récents de dictée.",
+        "empty": "Aucun historique pour le moment.",
+        "actions": {
+            "play": "Lire l'audio",
+            "search": "Rechercher",
+            "delete": "Supprimer"
+        }
+    },
+    "models": {
+        "title": "Modèles",
+        "description": "Changez de modèles et examinez les capacités.",
+        "showAuxiliaryModels": "Afficher les modèles auxiliaires",
+        "waitingForModel": "Aucun modèle trouvé. Connexion...",
+        "status": {
+            "running": "En cours",
+            "installed": "Installé",
+            "comingSoon": "Bientôt disponible",
+            "auxiliary": "Modèle auxiliaire",
+            "auxiliaryNote": "Utilisé automatiquement avec les modèles ASR"
+        },
+        "info": {
+            "family": "Famille",
+            "type": "Type",
+            "languages": "Langues",
+            "devices": "Appareils",
+            "deviceSupport": "Support matériel",
+            "currentDevice": "Appareil actuel",
+            "notes": "Notes"
+        },
+        "types": {
+            "asr": "ASR",
+            "punctuation": "Ponctuation"
+        },
+        "settings": {
+            "title": "Paramètres du modèle",
+            "device": "Appareil",
+            "language": "Langue",
+            "qwenBackend": "Moteur Qwen3",
+            "streaming": "Mode de reconnaissance",
+            "streamingOn": "Streaming",
+            "streamingOff": "Hors ligne",
+            "apply": "Appliquer",
+            "auto": "Auto",
+            "autoDetect": "Détection auto",
+            "hints": {
+                "languageSelection": "Sélectionnez la langue ou utilisez la détection automatique",
+                "qwenBackend": "transformers est recommandé",
+                "streaming": "Streaming : résultats en temps réel ; Hors ligne : après l'enregistrement"
+            }
+        }
+    },
+    "integrations": {
+        "title": "Intégrations",
+        "description": "Workflows d'automatisation basés sur des plugins.",
+        "myIntegrations": "Mes intégrations",
+        "addIntegration": "Ajouter",
+        "emptyState": "Aucune intégration. Cliquez sur Ajouter.",
+        "availablePlugins": "Plugins disponibles",
+        "comingSoon": "Bientôt",
+        "quickAction": {
+            "title": "Action Rapide",
+            "lastText": "Dernier texte transcrit",
+            "noText": "Aucun texte",
+            "hint": "Entrée pour l'action par défaut"
+        },
+        "outputMode": {
+            "clipboard": "Clipsboard",
+            "direct": "Entrée Directe",
+            "both": "Les deux"
+        },
+        "actions": {
+            "enable": "Activer",
+            "disable": "Désactiver",
+            "setDefault": "Par défaut",
+            "configure": "Configurer",
+            "remove": "Supprimer",
+            "enabled": "Activé"
+        },
+        "categories": {
+            "search": "Moteurs de recherche",
+            "ai": "Assistants AI",
+            "translation": "Traduction",
+            "custom": "Personnalisé"
+        },
+        "dialog": {
+            "addTitle": "Ajouter une intégration",
+            "configureTitle": "Configuration",
+            "selectPlugin": "Choisir un plugin",
+            "instanceName": "Nom de l'instance",
+            "icon": "Icône",
+            "outputMode": "Mode de sortie",
+            "outputModeDescSupported": "Choisissez comment envoyer le texte.",
+            "outputModeDescUnsupported": "Entrée directe non supportée. Copie dans le presse-papiers.",
+            "cancel": "Annuler",
+            "add": "Ajouter",
+            "prevPage": "Précédent",
+            "nextPage": "Suivant",
+            "save": "Enregistrer",
+            "confirmRemoveTitle": "Supprimer ?",
+            "confirmRemove": "Voulez-vous supprimer cette intégration ?",
+            "manualPasteRequired": "⚠️ Collage manuel requis"
+        },
+        "plugins": {
+            "clawbot": {
+                "config": {
+                    "gatewayHint": "Hôte, port, jeton depuis l'interface OpenClaw.",
+                    "host": {
+                        "label": "Hôte",
+                        "description": "Serveur OpenClaw (défaut : localhost)"
+                    },
+                    "port": {
+                        "label": "Port",
+                        "description": "Port OpenClaw (défaut : 18789)"
+                    },
+                    "apiKey": {
+                        "label": "Jeton",
+                        "description": "Votre jeton d'accès OpenClaw"
+                    }
+                }
+            }
+        },
+        "items": {
+            "clawbot": {
+                "name": "OpenClaw / Clawbot",
+                "description": "IA pour la recherche"
+            },
+            "search": {
+                "name": "Recherche",
+                "description": "Recherche web rapide"
+            }
+        }
+    },
+    "settings": {
+        "title": "Paramètres",
+        "description": "Réglages globaux.",
+        "startup": {
+            "title": "Démarrage",
+            "autoStart": "Lancer au démarrage",
+            "autoLoadModel": "Charger le modèle auto"
+        },
+        "language": {
+            "title": "Langue",
+            "systemDefault": "Défaut système",
+            "en": "English",
+            "zh": "中文",
+            "fr": "Français"
+        },
+        "hotkey": {
+            "title": "Raccourci",
+            "current": "Raccourci actuel",
+            "configure": "Configurer le raccourci",
+            "pressKeys": "Appuyez sur une touche...",
+            "clickToRecord": "Cliquer pour enregistrer",
+            "quickSelect": "Sélection rapide",
+            "description": "Définissez un raccourci global pour activer l'enregistrement.",
+            "save": "Enregistrer",
+            "cancel": "Annuler"
+        },
+        "recordingMode": {
+            "title": "Mode d'enregistrement",
+            "pushToTalk": "Maintenir pour parler",
+            "toggleMode": "Bascule"
+        },
+        "audio": {
+            "title": "Entrée audio",
+            "microphone": "Microphone"
+        },
+        "output": {
+            "title": "Méthode de sortie",
+            "directInput": "Entrée directe",
+            "clipboard": "Presse-papiers"
+        }
+    },
+    "errors": {
+        "model": {
+            "title": "Erreur de modèle",
+            "message": "Échec du chargement"
+        }
+    },
+    "onboarding": {
+        "title": "Bienvenue sur EchoType",
+        "subtitle": "La saisie vocale nécessite l'accès au micro et aux raccourcis.",
+        "stepPermissions": "Permissions",
+        "stepMicrophone": "Micro",
+        "stepModels": "Modèles AI",
+        "permissions": {
+            "microphone": "Microphone",
+            "microphoneDesc": "Utilisé pour enregistrer la voix.",
+            "openMicrophone": "Paramètres micro",
+            "accessibility": "Raccourci / Accessibilité",
+            "accessibilityDescWin": "Sur Windows, aucune permission séparée n'est requise.",
+            "accessibilityDescMac": "Requis pour les raccourcis globaux.",
+            "openAccessibility": "Paramètres accessibilité",
+            "checking": "Vérification...",
+            "granted": "Autorisé",
+            "denied": "Refusé",
+            "recheck": "Vérifier"
+        },
+        "microphone": {
+            "title": "Choisissez le micro",
+            "description": "Sélectionnez le microphone pour la saisie vocale.",
+            "finish": "Terminer"
+        },
+        "models": {
+            "title": "Télécharger les modèles",
+            "description": "Des modèles AI requis sont manquants.",
+            "downloading": "Téléchargement...",
+            "extracting": "Extraction...",
+            "installed": "Installé",
+            "error": "Échec",
+            "download": "Télécharger"
+        },
+        "next": "Suivant",
+        "back": "Retour"
+    }
+}

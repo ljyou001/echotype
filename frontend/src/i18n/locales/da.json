@@ -1,0 +1,18 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Mere end blot stemmeinput"
+    },
+    "nav": {
+        "home": "Hjem",
+        "history": "Historik",
+        "models": "Modeller",
+        "settings": "Indstillinger"
+    },
+    "settings": {
+        "language": {
+            "title": "Sprog",
+            "da": "Dansk"
+        }
+    }
+}

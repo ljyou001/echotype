@@ -1,0 +1,100 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Mehr als nur Spracheingabe"
+    },
+    "hotkeyLabel": {
+        "RCtrl": "Rechte Strg",
+        "LCtrl": "Linke Strg",
+        "RAlt": "Rechtes Alt",
+        "LAlt": "Linkes Alt",
+        "RShift": "Rechte Umschalt",
+        "LShift": "Linke Umschalt",
+        "RCmd": "Rechtes ⌘",
+        "LCmd": "Linkes ⌘",
+        "CapsLock": "Feststelltaste",
+        "ScrollLock": "Rollen-Taste",
+        "NumLock": "Num-Taste"
+    },
+    "nav": {
+        "home": "Home",
+        "history": "Verlauf",
+        "models": "Modelle",
+        "integrations": "Integrationen",
+        "settings": "Einstellungen",
+        "debug": "Debug"
+    },
+    "status": {
+        "loading": "Lade",
+        "ready": "Bereit",
+        "capturing": "Erfassung",
+        "recording": "Aufnahme",
+        "error": "Fehler",
+        "connected": "Verbunden",
+        "disconnected": "Getrennt"
+    },
+    "home": {
+        "statusMessage": {
+            "unavailable": "Modell nicht verfügbar",
+            "listening": "Höre zu",
+            "ready": "Bereit zum Transkribieren",
+            "backendReady": "Modell bereit!"
+        },
+        "cards": {
+            "model": "Modell",
+            "hotkey": "Hotkey",
+            "mode": "Modus",
+            "input": "Eingabe"
+        },
+        "modes": {
+            "streaming": "Streaming",
+            "offline": "Offline"
+        }
+    },
+    "history": {
+        "title": "Verlauf",
+        "description": "Letzte Diktatergebnisse.",
+        "empty": "Noch kein Verlauf."
+    },
+    "models": {
+        "title": "Modelle",
+        "description": "Modelle wechseln und Funktionen prüfen.",
+        "status": {
+            "running": "Läuft",
+            "installed": "Installiert",
+            "auxiliary": "Zusatzmodell"
+        }
+    },
+    "settings": {
+        "title": "Einstellungen",
+        "description": "Globale Anwendungseinstellungen.",
+        "language": {
+            "title": "Sprache",
+            "systemDefault": "Systemstandard",
+            "de": "Deutsch"
+        },
+        "hotkey": {
+            "title": "Hotkey",
+            "current": "Aktueller Hotkey",
+            "pressKeys": "Taste drücken...",
+            "save": "Speichern",
+            "cancel": "Abbrechen"
+        }
+    },
+    "onboarding": {
+        "title": "Willkommen bei EchoType",
+        "subtitle": "Spracheingabe benötigt Zugriff auf Mikrofon und Hotkeys.",
+        "permissions": {
+            "microphone": "Mikrofon",
+            "granted": "Erteilt",
+            "denied": "Nicht erteilt"
+        },
+        "models": {
+            "title": "KI-Modelle herunterladen",
+            "installed": "Installiert",
+            "download": "Herunterladen"
+        },
+        "next": "Weiter",
+        "back": "Zurück"
+    }
+}

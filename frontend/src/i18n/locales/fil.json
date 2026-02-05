@@ -1,0 +1,18 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Higit pa sa boses na input"
+    },
+    "nav": {
+        "home": "Home",
+        "history": "Kasaysayan",
+        "models": "Mga Model",
+        "settings": "Mga Settings"
+    },
+    "settings": {
+        "language": {
+            "title": "Wika",
+            "fil": "Filipino"
+        }
+    }
+}

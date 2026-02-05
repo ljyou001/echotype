@@ -1,0 +1,18 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Meer dan alleen spraakinvoer"
+    },
+    "nav": {
+        "home": "Home",
+        "history": "Geschiedenis",
+        "models": "Modellen",
+        "settings": "Instellingen"
+    },
+    "settings": {
+        "language": {
+            "title": "Taal",
+            "nl": "Nederlands"
+        }
+    }
+}

@@ -1,0 +1,18 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "فراتر از ورودی صوتی"
+    },
+    "nav": {
+        "home": "خانه",
+        "history": "تاریخچه",
+        "models": "مدل‌ها",
+        "settings": "تنظیمات"
+    },
+    "settings": {
+        "language": {
+            "title": "زبان",
+            "fa": "فارسی"
+        }
+    }
+}

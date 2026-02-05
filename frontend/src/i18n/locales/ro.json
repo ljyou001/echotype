@@ -1,0 +1,18 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Mai mult decât introducere vocală"
+    },
+    "nav": {
+        "home": "Acasă",
+        "history": "Istoric",
+        "models": "Modele",
+        "settings": "Setări"
+    },
+    "settings": {
+        "language": {
+            "title": "Limbă",
+            "ro": "Română"
+        }
+    }
+}

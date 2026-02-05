@@ -1,0 +1,430 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "단순한 음성 입력을 넘어"
+    },
+    "hotkeyLabel": {
+        "RCtrl": "오른쪽 Ctrl",
+        "LCtrl": "왼쪽 Ctrl",
+        "RAlt": "오른쪽 Alt",
+        "LAlt": "왼쪽 Alt",
+        "RShift": "오른쪽 Shift",
+        "LShift": "왼쪽 Shift",
+        "RCmd": "오른쪽 ⌘",
+        "LCmd": "왼쪽 ⌘",
+        "RWin": "오른쪽 ⊞",
+        "LWin": "왼쪽 ⊞",
+        "CapsLock": "Caps Lock",
+        "ScrollLock": "Scroll Lock",
+        "NumLock": "Num Lock",
+        "Pause": "Pause",
+        "PrtSc": "Print Screen",
+        "F13": "F13",
+        "F14": "F14",
+        "F15": "F15",
+        "Fn": "Fn"
+    },
+    "hotkeyLabelMac": {
+        "RAlt": "오른쪽 Option ⌥",
+        "LAlt": "왼쪽 Option ⌥",
+        "RCmd": "오른쪽 Command ⌘",
+        "LCmd": "왼쪽 Command ⌘"
+    },
+    "nav": {
+        "home": "홈",
+        "history": "기록",
+        "models": "모델",
+        "integrations": "연동",
+        "settings": "설정",
+        "debug": "디버그"
+    },
+    "status": {
+        "loading": "로딩 중",
+        "ready": "준비 완료",
+        "capturing": "캡처 중",
+        "recording": "녹음 중",
+        "error": "오류",
+        "offline": "오프라인",
+        "standby": "대기",
+        "connected": "연결됨",
+        "disconnected": "연결 끊김"
+    },
+    "home": {
+        "statusMessage": {
+            "unavailable": "모델 사용 불가",
+            "listening": "음성을 듣고 있습니다",
+            "ready": "변환 준비 완료",
+            "preparing": "모델 준비 중",
+            "standby": "대기",
+            "startingBackend": "모델 연결 중...",
+            "loadingModules": "모델 로딩 중...",
+            "loadingSpeechModel": "음성 모델 로딩 중...",
+            "loadingPuncModel": "문장 부호 모델 로딩 중...",
+            "backendReady": "모델이 준비되었습니다!"
+        },
+        "cards": {
+            "model": "모델",
+            "hotkey": "단축키",
+            "mode": "모드",
+            "input": "입력",
+            "recordingMode": "녹음 모드"
+        },
+        "modes": {
+            "streaming": "실시간",
+            "offline": "오프라인"
+        },
+        "recordingModes": {
+            "toggle": "토글",
+            "pushToTalk": "푸시투토크"
+        },
+        "error": {
+            "title": "모델 오류",
+            "restart": "모델 재시작"
+        },
+        "transcript": {
+            "live": "실시간",
+            "final": "최종",
+            "placeholder": "말을 하면 변환이 시작됩니다.",
+            "waiting": "..."
+        },
+        "voiceHint": {
+            "pushToTalkPrefix": "",
+            "pushToTalkSuffix": " 을(를) 누른 상태로 말하기",
+            "togglePrefix": "",
+            "toggleSuffix": " 을(를) 눌러 시작, 다시 눌러 중지",
+            "integrationShortPressPrefix": "",
+            "integrationShortPressSuffix": " 을(를) 살짝 눌러 연동 도구 열기",
+            "integrationLongPressPrefix": "",
+            "integrationLongPressSuffix": " 을(를) 길게 눌러 연동 도구 열기"
+        }
+    },
+    "history": {
+        "title": "기록",
+        "description": "최근 음성 변환 결과입니다.",
+        "empty": "기록이 없습니다.",
+        "actions": {
+            "play": "오디오 재생",
+            "search": "검색",
+            "delete": "삭제"
+        }
+    },
+    "models": {
+        "title": "모델",
+        "description": "모델 전환 및 기능을 검토합니다.",
+        "showAuxiliaryModels": "보조 모델 표시",
+        "waitingForModel": "모델을 찾을 수 없습니다. 연결 중...",
+        "status": {
+            "running": "실행 중",
+            "installed": "설치됨",
+            "comingSoon": "출시 예정",
+            "auxiliary": "보조 모델",
+            "auxiliaryNote": "ASR 모델과 함께 자동으로 사용됩니다"
+        },
+        "info": {
+            "family": "제품군",
+            "type": "유형",
+            "languages": "언어",
+            "devices": "장치",
+            "deviceSupport": "장치 지원",
+            "currentDevice": "현재 장치",
+            "notes": "참고"
+        },
+        "types": {
+            "asr": "음성 인식",
+            "punctuation": "문장 부호"
+        },
+        "settings": {
+            "title": "모델 설정",
+            "device": "장치",
+            "language": "언어",
+            "qwenBackend": "Qwen3 실행 환경",
+            "streaming": "인식 모드",
+            "streamingOn": "실시간",
+            "streamingOff": "오프라인",
+            "apply": "설정 적용",
+            "auto": "자동",
+            "autoDetect": "자동 감지",
+            "hints": {
+                "languageSelection": "변환할 언어를 선택하거나 자동 감지를 사용하세요",
+                "qwenBackend": "일반적인 사용에는 transformers를 권장합니다",
+                "streaming": "실시간: 결과를 즉시 표시; 오프라인: 녹음 완료 후 결과 표시"
+            }
+        }
+    },
+    "integrations": {
+        "title": "연동",
+        "description": "검색 및 자동화를 위한 플러그인 기반 워크플로우입니다.",
+        "myIntegrations": "내 연동",
+        "addIntegration": "연동 추가",
+        "emptyState": "추가된 연동이 없습니다. \"연동 추가\"를 클릭하여 시작하세요.",
+        "availablePlugins": "사용 가능한 플러그인",
+        "comingSoon": "출시 예정",
+        "quickAction": {
+            "title": "퀵 액션",
+            "lastText": "최근 변환된 텍스트",
+            "noText": "텍스트 없음",
+            "hint": "Enter를 눌러 기본 작업 실행"
+        },
+        "outputMode": {
+            "clipboard": "클립보드에 복사",
+            "direct": "직접 입력",
+            "both": "모두 사용 (클립보드 + 직접 입력)"
+        },
+        "actions": {
+            "enable": "활성화",
+            "disable": "비활성화",
+            "setDefault": "기본값으로 설정",
+            "configure": "구성",
+            "remove": "제거",
+            "enabled": "활성화됨"
+        },
+        "categories": {
+            "search": "검색 엔진",
+            "ai": "AI 어시스턴트",
+            "translation": "번역 서비스",
+            "custom": "사용자 정의"
+        },
+        "dialog": {
+            "addTitle": "연동 추가",
+            "configureTitle": "구성",
+            "selectPlugin": "플러그인 선택",
+            "instanceName": "인스턴스 이름",
+            "icon": "아이콘",
+            "outputMode": "출력 모드",
+            "outputModeDescSupported": "이 서비스로 텍스트를 보내는 방법을 선택하세요. 직접 입력은 URL 파라미터나 API를 사용합니다.",
+            "outputModeDescUnsupported": "이 서비스는 직접 입력을 지원하지 않습니다. 텍스트를 클립보드에 복사한 후 수동으로 붙여넣어야 합니다.",
+            "cancel": "취소",
+            "add": "추가",
+            "prevPage": "이전",
+            "nextPage": "다음",
+            "save": "저장",
+            "confirmRemoveTitle": "연동을 제거할까요?",
+            "confirmRemove": "이 연동을 정말로 제거하시겠습니까?",
+            "manualPasteRequired": "⚠️ 수동 붙여넣기 필요"
+        },
+        "plugins": {
+            "clawbot": {
+                "config": {
+                    "gatewayHint": "OpenClaw UI(Control → Overview → Gateway Access)에서 호스트, 포트, 토큰을 가져오거나 OpenClaw CLI를 사용하세요. 설정은 `~/.openclaw/openclaw.json`에 있습니다.",
+                    "host": {
+                        "label": "호스트",
+                        "description": "OpenClaw 서버 호스트 (기본값: localhost)"
+                    },
+                    "port": {
+                        "label": "포트",
+                        "description": "OpenClaw 서버 포트 (기본값: 18789)"
+                    },
+                    "apiKey": {
+                        "label": "토큰",
+                        "description": "OpenClaw 액세스 토큰"
+                    },
+                    "session": {
+                        "label": "세션 ID",
+                        "description": "OpenClaw 세션 ID (기본값: agent:main:main). WebSocket의 경우 메시지 라우팅을 위한 sessionKey를 지정합니다."
+                    },
+                    "useHttp": {
+                        "label": "HTTP API 사용",
+                        "description": "WebSocket 대신 HTTP API를 사용합니다 (OpenClaw 설정에서 활성화 필요)."
+                    },
+                    "openInterface": {
+                        "label": "전송 후 웹 인터페이스 열기",
+                        "description": "메시지 전송 후 자동으로 OpenClaw 웹 인터페이스를 엽니다"
+                    },
+                    "timeout": {
+                        "label": "연결 제한 시간 (ms)",
+                        "description": "밀리초 단위의 연결 제한 시간 (기본값: 15000, WebSocket 전용)"
+                    }
+                }
+            }
+        },
+        "items": {
+            "clawbot": {
+                "name": "OpenClaw / Clawbot",
+                "description": "AI 기반 검색 및 자동화 워크플로우"
+            },
+            "search": {
+                "name": "검색",
+                "description": "빠른 웹 검색 연동"
+            },
+            "workflow": {
+                "name": "워크플로우",
+                "description": "사용자 정의 자동화 워크플로우"
+            }
+        }
+    },
+    "settings": {
+        "title": "설정",
+        "description": "전체 애플리케이션 설정입니다.",
+        "startup": {
+            "title": "시작",
+            "autoStart": "시스템 시작 시 실행",
+            "autoLoadModel": "시작 시 모델 자동 로드"
+        },
+        "language": {
+            "title": "언어",
+            "systemDefault": "시스템 기본값",
+            "en": "English",
+            "zh": "中文"
+        },
+        "hotkey": {
+            "title": "단축키",
+            "current": "현재 단축키",
+            "configure": "단축키 구성",
+            "pressKeys": "아무 키나 누르세요...",
+            "clickToRecord": "클릭하여 새 단축키 녹화",
+            "quickSelect": "빠른 선택",
+            "quickSelectDescMac": "시스템 단축키와의 충돌을 피하기 위해 오른쪽 보조 키나 기능 키를 사용하는 것이 좋습니다.",
+            "quickSelectDescWin": "시스템 단축키와의 충돌을 피하기 위해 오른쪽 보조 키나 특수 잠금 키를 사용하는 것이 좋습니다.",
+            "quickKeyDescMac": {
+                "RCmd": "오른쪽 Command 키",
+                "RAlt": "오른쪽 Option 키",
+                "RCtrl": "오른쪽 Control 키",
+                "Fn": "Fn 키",
+                "F13": "F13 기능 키",
+                "F14": "F14 기능 키",
+                "F15": "F15 기능 키"
+            },
+            "quickKeyDescWin": {
+                "RCtrl": "오른쪽 Control 키",
+                "RAlt": "오른쪽 Alt 키",
+                "RWin": "오른쪽 Windows 키",
+                "ScrollLock": "Scroll Lock 키",
+                "Pause": "Pause 키",
+                "PrtSc": "Print Screen 키",
+                "CapsLock": "Caps Lock 키"
+            },
+            "description": "녹음을 전환할 글로벌 단축키를 설정합니다. 기본값은 단일 키(오른쪽 보조 키)이지만 키 조합도 지원합니다.",
+            "note": "중요 참고 사항",
+            "noteItem1": "충돌을 피하기 위해 기본적으로 단일 키(오른쪽 Ctrl/Cmd)를 사용합니다.",
+            "noteItem2": "오른쪽 키(오른쪽 Ctrl, Alt, Win/Cmd)가 가장 안정적입니다.",
+            "noteItem3": "특수 기능 키(F13-F15, Scroll Lock)는 거의 충돌하지 않습니다.",
+            "noteItem4": "앱이 최소화된 상태에서도 단축키가 작동합니다.",
+            "save": "저장",
+            "cancel": "취소",
+            "errors": {
+                "alreadyInUse": "이 단축키는 이미 사용 중입니다.",
+                "invalid": "유효하지 않은 단축키 조합입니다.",
+                "systemShortcut": "시스템 단축키입니다."
+            }
+        },
+        "recordingMode": {
+            "title": "녹음 모드",
+            "pushToTalk": "푸시투토크",
+            "toggleMode": "토글",
+            "pushToTalkDesc": "단축키를 누르고 있는 동안 녹음하고 떼면 중지합니다.",
+            "toggleModeDesc": "단축키를 한 번 눌러 녹음을 시작하고 다시 눌러 중지합니다."
+        },
+        "audio": {
+            "title": "오디오 입력 장치",
+            "microphone": "마이크"
+        },
+        "output": {
+            "title": "출력 방법",
+            "directInput": "직접 입력",
+            "clipboard": "클립보드에 복사",
+            "atLeastOne": "⚠️ 최소 하나 이상의 출력 방법이 활성화되어야 합니다."
+        },
+        "textProcessing": {
+            "title": "텍스트 처리",
+            "punctuation": "문장 부호 처리",
+            "numberFormatting": "숫자 형식 지정"
+        },
+        "streaming": {
+            "title": "실시간 모드",
+            "on": "켜짐",
+            "off": "꺼짐"
+        },
+        "log": {
+            "title": "모델 로그"
+        }
+    },
+    "errors": {
+        "model": {
+            "title": "모델 문제",
+            "message": "모델 로드 실패"
+        },
+        "device": {
+            "title": "장치 문제",
+            "message": "장치가 지원되지 않음"
+        },
+        "performance": {
+            "title": "성능 문제",
+            "message": "인식 실패"
+        },
+        "dependency": {
+            "title": "종속성 문제",
+            "message": "런타임 종속성 부족"
+        },
+        "restart": {
+            "title": "재시작 필요",
+            "message": "모델 재시작이 필요함"
+        },
+        "connection": {
+            "title": "연결 끊김",
+            "message": "모델에 연결할 수 없음"
+        },
+        "websocket": {
+            "title": "연결 오류",
+            "message": "WebSocket 연결 오류"
+        },
+        "malformed": {
+            "title": "모델 오류",
+            "message": "잘못된 모델 메시지 형식"
+        },
+        "unknown": {
+            "title": "모델 오류",
+            "message": "알 수 없는 오류"
+        }
+    },
+    "onboarding": {
+        "title": "EchoType에 오신 것을 환영합니다",
+        "subtitle": "음성 입력을 위해 마이크와 단축키 권한이 필요합니다. 아래 단계를 완료해 주세요.",
+        "stepPermissions": "권한 설정",
+        "stepMicrophone": "마이크 선택",
+        "stepModels": "AI 모델",
+        "permissions": {
+            "microphone": "마이크 권한",
+            "microphoneDesc": "음성을 녹음하고 텍스트로 변환하는 데 사용됩니다.",
+            "openMicrophone": "마이크 설정 열기",
+            "accessibility": "단축키 / 접근성",
+            "accessibilityDescWin": "Windows에서는 일반적으로 별도의 권한이 필요하지 않습니다. 단축키가 작동하지 않으면 앱이 실행 중인지 확인하세요.",
+            "accessibilityDescMac": "글로벌 단축키(녹음 시작/중지 등)에 필요합니다. 접근성 설정에서 이 앱을 허용해 주세요.",
+            "openAccessibility": "접근성 설정 열기",
+            "checking": "확인 중…",
+            "granted": "허용됨",
+            "denied": "허용 안 됨",
+            "recheck": "재확인"
+        },
+        "microphone": {
+            "title": "마이크 선택",
+            "description": "음성 입력에 사용할 마이크를 선택하세요. 말할 때 레벨 미터가 움직이는 것을 볼 수 있습니다.",
+            "finish": "완료"
+        },
+        "models": {
+            "title": "AI 모델 다운로드",
+            "description": "필요한 AI 모델이 없습니다. EchoType을 시작하려면 모델을 다운로드해야 합니다.",
+            "paraformer": "Paraformer (기본)",
+            "paraformerDesc": "기본 음성 인식 모델입니다. 한국어와 영어를 지원합니다.",
+            "qwen": "Qwen3 (고급)",
+            "qwenDesc": "더 강력한 AI 음성 모델입니다. 더 나은 실시간 출력을 제공합니다(파일 크기 큼).",
+            "downloading": "다운로드 중...",
+            "extracting": "압축 해제 중...",
+            "installed": "설치됨",
+            "error": "실패",
+            "download": "다운로드"
+        },
+        "next": "다음",
+        "back": "이전"
+    },
+    "common": {
+        "defaultMicrophone": "기본 마이크",
+        "empty": "(비어 있음)"
+    },
+    "debug": {
+        "modelStatus": "모델 상태",
+        "modelLog": {
+            "title": "모델 로그",
+            "empty": "모델 로그가 아직 없습니다. 실행 시 최신 백엔드 로그가 여기에 표시됩니다."
+        }
+    }
+}

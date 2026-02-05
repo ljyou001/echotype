@@ -168,7 +168,7 @@ export type AppState = {
   modelLanguage: Record<string, string>; // Language selection for each model
   modelBackend: Record<string, string>; // Backend selection for each model (e.g., qwen_backend)
   lastActiveModelId: string | undefined; // Last active model to restore on startup
-  appLanguage: "system" | "en" | "zh"; // App UI language: follow system / English / Chinese
+  appLanguage: string; // App UI language (code)
   recordingMode: "push-to-talk" | "toggle"; // Push-to-talk mode vs toggle mode
   _userHasSetRecordingMode: boolean; // Prevent initializeSettings from overwriting user's recent choice
   outputDirectInput: boolean; // Output via direct input (typing)
@@ -211,7 +211,7 @@ export type AppState = {
   setModelBackend: (modelId: string, backend: string) => void;
   getModelBackend: (modelId: string) => string;
   setLastActiveModelId: (modelId: string | undefined) => void;
-  setAppLanguage: (lang: "system" | "en" | "zh") => void;
+  setAppLanguage: (lang: string) => void;
   setRecordingMode: (mode: "push-to-talk" | "toggle") => void;
   initializeSettings: () => Promise<void>;
   setOutputDirectInput: (enabled: boolean) => void;
@@ -302,8 +302,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
     window.echotype?.updateSetting?.(`modelStreaming_${modelId}`, enabled);
   },
-  getModelStreaming: (modelId) => {
-    const state = useAppStore.getState();
+  getModelStreaming: (modelId: string) => {
+    const state = get();
     return state.modelStreaming[modelId] ?? false;
   },
   setModelDevice: (modelId, device) => {
@@ -312,18 +312,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
     window.echotype?.updateSetting?.(`modelDevice_${modelId}`, device);
   },
-  getModelDevice: (modelId) => {
-    const state = useAppStore.getState();
+  getModelDevice: (modelId: string) => {
+    const state = get();
     return state.modelDevice[modelId] ?? "auto";
   },
-  setModelLanguage: (modelId, language) => {
+  setModelLanguage: (modelId: string, language: string) => {
     set((state) => ({
       modelLanguage: { ...state.modelLanguage, [modelId]: language }
     }));
     window.echotype?.updateSetting?.(`modelLanguage_${modelId}`, language);
   },
-  getModelLanguage: (modelId) => {
-    const state = useAppStore.getState();
+  getModelLanguage: (modelId: string) => {
+    const state = get();
     return state.modelLanguage[modelId] ?? "auto";
   },
   setModelBackend: (modelId, backend) => {
@@ -332,8 +332,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
     window.echotype?.updateSetting?.(`modelBackend_${modelId}`, backend);
   },
-  getModelBackend: (modelId) => {
-    const state = useAppStore.getState();
+  getModelBackend: (modelId: string) => {
+    const state = get();
     return state.modelBackend[modelId] ?? "transformers";
   },
   setLastActiveModelId: (modelId) => {

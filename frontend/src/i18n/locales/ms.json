@@ -1,0 +1,24 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Lebih daripada sekadar input suara"
+    },
+    "nav": {
+        "home": "Laman Utama",
+        "history": "Sejarah",
+        "models": "Model",
+        "settings": "Tetapan"
+    },
+    "status": {
+        "loading": "Memuatkan",
+        "ready": "Sedia",
+        "recording": "Merakam",
+        "error": "Ralat"
+    },
+    "settings": {
+        "language": {
+            "title": "Bahasa",
+            "ms": "Bahasa Melayu"
+        }
+    }
+}

@@ -1,0 +1,18 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Więcej niż tylko wprowadzanie głosowe"
+    },
+    "nav": {
+        "home": "Start",
+        "history": "Historia",
+        "models": "Modele",
+        "settings": "Ustawienia"
+    },
+    "settings": {
+        "language": {
+            "title": "Język",
+            "pl": "Polski"
+        }
+    }
+}

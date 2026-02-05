@@ -1,0 +1,18 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Enemmän kuin vain puhesyöttö"
+    },
+    "nav": {
+        "home": "Koti",
+        "history": "Historia",
+        "models": "Mallit",
+        "settings": "Asetukset"
+    },
+    "settings": {
+        "language": {
+            "title": "Kieli",
+            "fi": "Suomi"
+        }
+    }
+}

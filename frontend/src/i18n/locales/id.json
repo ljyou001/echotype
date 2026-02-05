@@ -1,0 +1,24 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "Lebih dari sekadar input suara"
+    },
+    "nav": {
+        "home": "Beranda",
+        "history": "Riwayat",
+        "models": "Model",
+        "settings": "Pengaturan"
+    },
+    "status": {
+        "loading": "Memuat",
+        "ready": "Siap",
+        "recording": "Merekam",
+        "error": "Kesalahan"
+    },
+    "settings": {
+        "language": {
+            "title": "Bahasa",
+            "id": "Bahasa Indonesia"
+        }
+    }
+}

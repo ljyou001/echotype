@@ -1,0 +1,24 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "सिर्फ वॉयस इनपुट ही नहीं"
+    },
+    "nav": {
+        "home": "होम",
+        "history": "इतिहास",
+        "models": "मॉडल",
+        "settings": "सेटिंग"
+    },
+    "status": {
+        "loading": "लोड हो रहा है",
+        "ready": "तैयार",
+        "recording": "रिकॉर्डिंग",
+        "error": "त्रुटि"
+    },
+    "settings": {
+        "language": {
+            "title": "भाषा",
+            "hi": "हिन्दी"
+        }
+    }
+}

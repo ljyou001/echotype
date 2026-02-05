@@ -1,0 +1,430 @@
+{
+    "app": {
+        "name": "Echotype",
+        "subtitle": "音声入力だけじゃない"
+    },
+    "hotkeyLabel": {
+        "RCtrl": "右 Ctrl",
+        "LCtrl": "左 Ctrl",
+        "RAlt": "右 Alt",
+        "LAlt": "左 Alt",
+        "RShift": "右 Shift",
+        "LShift": "左 Shift",
+        "RCmd": "右 ⌘",
+        "LCmd": "左 ⌘",
+        "RWin": "右 ⊞",
+        "LWin": "左 ⊞",
+        "CapsLock": "Caps Lock",
+        "ScrollLock": "Scroll Lock",
+        "NumLock": "Num Lock",
+        "Pause": "Pause",
+        "PrtSc": "Print Screen",
+        "F13": "F13",
+        "F14": "F14",
+        "F15": "F15",
+        "Fn": "Fn"
+    },
+    "hotkeyLabelMac": {
+        "RAlt": "右 Option ⌥",
+        "LAlt": "左 Option ⌥",
+        "RCmd": "右 Command ⌘",
+        "LCmd": "左 Command ⌘"
+    },
+    "nav": {
+        "home": "ホーム",
+        "history": "履歴",
+        "models": "モデル",
+        "integrations": "統合",
+        "settings": "設定",
+        "debug": "デバッグ"
+    },
+    "status": {
+        "loading": "読み込み中",
+        "ready": "準備完了",
+        "capturing": "キャプチャ中",
+        "recording": "録音中",
+        "error": "エラー",
+        "offline": "オフライン",
+        "standby": "スタンバイ",
+        "connected": "接続済み",
+        "disconnected": "切断済み"
+    },
+    "home": {
+        "statusMessage": {
+            "unavailable": "モデル利用不可",
+            "listening": "音声を聴いています",
+            "ready": "文字起こしの準備完了",
+            "preparing": "モデルを準備中",
+            "standby": "スタンバイ",
+            "startingBackend": "モデルに接続中...",
+            "loadingModules": "モデルを読み込み中...",
+            "loadingSpeechModel": "音声モデルを読み込み中...",
+            "loadingPuncModel": "句読点モデルを読み込み中...",
+            "backendReady": "モデルの準備ができました！"
+        },
+        "cards": {
+            "model": "モデル",
+            "hotkey": "ホットキー",
+            "mode": "モード",
+            "input": "入力",
+            "recordingMode": "録音モード"
+        },
+        "modes": {
+            "streaming": "ストリーミング",
+            "offline": "オフライン"
+        },
+        "recordingModes": {
+            "toggle": "トグル",
+            "pushToTalk": "プッシュトーク"
+        },
+        "error": {
+            "title": "モデルエラー",
+            "restart": "モデルを再起動"
+        },
+        "transcript": {
+            "live": "ライブ",
+            "final": "確定",
+            "placeholder": "話して文字起こしを開始してください。",
+            "waiting": "..."
+        },
+        "voiceHint": {
+            "pushToTalkPrefix": "",
+            "pushToTalkSuffix": " を押しながら話す",
+            "togglePrefix": "",
+            "toggleSuffix": " を押して開始、もう一度押して停止",
+            "integrationShortPressPrefix": "",
+            "integrationShortPressSuffix": " をタップして統合ツールを開く",
+            "integrationLongPressPrefix": "",
+            "integrationLongPressSuffix": " を長押しして統合ツールを開く"
+        }
+    },
+    "history": {
+        "title": "履歴",
+        "description": "最近の文字起こし結果。",
+        "empty": "履歴はまだありません。",
+        "actions": {
+            "play": "音声を再生",
+            "search": "検索",
+            "delete": "削除"
+        }
+    },
+    "models": {
+        "title": "モデル",
+        "description": "モデルの切り替えと機能の確認。",
+        "showAuxiliaryModels": "補助モデルを表示",
+        "waitingForModel": "モデルが見つかりません。接続中...",
+        "status": {
+            "running": "実行中",
+            "installed": "インストール済み",
+            "comingSoon": "近日公開",
+            "auxiliary": "補助モデル",
+            "auxiliaryNote": "ASRモデルと自動的に使用されます"
+        },
+        "info": {
+            "family": "ファミリー",
+            "type": "タイプ",
+            "languages": "言語",
+            "devices": "デバイス",
+            "deviceSupport": "デバイスサポート",
+            "currentDevice": "現在のデバイス",
+            "notes": "備考"
+        },
+        "types": {
+            "asr": "音声認識",
+            "punctuation": "句読点"
+        },
+        "settings": {
+            "title": "モデル設定",
+            "device": "デバイス",
+            "language": "言語",
+            "qwenBackend": "Qwen3 実行環境",
+            "streaming": "認識モード",
+            "streamingOn": "ストリーミング",
+            "streamingOff": "オフライン",
+            "apply": "設定を適用",
+            "auto": "自動",
+            "autoDetect": "自動検出",
+            "hints": {
+                "languageSelection": "文字起こしする言語を選択するか、自動検出を使用してください",
+                "qwenBackend": "通常は transformers が推奨されます",
+                "streaming": "ストリーミング: リアルタイムで結果を表示; オフライン: 録音終了後に結果を表示"
+            }
+        }
+    },
+    "integrations": {
+        "title": "統合",
+        "description": "検索や自動化のためのプラグインベースのワークフロー。",
+        "myIntegrations": "マイ統合",
+        "addIntegration": "統合を追加",
+        "emptyState": "統合がまだ追加されていません。「統合を追加」をクリックして開始してください。",
+        "availablePlugins": "利用可能なプラグイン",
+        "comingSoon": "近日公開",
+        "quickAction": {
+            "title": "クイックアクション",
+            "lastText": "最後の文字起こしテキスト",
+            "noText": "テキストなし",
+            "hint": "Enterでデフォルトを実行"
+        },
+        "outputMode": {
+            "clipboard": "クリップボードにコピー",
+            "direct": "直接入力",
+            "both": "両方（クリップボード + 直接入力）"
+        },
+        "actions": {
+            "enable": "有効",
+            "disable": "無効",
+            "setDefault": "デフォルトに設定",
+            "configure": "設定",
+            "remove": "削除",
+            "enabled": "有効"
+        },
+        "categories": {
+            "search": "検索エンジン",
+            "ai": "AI アシスタント",
+            "translation": "翻訳サービス",
+            "custom": "カスタム"
+        },
+        "dialog": {
+            "addTitle": "統合を追加",
+            "configureTitle": "設定",
+            "selectPlugin": "プラグインを選択",
+            "instanceName": "インスタンス名",
+            "icon": "アイコン",
+            "outputMode": "出力モード",
+            "outputModeDescSupported": "このサービスへのテキスト送信方法を選択してください。直接入力はURLパラメータまたはAPIを使用します。",
+            "outputModeDescUnsupported": "このサービスは直接入力をサポートしていません。テキストは手動で貼り付けるためにクリップボードにコピーされます。",
+            "cancel": "キャンセル",
+            "add": "追加",
+            "prevPage": "前へ",
+            "nextPage": "次へ",
+            "save": "保存",
+            "confirmRemoveTitle": "統合を削除しますか？",
+            "confirmRemove": "この統合を削除してもよろしいですか？",
+            "manualPasteRequired": "⚠️ 手動での貼り付けが必要"
+        },
+        "plugins": {
+            "clawbot": {
+                "config": {
+                    "gatewayHint": "OpenClaw UI (Control → Overview → Gateway Access) からホスト、ポート、トークンを取得するか、OpenClaw CLI (`openclaw gateway status` / `discover`) を使用してください。設定は `~/.openclaw/openclaw.json` にあります。",
+                    "host": {
+                        "label": "ホスト",
+                        "description": "OpenClaw サーバーホスト (デフォルト: localhost)"
+                    },
+                    "port": {
+                        "label": "ポート",
+                        "description": "OpenClaw サーバーポート (デフォルト: 18789)"
+                    },
+                    "apiKey": {
+                        "label": "トークン",
+                        "description": "OpenClaw アクセストークン"
+                    },
+                    "session": {
+                        "label": "セッション ID",
+                        "description": "OpenClaw セッション ID (デフォルト: agent:main:main)。WebSocket の場合、メッセージルーティング用の sessionKey を指定します。"
+                    },
+                    "useHttp": {
+                        "label": "HTTP API を使用",
+                        "description": "WebSocket の代わりに HTTP API を使用します (OpenClaw 設定での有効化が必要)。"
+                    },
+                    "openInterface": {
+                        "label": "送信後にウェブインターフェースを開く",
+                        "description": "メッセージ送信後に OpenClaw ウェブインターフェースを自動的に開きます"
+                    },
+                    "timeout": {
+                        "label": "接続タイムアウト (ms)",
+                        "description": "ミリ秒単位の接続タイムアウト (デフォルト: 15000、WebSocket のみ)"
+                    }
+                }
+            }
+        },
+        "items": {
+            "clawbot": {
+                "name": "OpenClaw / Clawbot",
+                "description": "AI駆動の検索と自動化ワークフロー"
+            },
+            "search": {
+                "name": "検索",
+                "description": "クイックなウェブ検索統合"
+            },
+            "workflow": {
+                "name": "ワークフロー",
+                "description": "カスタム自動化ワークフロー"
+            }
+        }
+    },
+    "settings": {
+        "title": "設定",
+        "description": "アプリケーションの全体設定。",
+        "startup": {
+            "title": "起動",
+            "autoStart": "システム起動時に実行",
+            "autoLoadModel": "起動時にモデルを自動ロード"
+        },
+        "language": {
+            "title": "言語",
+            "systemDefault": "システムデフォルト",
+            "en": "English",
+            "zh": "中文"
+        },
+        "hotkey": {
+            "title": "ホットキー",
+            "current": "現在のホットキー",
+            "configure": "ホットキーを設定",
+            "pressKeys": "キーを押してください...",
+            "clickToRecord": "クリックして新しいホットキーを録送",
+            "quickSelect": "クイック選択",
+            "quickSelectDescMac": "システムショートカットとの衝突を避けるため、右側の修飾キーやファンクションキーを推奨します",
+            "quickSelectDescWin": "システムショートカットとの衝突を避けるため、右側の修飾キーや特殊なロックキーを推奨します",
+            "quickKeyDescMac": {
+                "RCmd": "右 Command キー",
+                "RAlt": "右 Option キー",
+                "RCtrl": "右 Control キー",
+                "Fn": "Fn キー",
+                "F13": "F13 キー",
+                "F14": "F14 キー",
+                "F15": "F15 キー"
+            },
+            "quickKeyDescWin": {
+                "RCtrl": "右 Control キー",
+                "RAlt": "右 Alt キー",
+                "RWin": "右 Windows キー",
+                "ScrollLock": "Scroll Lock キー",
+                "Pause": "Pause キー",
+                "PrtSc": "Print Screen キー",
+                "CapsLock": "Caps Lock キー"
+            },
+            "description": "録音を切り替えるグローバルホットキーを設定します。デフォルトは単一キー（右側の修飾キー）ですが、組み合わせもサポートしています。",
+            "note": "重要な注意事項",
+            "noteItem1": "デフォルトでは衝突を避けるため単一キー（右 Ctrl/Cmd）を使用します",
+            "noteItem2": "右側のキー（右 Ctrl, 右 Alt, 右 Win/Cmd）が最も安定しています",
+            "noteItem3": "特殊なファンクションキー（F13-F15, Scroll Lock）は滅多に衝突しません",
+            "noteItem4": "アプリが最小化されていてもホットキーは動作します",
+            "save": "保存",
+            "cancel": "キャンセル",
+            "errors": {
+                "alreadyInUse": "このホットキーは既に使用されています",
+                "invalid": "無効なホットキーの組み合わせです",
+                "systemShortcut": "これはシステムショートカットです"
+            }
+        },
+        "recordingMode": {
+            "title": "録音モード",
+            "pushToTalk": "プッシュトーク",
+            "toggleMode": "トグル",
+            "pushToTalkDesc": "キーを押している間だけ録音し、離すと停止します",
+            "toggleModeDesc": "キーを一度押すと録音開始、もう一度押すと停止します"
+        },
+        "audio": {
+            "title": "オーディオ入力デバイス",
+            "microphone": "マイク"
+        },
+        "output": {
+            "title": "出力方法",
+            "directInput": "直接入力",
+            "clipboard": "クリップボードにコピー",
+            "atLeastOne": "⚠️ 少なくとも1つの出力方法を有効にする必要があります"
+        },
+        "textProcessing": {
+            "title": "テキスト処理",
+            "punctuation": "句読点処理",
+            "numberFormatting": "数値の書式設定"
+        },
+        "streaming": {
+            "title": "ストリーミングモード",
+            "on": "オン",
+            "off": "オフ"
+        },
+        "log": {
+            "title": "モデルログ"
+        }
+    },
+    "errors": {
+        "model": {
+            "title": "モデルの問題",
+            "message": "モデルの読み込みに失敗しました"
+        },
+        "device": {
+            "title": "デバイスの問題",
+            "message": "デバイスがサポートされていません"
+        },
+        "performance": {
+            "title": "パフォーマンスの問題",
+            "message": "認識に失敗しました"
+        },
+        "dependency": {
+            "title": "依存関係の問題",
+            "message": "実行時の依存関係が不足しています"
+        },
+        "restart": {
+            "title": "再起動が必要",
+            "message": "モデルの再起動が必要です"
+        },
+        "connection": {
+            "title": "接続解除",
+            "message": "モデルに到達できません"
+        },
+        "websocket": {
+            "title": "接続エラー",
+            "message": "WebSocket 接続エラー"
+        },
+        "malformed": {
+            "title": "モデルエラー",
+            "message": "不正なモデルメッセージ形式"
+        },
+        "unknown": {
+            "title": "モデルエラー",
+            "message": "不明なエラー"
+        }
+    },
+    "onboarding": {
+        "title": "EchoType へようこそ",
+        "subtitle": "音声入力にはマイクとホットキーの権限が必要です。以下の手順を完了してください。",
+        "stepPermissions": "権限の設定",
+        "stepMicrophone": "マイクの選択",
+        "stepModels": "AI モデル",
+        "permissions": {
+            "microphone": "マイク権限",
+            "microphoneDesc": "音声を録音してテキストに変換するために使用します。",
+            "openMicrophone": "マイク設定を開く",
+            "accessibility": "ホットキー / アクセシビリティ",
+            "accessibilityDescWin": "Windows では通常、個別の権限は不要です。ホットキーが動作しない場合はアプリの実行を確認してください。",
+            "accessibilityDescMac": "グローバルホットキー（録音開始/停止など）に必要です。アクセシビリティ設定でこのアプリを許可してください。",
+            "openAccessibility": "アクセシビリティ設定を開く",
+            "checking": "確認中…",
+            "granted": "許可済み",
+            "denied": "未許可",
+            "recheck": "再確認"
+        },
+        "microphone": {
+            "title": "マイクを選択",
+            "description": "音声入力に使用するマイクを選択してください。話すとレベルメーターが動きます。",
+            "finish": "完了"
+        },
+        "models": {
+            "title": "AI モデルをダウンロード",
+            "description": "必要な AI モデルが不足しています。EchoType を開始するにはこれらをダウンロードする必要があります。",
+            "paraformer": "Paraformer (標準)",
+            "paraformerDesc": "標準的な音声認識モデル。日本語と英語をサポートしています。",
+            "qwen": "Qwen3 (高度)",
+            "qwenDesc": "より強力な AI 音声モデル。よりスムーズなストリーミング出力を提供します（ファイルサイズ大）。",
+            "downloading": "ダウンロード中...",
+            "extracting": "展開中...",
+            "installed": "インストール済み",
+            "error": "失敗",
+            "download": "ダウンロード"
+        },
+        "next": "次へ",
+        "back": "戻る"
+    },
+    "common": {
+        "defaultMicrophone": "デフォルトマイク",
+        "empty": "（空）"
+    },
+    "debug": {
+        "modelStatus": "モデルステータス",
+        "modelLog": {
+            "title": "モデルログ",
+            "empty": "モデルログはまだありません。実行すると最新のバックエンドログがここに表示されます。"
+        }
+    }
+}
