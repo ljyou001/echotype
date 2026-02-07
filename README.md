@@ -1,12 +1,15 @@
 # EchoType All-in-One
 
 <div align="center">
+<img src="assets/icon.png" width="128" alt="EchoType Logo">
 
 **🎤 Modern Voice-to-Text Application with AI Integration**
 
 Fast · Offline · Intelligent · Cross-platform
 
-[📥 Download](https://github.com/ljyou001/echotype/releases) · [� Documentation](#documentation) · [🛠 Development](#development)
+[📥 Download](https://github.com/ljyou001/echotype/releases) · [📖 Documentation](#documentation) · [🛠 Development](#development)
+
+[English](README.md) | [简体中文](README_ZH.md)
 
 </div>
 
@@ -24,6 +27,13 @@ EchoType All-in-One is a complete rewrite of the original EchoType project, feat
 - **🌍 Multilingual**: Support for English and Chinese with i18n framework
 - **🔒 Privacy-First**: Completely offline processing with local AI models
 - **🎨 Modern UI**: Clean, intuitive interface built with React and TypeScript
+
+## 📸 Screenshots
+
+| Main Interface | Models Management | Quick Actions |
+|:---:|:---:|:---:|
+| ![Main Interface](assets/screenshot/main_ui.png) | ![Models Management](assets/screenshot/models_ui.png) | ![Integrations](assets/screenshot/integrations_ui.png) |
+| *Modern Dashboard* | *Model Switching* | *AI Integrations* |
 
 ## 🏗 Architecture
 
