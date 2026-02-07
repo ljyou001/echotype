@@ -1,8 +1,8 @@
-# EchoType All-in-One Release Notes - v2.0.0
+# EchoType Release Notes - v2.0.0
 
 ## 🚀 What's New
 
-We are excited to announce the release of **EchoType All-in-One v2.0.0**, a major update that brings full internationalization, a powerful integration system, and significant UI/UX enhancements.
+We are excited to announce the release of **EchoType v2.0.0**, a major update that brings full internationalization, a powerful integration system, and significant UI/UX enhancements.
 
 ### 🌍 Internationalization (i18n)
 - **Full Chinese Support**: The entire application now supports both English and Simplified Chinese.
@@ -45,11 +45,11 @@ We are excited to announce the release of **EchoType All-in-One v2.0.0**, a majo
 
 ---
 
-# EchoType All-in-One 更新日志 - v2.0.0
+# EchoType 更新日志 - v2.0.0
 
 ## 🚀 新功能特性
 
-我们非常高兴地宣布 **EchoType All-in-One v2.0.0** 正式发布！本次重大更新带来了全方位的国际化支持、强大的集成系统以及显著的 UI/UX 优化。
+我们非常高兴地宣布 **EchoType v2.0.0** 正式发布！本次重大更新带来了全方位的国际化支持、强大的集成系统以及显著的 UI/UX 优化。
 
 ### 🌍 全面国际化 (i18n)
 - **完整中文支持**: 应用程序现在完整支持英文和简体中文切换。

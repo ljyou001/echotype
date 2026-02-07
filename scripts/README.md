@@ -8,11 +8,11 @@
 
 ```powershell
 # 正确的方式
-cd C:\My\Dev\echotype\all-in-one
+cd C:\My\Dev\echotype
 .\scripts\sync_configs.ps1
 
 # 错误的方式（不要这样做）
-cd C:\My\Dev\echotype\all-in-one\scripts
+cd C:\My\Dev\echotype\scripts
 .\sync_configs.ps1
 ```
 
@@ -281,7 +281,7 @@ npm run dev
 
 **解决**: 确保从项目根目录运行脚本
 ```powershell
-cd C:\My\Dev\echotype\all-in-one
+cd C:\My\Dev\echotype
 .\scripts\<script_name>
 ```
 

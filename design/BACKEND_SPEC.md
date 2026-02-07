@@ -1,4 +1,4 @@
-# All-in-One Backend Specification
+# EchoType Backend Specification
 
 ## Goal
 Build a standalone local recognition backend that can run independently from the existing server/client codebase. The backend must:
@@ -13,13 +13,13 @@ Build a standalone local recognition backend that can run independently from the
 - Dependencies: `websockets`, `numpy`, `sherpa-onnx`, `funasr-onnx` (optional for punctuation).
 - Qwen3 runtime uses `qwen-asr` with a lightweight default backend (`transformers`).
 
-## Deployment (Local, All-in-One)
-All setup is contained under `all-in-one/` to keep this project independent.
+## Deployment (Local)
+All setup is contained under the root directory to keep this project independent.
 
-### 1) Create venv inside `all-in-one`
+### 1) Create venv
 Use Python 3.10 on Windows for best compatibility with `kaldi-native-fbank`.
 ```
-cd all-in-one
+cd echotype
 py -3.10 -m venv .venv
 .\.venv\Scripts\python -m pip install --upgrade pip
 ```
@@ -41,11 +41,11 @@ GPU priority is controlled by config:
 - `device_preference="auto"` (selects CUDA if available) or `"cuda"`
 
 ### 4) Place models
-The backend prefers `~/.echotype/models` if it exists, otherwise uses `all-in-one/models`.
+The backend prefers `~/.echotype/models` if it exists, otherwise uses `models/`.
 To simulate multi-model deployments, copy bundled models:
 ```
 mkdir %USERPROFILE%\.echotype\models
-robocopy all-in-one\models %USERPROFILE%\.echotype\models /E
+robocopy models %USERPROFILE%\.echotype\models /E
 ```
 
 ### 5) Run backend
@@ -71,9 +71,9 @@ Outputs:
 - `test/results/qwen3_cpu_results.json`
 - `test/results/qwen3_gpu_results.json`
 
-## Project Layout (all-in-one)
+## Project Layout
 ```
-all-in-one/
+echotype/
   backend/
     __main__.py
     app.py
@@ -102,7 +102,7 @@ all-in-one/
 ## Configuration
 Config is loaded in the following order (later overrides earlier):
 1. Defaults in `config.py`.
-2. Optional JSON file: `all-in-one/backend/config.json` or `--config` path.
+2. Optional JSON file: `backend/config.json` or `--config` path.
 3. CLI flags: `--host`, `--port`, `--models-dir`, `--backend`.
 
 Key fields:
@@ -127,7 +127,7 @@ Key fields:
 - `qwen_streaming_slow_ratio`: slow-speech threshold (ratio of sample_rate).
 
 ## WebSocket Protocol
-See `all-in-one/design/README.md` for the full protocol spec. The backend must:
+See `design/README.md` for the full protocol spec. The backend must:
 - Accept audio messages in the current JSON format.
 - Return `result` messages with `is_final` as in the legacy server.
 - Send `progress`, `status`, and `capabilities` messages.
@@ -254,5 +254,5 @@ Device rules:
 
 ## Quality Requirements
 - All new code uses English identifiers and comments only.
-- No imports from the root project; all dependencies live under `all-in-one/backend`.
-- Backend must be runnable via `python all-in-one/backend/app.py` (or `python -m backend` when executed from `all-in-one`).
+- No imports from the root project; all dependencies live under `backend`.
+- Backend must be runnable via `python backend/app.py` (or `python -m backend`).

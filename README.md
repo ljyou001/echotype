@@ -1,4 +1,4 @@
-# EchoType All-in-One
+# EchoType
 
 <div align="center">
 <img src="assets/icon.png" width="128" alt="EchoType Logo">
@@ -17,7 +17,7 @@ Fast · Offline · Intelligent · Cross-platform
 
 ## 📖 Overview
 
-EchoType All-in-One is a complete rewrite of the original EchoType project, featuring a modern Electron-based frontend and Python backend architecture. It provides real-time voice-to-text transcription with support for multiple AI models and integration with external AI services.
+EchoType is a complete rewrite of the original EchoType project, featuring a modern Electron-based frontend and Python backend architecture. It provides real-time voice-to-text transcription with support for multiple AI models and integration with external AI services.
 
 ### Key Features
 
@@ -62,7 +62,7 @@ EchoType All-in-One is a complete rewrite of the original EchoType project, feat
 1. **Clone the repository**
    ```bash
    git clone https://github.com/ljyou001/echotype.git
-   cd echotype/all-in-one
+   cd echotype
    ```
 
 2. **Install backend dependencies**
@@ -178,7 +178,7 @@ The built application will be in `frontend/dist-electron/`.
 ### Project Structure
 
 ```
-all-in-one/
+echotype/
 ├── backend/                 # Python backend
 │   ├── common/             # Shared utilities
 │   ├── qwen3/              # Qwen3 model adapter

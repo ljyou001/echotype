@@ -16,7 +16,7 @@
 
 ## 品牌资产与图标
 使用前端资产目录中的图标：
-- `all-in-one/frontend/assets/icon.png`
+- `frontend/assets/icon.png`
 必须使用无白底版本，作为窗口图标、托盘图标和应用识别资产。
 
 ## 颜色体系

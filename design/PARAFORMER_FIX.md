@@ -100,7 +100,7 @@ if (supportsBackendSelection(entry) && localQwenBackend) {
   → 发送 (16kHz, 1ch)
 ```
 
-**新项目（all-in-one）**:
+**当前项目**:
 ```
 录音 (48kHz, 2ch) 
   → 累积 

@@ -144,7 +144,7 @@ async def run_server_async(config: BackendConfig, logger: logging.Logger) -> Non
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="EchoType all-in-one backend")
+    parser = argparse.ArgumentParser(description="EchoType backend")
     parser.add_argument("--config", type=str, help="Path to config.json")
     parser.add_argument("--host", type=str, help="WebSocket bind host")
     parser.add_argument("--port", type=int, help="WebSocket bind port")

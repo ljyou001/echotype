@@ -1,4 +1,4 @@
-# EchoType All-in-One
+# EchoType
 
 <div align="center">
 <img src="assets/icon.png" width="128" alt="EchoType Logo">
@@ -17,7 +17,7 @@
 
 ## 📖 项目简介
 
-EchoType All-in-One 是对原 EchoType 项目的完全重写，采用现代化的 Electron 前端与 Python 后端架构。它提供实时的语音转文字转录功能，支持多种 AI 模型，并能与外部 AI 服务进行集成。
+EchoType 是对原 EchoType 项目的完全重写，采用现代化的 Electron 前端与 Python 后端架构。它提供实时的语音转文字转录功能，支持多种 AI 模型，并能与外部 AI 服务进行集成。
 
 ### 核心特性
 
