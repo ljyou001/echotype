@@ -24,6 +24,8 @@ export interface AppError {
 // Settings — persisted by Core in ~/.echotype/settings.json (schemaVersion 2)
 // ============================================================
 export type RecordingMode = "push-to-talk" | "toggle";
+export type ThemeMode = "system" | "light" | "dark";
+export type ThemeAccent = "violet" | "indigo" | "ocean" | "teal" | "rose" | "sunset";
 export type Provider = "auto" | "cpu" | "cuda" | "metal" | "coreml" | "vulkan" | "directml";
 export type SettingValue = string | number | boolean;
 
@@ -53,7 +55,12 @@ export interface Settings {
     activeId: string | null;
     perModel: Record<string, ModelUserSettings>; // 只经 bridge.models.updateSettings 写入，不经 updateSettings
   };
-  ui: { language: string; onboardingCompleted: boolean; launchAtStartup: boolean };
+  ui: {
+    language: string;
+    onboardingCompleted: boolean;
+    launchAtStartup: boolean;
+    theme: { mode: ThemeMode; accent: ThemeAccent }; // 默认 { mode: "system", accent: "violet" }；Core 同步 nativeTheme.themeSource
+  };
   privacy: { saveRecordings: boolean }; // default false
 }
 

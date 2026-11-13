@@ -146,7 +146,7 @@
     },
     {
       "id": "paraformer-zh-small",
-      "name": "Paraformer Small (Chinese)",
+      "name": "Paraformer Small",
       "description": "The smallest download. Fast Chinese and English dictation for low-end machines.",
       "kind": "asr",
       "tier": "instant",
@@ -229,7 +229,7 @@
     },
     {
       "id": "paraformer-zh",
-      "name": "Paraformer (Chinese)",
+      "name": "Paraformer",
       "description": "Balanced Chinese and English dictation. Replaces the v2 Paraformer Offline model.",
       "kind": "asr",
       "tier": "balanced",
@@ -1127,7 +1127,7 @@
     },
     {
       "id": "moonshine-v2-base-en",
-      "name": "Moonshine v2 Base (English)",
+      "name": "Moonshine v2 Base",
       "description": "Tiny and very fast English dictation.",
       "kind": "asr",
       "tier": "instant",
