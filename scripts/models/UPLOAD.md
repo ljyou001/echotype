@@ -4,9 +4,9 @@
 
 先确认已登录：`gh auth status`。Core 按 catalog 的 `sources.url_template` 用 `{release}/{asset}` 拼下载地址，资产名和 release 名必须与下表一致。
 
-## 1. release `models-v3`（模型）
+## 1. release `models-v4`（模型）
 
-共 12 个 zip，合计 **6.72 GiB**（6880.0 MiB）。每个都小于 GitHub 单文件 2 GiB 上限。zip 在 `~/.echotype-staging/models-v3`。
+共 12 个 zip，合计 **6.72 GiB**（6880.0 MiB）。每个都小于 GitHub 单文件 2 GiB 上限。zip 在 `~/.echotype-staging/models-v4`。
 三个 GGUF 变体（cuda / apple-metal / vulkan）共用一个 `*--gguf-q8.zip`，只传一次。
 
 | 文件 | 大小 | sha256 |
@@ -27,58 +27,58 @@
 **release 还不存在**（首次）:
 
 ```bash
-gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes "EchoType v3 model packages. Each zip is one model asset; files sit at the zip root. Checksums are in contracts/models.catalog.json." \
-  "$HOME/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" \
-  "$HOME/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/paraformer-zh--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/qwen3-asr-0.6b--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/qwen3-asr-0.6b--gguf-q8.zip" \
-  "$HOME/.echotype-staging/models-v3/parakeet-tdt-0.6b-v3--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/qwen3-asr-1.7b--gguf-q8.zip" \
-  "$HOME/.echotype-staging/models-v3/fire-red-asr2-aed--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/whisper-large-v3-turbo--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/moonshine-v2-base-en--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/punct-ct-transformer-zh-en--cpu-int8.zip"
+gh release create models-v4 --repo ljyou001/echotype --title "Models v4" --notes "EchoType v4 model packages. Each zip is one model asset; files sit at the zip root. Checksums are in contracts/models.catalog.json." \
+  "$HOME/.echotype-staging/models-v4/sensevoice-small--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/sensevoice-small--cuda-fp32.zip" \
+  "$HOME/.echotype-staging/models-v4/paraformer-zh-small--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/paraformer-zh--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/qwen3-asr-0.6b--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/qwen3-asr-0.6b--gguf-q8.zip" \
+  "$HOME/.echotype-staging/models-v4/parakeet-tdt-0.6b-v3--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/qwen3-asr-1.7b--gguf-q8.zip" \
+  "$HOME/.echotype-staging/models-v4/fire-red-asr2-aed--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/whisper-large-v3-turbo--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/moonshine-v2-base-en--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/punct-ct-transformer-zh-en--cpu-int8.zip"
 ```
 
 **release 已存在**（补传或覆盖）:
 
 ```bash
-gh release upload models-v3 --repo ljyou001/echotype --clobber \
-  "$HOME/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" \
-  "$HOME/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/paraformer-zh--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/qwen3-asr-0.6b--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/qwen3-asr-0.6b--gguf-q8.zip" \
-  "$HOME/.echotype-staging/models-v3/parakeet-tdt-0.6b-v3--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/qwen3-asr-1.7b--gguf-q8.zip" \
-  "$HOME/.echotype-staging/models-v3/fire-red-asr2-aed--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/whisper-large-v3-turbo--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/moonshine-v2-base-en--cpu-int8.zip" \
-  "$HOME/.echotype-staging/models-v3/punct-ct-transformer-zh-en--cpu-int8.zip"
+gh release upload models-v4 --repo ljyou001/echotype --clobber \
+  "$HOME/.echotype-staging/models-v4/sensevoice-small--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/sensevoice-small--cuda-fp32.zip" \
+  "$HOME/.echotype-staging/models-v4/paraformer-zh-small--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/paraformer-zh--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/qwen3-asr-0.6b--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/qwen3-asr-0.6b--gguf-q8.zip" \
+  "$HOME/.echotype-staging/models-v4/parakeet-tdt-0.6b-v3--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/qwen3-asr-1.7b--gguf-q8.zip" \
+  "$HOME/.echotype-staging/models-v4/fire-red-asr2-aed--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/whisper-large-v3-turbo--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/moonshine-v2-base-en--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v4/punct-ct-transformer-zh-en--cpu-int8.zip"
 ```
 
 PowerShell 版（反引号续行）:
 
 ```powershell
-gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes "EchoType v3 model packages." `
-  "$HOME/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" `
-  "$HOME/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" `
-  "$HOME/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" `
-  "$HOME/.echotype-staging/models-v3/paraformer-zh--cpu-int8.zip" `
-  "$HOME/.echotype-staging/models-v3/qwen3-asr-0.6b--cpu-int8.zip" `
-  "$HOME/.echotype-staging/models-v3/qwen3-asr-0.6b--gguf-q8.zip" `
-  "$HOME/.echotype-staging/models-v3/parakeet-tdt-0.6b-v3--cpu-int8.zip" `
-  "$HOME/.echotype-staging/models-v3/qwen3-asr-1.7b--gguf-q8.zip" `
-  "$HOME/.echotype-staging/models-v3/fire-red-asr2-aed--cpu-int8.zip" `
-  "$HOME/.echotype-staging/models-v3/whisper-large-v3-turbo--cpu-int8.zip" `
-  "$HOME/.echotype-staging/models-v3/moonshine-v2-base-en--cpu-int8.zip" `
-  "$HOME/.echotype-staging/models-v3/punct-ct-transformer-zh-en--cpu-int8.zip"
+gh release create models-v4 --repo ljyou001/echotype --title "Models v4" --notes "EchoType v4 model packages." `
+  "$HOME/.echotype-staging/models-v4/sensevoice-small--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v4/sensevoice-small--cuda-fp32.zip" `
+  "$HOME/.echotype-staging/models-v4/paraformer-zh-small--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v4/paraformer-zh--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v4/qwen3-asr-0.6b--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v4/qwen3-asr-0.6b--gguf-q8.zip" `
+  "$HOME/.echotype-staging/models-v4/parakeet-tdt-0.6b-v3--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v4/qwen3-asr-1.7b--gguf-q8.zip" `
+  "$HOME/.echotype-staging/models-v4/fire-red-asr2-aed--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v4/whisper-large-v3-turbo--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v4/moonshine-v2-base-en--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v4/punct-ct-transformer-zh-en--cpu-int8.zip"
 ```
 
-## 2. release `engine-packs-v3`（引擎包）
+## 2. release `engine-packs-v4`（引擎包）
 
 由 engine / ci 会话产出。sha256 为 pending 表示文件还没有。文件齐了之后，他们填 catalog 并在这里追加命令。
 
@@ -94,5 +94,5 @@ gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes
 ## 上传后
 
 - 链接在上传完成的那一刻才生效。上传前应用内下载会 404，所以先上传，再发布依赖这些资产的构建。
-- 抽查: `curl -sIL https://github.com/ljyou001/echotype/releases/download/models-v3/<文件名>`，确认 200 且 content-length 与上表一致。
+- 抽查: `curl -sIL https://github.com/ljyou001/echotype/releases/download/models-v4/<文件名>`，确认 200 且 content-length 与上表一致。
 - 换文件内容必须重新打包并同步 catalog 的 sha256，否则 Core 校验失败。
