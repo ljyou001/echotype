@@ -86,7 +86,7 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-5) var(--space-6);
-  border-color: var(--pink-ring);
+  border-color: var(--accent-2-ring);
 }
 
 .live__head {

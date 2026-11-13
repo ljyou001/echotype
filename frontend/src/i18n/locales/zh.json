@@ -565,7 +565,8 @@
       "dictation": "听写",
       "microphone": "麦克风",
       "privacy": "隐私",
-      "about": "关于"
+      "about": "关于",
+      "appearance": "外观"
     },
     "privacy": {
       "saveRecordings": "保存录音",
@@ -594,6 +595,25 @@
       "source": "源代码",
       "sourceDescription": "EchoType 是开源软件。",
       "reportIssue": "反馈问题"
+    },
+    "appearance": {
+      "theme": "主题",
+      "themeDescription": "跟随系统，或固定为浅色、深色。",
+      "modes": {
+        "system": "跟随系统",
+        "light": "浅色",
+        "dark": "深色"
+      },
+      "accent": "主题色",
+      "accentDescription": "{{name}}。用于按钮、高亮、侧栏和光球。",
+      "accents": {
+        "violet": "紫罗兰",
+        "indigo": "靛蓝",
+        "ocean": "海蓝",
+        "teal": "青绿",
+        "rose": "玫红",
+        "sunset": "日落橙"
+      }
     }
   },
   "errors": {

@@ -44,7 +44,7 @@ textarea {
 }
 
 a {
-  color: var(--brand);
+  color: var(--brand-text);
 }
 
 code {
@@ -65,7 +65,7 @@ kbd {
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
-  color: var(--brand);
+  color: var(--brand-text);
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-bottom-width: 2px;

@@ -193,7 +193,7 @@
 }
 
 .model-card__license:hover {
-  color: var(--brand);
+  color: var(--brand-text);
   text-decoration: underline;
 }
 
