@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 ipc-contract 的 LicensesView 类型；依赖 bridge().system.openExternal；依赖 store/appStore 的 models（取语言以去掉名称里的语言括号）；
- *          依赖 components 的 Modal、Badge；依赖 utils/models 的 stripLanguageSuffix；react-i18next
+ *          依赖 components 的 Modal、Badge；依赖 utils/models 的 displayName；react-i18next
  * [OUTPUT]: 导出 LicensesDialog 组件
  * [POS]: 设置 → 关于 → 许可证。上半部分是模型许可证（id 链接 + 商用说明），下半部分是开源组件（名称、版本、许可证、链接）。
  *        数据来自 system.getLicenses()，由调用方拉取后传入，本组件只负责展示。
@@ -13,7 +13,7 @@ import { bridge } from "../../bridge";
 import { Badge } from "../../components/controls";
 import { Modal } from "../../components/Modal";
 import { useAppStore } from "../../store/appStore";
-import { stripLanguageSuffix } from "../../utils/models";
+import { displayName } from "../../utils/models";
 
 const COMMERCIAL_TONE = { yes: "success", no: "danger", unclear: "warning" } as const;
 
@@ -21,7 +21,10 @@ export function LicensesDialog({ licenses, onClose }: { licenses: LicensesView; 
   const { t } = useTranslation();
   const models = useAppStore((s) => s.models);
   const open = (url: string) => void bridge().system.openExternal(url);
-  const languagesOf = (id: string) => models.find((m) => m.id === id)?.languages ?? [];
+  const nameOf = (id: string, fallback: string) => {
+    const model = models.find((m) => m.id === id);
+    return model ? displayName(model) : fallback;
+  };
 
   return (
     <Modal
@@ -40,7 +43,7 @@ export function LicensesDialog({ licenses, onClose }: { licenses: LicensesView; 
         <ul className="licenses__list">
           {licenses.models.map((m) => (
             <li key={m.id} className="licenses__row">
-              <span className="licenses__name">{stripLanguageSuffix(m.name, languagesOf(m.id))}</span>
+              <span className="licenses__name">{nameOf(m.id, m.name)}</span>
               <button type="button" className="licenses__link" onClick={() => open(m.license.url)}>
                 {m.license.id} <FiExternalLink />
               </button>

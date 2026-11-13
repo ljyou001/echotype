@@ -84,4 +84,6 @@ export function stripLanguageSuffix(name: string, languages: string[]): string {
   return parts.length > 0 && parts.every((p) => known.has(p)) ? match[1] : name;
 }
 
-export const displayName = (m: Pick<ModelView, "name" | "languages">) => stripLanguageSuffix(m.name, m.languages);
+/** 只处理语音模型：它们旁边有语言标签。辅助模型（如标点）没有标签，括号里的语言就是名字的一部分 */
+export const displayName = (m: Pick<ModelView, "name" | "languages" | "kind">) =>
+  m.kind === "asr" ? stripLanguageSuffix(m.name, m.languages) : m.name;
