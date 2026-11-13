@@ -2,7 +2,50 @@
   "schema": 2,
   "updated": "2026-11-13",
   "default_model_id": "sensevoice-small",
-  "release_base_url": "https://github.com/ljyou001/echotype/releases/download/models-v3/",
+  "sources": [
+    {
+      "id": "github",
+      "type": "http",
+      "url_template": "https://github.com/ljyou001/echotype/releases/download/{release}/{asset}"
+    },
+    {
+      "id": "steam",
+      "type": "local",
+      "path_template": "{steam_app_dir}/models/{asset}"
+    }
+  ],
+  "channels": {
+    "github": {
+      "sources": [
+        "github"
+      ],
+      "remote_catalog": null,
+      "allow_commercial": [
+        "yes",
+        "unclear"
+      ]
+    },
+    "steam": {
+      "sources": [
+        "steam",
+        "github"
+      ],
+      "remote_catalog": null,
+      "allow_commercial": [
+        "yes"
+      ]
+    },
+    "msstore": {
+      "sources": [
+        "github"
+      ],
+      "remote_catalog": null,
+      "allow_commercial": [
+        "yes"
+      ]
+    },
+    "_note": "allow_commercial is provisional; the user decides per-store policy later."
+  },
   "models": [
     {
       "id": "sensevoice-small",
@@ -46,6 +89,16 @@
           "default": true
         },
         {
+          "key": "punct_style",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en"
+          ]
+        },
+        {
           "key": "itn",
           "type": "toggle",
           "default": true
@@ -54,18 +107,20 @@
       "variants": [
         {
           "id": "cpu-int8",
+          "target": "cpu",
           "runtime": "sherpa-onnx",
           "arch": "sense_voice",
           "providers": [
             "cpu"
           ],
+          "requires_pack": null,
           "files": {
             "model": "model.int8.onnx",
             "tokens": "tokens.txt"
           },
-          "download": {
-            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/sensevoice-small--cpu-int8.zip",
-            "format": "zip",
+          "asset": {
+            "name": "sensevoice-small--cpu-int8.zip",
+            "release": "models-v3",
             "sha256": null,
             "size_bytes": 0,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2"
@@ -86,7 +141,8 @@
         "id": "FunASR-Model-License",
         "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
         "commercial": "unclear"
-      }
+      },
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     },
     {
       "id": "paraformer-zh-small",
@@ -117,6 +173,16 @@
           "default": true
         },
         {
+          "key": "punct_style",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en"
+          ]
+        },
+        {
           "key": "itn",
           "type": "toggle",
           "default": true
@@ -125,18 +191,20 @@
       "variants": [
         {
           "id": "cpu-int8",
+          "target": "cpu",
           "runtime": "sherpa-onnx",
           "arch": "paraformer",
           "providers": [
             "cpu"
           ],
+          "requires_pack": null,
           "files": {
             "model": "model.int8.onnx",
             "tokens": "tokens.txt"
           },
-          "download": {
-            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/paraformer-zh-small--cpu-int8.zip",
-            "format": "zip",
+          "asset": {
+            "name": "paraformer-zh-small--cpu-int8.zip",
+            "release": "models-v3",
             "sha256": null,
             "size_bytes": 0,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-small-2024-03-09.tar.bz2"
@@ -156,7 +224,8 @@
         "id": "FunASR-Model-License",
         "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
         "commercial": "unclear"
-      }
+      },
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     },
     {
       "id": "paraformer-zh",
@@ -187,6 +256,16 @@
           "default": true
         },
         {
+          "key": "punct_style",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en"
+          ]
+        },
+        {
           "key": "itn",
           "type": "toggle",
           "default": true
@@ -195,18 +274,20 @@
       "variants": [
         {
           "id": "cpu-int8",
+          "target": "cpu",
           "runtime": "sherpa-onnx",
           "arch": "paraformer",
           "providers": [
             "cpu"
           ],
+          "requires_pack": null,
           "files": {
             "model": "model.int8.onnx",
             "tokens": "tokens.txt"
           },
-          "download": {
-            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/paraformer-zh--cpu-int8.zip",
-            "format": "zip",
+          "asset": {
+            "name": "paraformer-zh--cpu-int8.zip",
+            "release": "models-v3",
             "sha256": null,
             "size_bytes": 0,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2"
@@ -226,7 +307,8 @@
         "id": "FunASR-Model-License",
         "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
         "commercial": "unclear"
-      }
+      },
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     },
     {
       "id": "qwen3-asr-0.6b",
@@ -320,6 +402,16 @@
           "default": true
         },
         {
+          "key": "punct_style",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en"
+          ]
+        },
+        {
           "key": "itn",
           "type": "toggle",
           "default": true
@@ -333,15 +425,17 @@
       "variants": [
         {
           "id": "cpu-int8",
+          "target": "cpu",
           "runtime": "sherpa-onnx",
           "arch": "qwen3_asr",
           "providers": [
             "cpu"
           ],
+          "requires_pack": null,
           "files": {},
-          "download": {
-            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/qwen3-asr-0.6b--cpu-int8.zip",
-            "format": "zip",
+          "asset": {
+            "name": "qwen3-asr-0.6b--cpu-int8.zip",
+            "release": "models-v3",
             "sha256": null,
             "size_bytes": 0,
             "upstream_url": null
@@ -356,21 +450,21 @@
           }
         },
         {
-          "id": "gpu-gguf-q8",
+          "id": "cuda-gguf-q8",
+          "target": "nvidia",
           "runtime": "llama.cpp",
           "arch": "mtmd_asr",
           "providers": [
-            "cuda",
-            "metal",
-            "vulkan"
+            "cuda"
           ],
+          "requires_pack": "cuda",
           "files": {
             "model": "Qwen3-ASR-0.6B-Q8_0.gguf",
             "mmproj": "mmproj-Qwen3-ASR-0.6B-Q8_0.gguf"
           },
-          "download": {
-            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/qwen3-asr-0.6b--gpu-gguf-q8.zip",
-            "format": "zip",
+          "asset": {
+            "name": "qwen3-asr-0.6b--gguf-q8.zip",
+            "release": "models-v3",
             "sha256": null,
             "size_bytes": 0,
             "upstream_url": "https://huggingface.co/ggml-org/Qwen3-ASR-0.6B-GGUF"
@@ -382,8 +476,65 @@
           "bench": {
             "release_to_final_ms_p50_10s": null,
             "host": null
+          }
+        },
+        {
+          "id": "apple-metal-gguf-q8",
+          "target": "apple",
+          "runtime": "llama.cpp",
+          "arch": "mtmd_asr",
+          "providers": [
+            "metal"
+          ],
+          "requires_pack": null,
+          "files": {
+            "model": "Qwen3-ASR-0.6B-Q8_0.gguf",
+            "mmproj": "mmproj-Qwen3-ASR-0.6B-Q8_0.gguf"
           },
-          "_note": "Runs through a pinned prebuilt llama-server sidecar (input_audio in /v1/chat/completions) unless embedding llama-cpp-2 mtmd proves simpler. Shipped in GPU engine packs and in the macOS base engine (Metal)."
+          "asset": {
+            "name": "qwen3-asr-0.6b--gguf-q8.zip",
+            "release": "models-v3",
+            "sha256": null,
+            "size_bytes": 0,
+            "upstream_url": "https://huggingface.co/ggml-org/Qwen3-ASR-0.6B-GGUF"
+          },
+          "requirements": {
+            "ram_mb": 1500,
+            "vram_mb": 1500
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        },
+        {
+          "id": "vulkan-gguf-q8",
+          "target": "vulkan",
+          "runtime": "llama.cpp",
+          "arch": "mtmd_asr",
+          "providers": [
+            "vulkan"
+          ],
+          "requires_pack": "vulkan",
+          "files": {
+            "model": "Qwen3-ASR-0.6B-Q8_0.gguf",
+            "mmproj": "mmproj-Qwen3-ASR-0.6B-Q8_0.gguf"
+          },
+          "asset": {
+            "name": "qwen3-asr-0.6b--gguf-q8.zip",
+            "release": "models-v3",
+            "sha256": null,
+            "size_bytes": 0,
+            "upstream_url": "https://huggingface.co/ggml-org/Qwen3-ASR-0.6B-GGUF"
+          },
+          "requirements": {
+            "ram_mb": 1500,
+            "vram_mb": 1500
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
         }
       ],
       "status": "beta",
@@ -392,7 +543,8 @@
         "id": "Apache-2.0",
         "url": "https://huggingface.co/Qwen/Qwen3-ASR-0.6B",
         "commercial": "yes"
-      }
+      },
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     },
     {
       "id": "parakeet-tdt-0.6b-v3",
@@ -478,20 +630,22 @@
       "variants": [
         {
           "id": "cpu-int8",
+          "target": "cpu",
           "runtime": "sherpa-onnx",
           "arch": "nemo_transducer",
           "providers": [
             "cpu"
           ],
+          "requires_pack": null,
           "files": {
             "encoder": "encoder.int8.onnx",
             "decoder": "decoder.int8.onnx",
             "joiner": "joiner.int8.onnx",
             "tokens": "tokens.txt"
           },
-          "download": {
-            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/parakeet-tdt-0.6b-v3--cpu-int8.zip",
-            "format": "zip",
+          "asset": {
+            "name": "parakeet-tdt-0.6b-v3--cpu-int8.zip",
+            "release": "models-v3",
             "sha256": null,
             "size_bytes": 0,
             "upstream_url": null
@@ -512,7 +666,8 @@
         "id": "CC-BY-4.0",
         "url": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3",
         "commercial": "yes"
-      }
+      },
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     },
     {
       "id": "qwen3-asr-1.7b",
@@ -606,6 +761,16 @@
           "default": true
         },
         {
+          "key": "punct_style",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en"
+          ]
+        },
+        {
           "key": "itn",
           "type": "toggle",
           "default": true
@@ -618,21 +783,79 @@
       ],
       "variants": [
         {
-          "id": "gpu-gguf-q8",
+          "id": "cuda-gguf-q8",
+          "target": "nvidia",
           "runtime": "llama.cpp",
           "arch": "mtmd_asr",
           "providers": [
-            "cuda",
-            "metal",
-            "vulkan"
+            "cuda"
           ],
+          "requires_pack": "cuda",
           "files": {
             "model": "Qwen3-ASR-1.7B-Q8_0.gguf",
             "mmproj": "mmproj-Qwen3-ASR-1.7B-Q8_0.gguf"
           },
-          "download": {
-            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/qwen3-asr-1.7b--gpu-gguf-q8.zip",
-            "format": "zip",
+          "asset": {
+            "name": "qwen3-asr-1.7b--gguf-q8.zip",
+            "release": "models-v3",
+            "sha256": null,
+            "size_bytes": 0,
+            "upstream_url": "https://huggingface.co/ggml-org/Qwen3-ASR-1.7B-GGUF"
+          },
+          "requirements": {
+            "ram_mb": 3000,
+            "vram_mb": 3000
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        },
+        {
+          "id": "apple-metal-gguf-q8",
+          "target": "apple",
+          "runtime": "llama.cpp",
+          "arch": "mtmd_asr",
+          "providers": [
+            "metal"
+          ],
+          "requires_pack": null,
+          "files": {
+            "model": "Qwen3-ASR-1.7B-Q8_0.gguf",
+            "mmproj": "mmproj-Qwen3-ASR-1.7B-Q8_0.gguf"
+          },
+          "asset": {
+            "name": "qwen3-asr-1.7b--gguf-q8.zip",
+            "release": "models-v3",
+            "sha256": null,
+            "size_bytes": 0,
+            "upstream_url": "https://huggingface.co/ggml-org/Qwen3-ASR-1.7B-GGUF"
+          },
+          "requirements": {
+            "ram_mb": 3000,
+            "vram_mb": 3000
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        },
+        {
+          "id": "vulkan-gguf-q8",
+          "target": "vulkan",
+          "runtime": "llama.cpp",
+          "arch": "mtmd_asr",
+          "providers": [
+            "vulkan"
+          ],
+          "requires_pack": "vulkan",
+          "files": {
+            "model": "Qwen3-ASR-1.7B-Q8_0.gguf",
+            "mmproj": "mmproj-Qwen3-ASR-1.7B-Q8_0.gguf"
+          },
+          "asset": {
+            "name": "qwen3-asr-1.7b--gguf-q8.zip",
+            "release": "models-v3",
             "sha256": null,
             "size_bytes": 0,
             "upstream_url": "https://huggingface.co/ggml-org/Qwen3-ASR-1.7B-GGUF"
@@ -653,7 +876,8 @@
         "commercial": "yes"
       },
       "status": "beta",
-      "_note": "GPU only. Hide the model on machines with no GPU provider."
+      "_note": "GPU only. Hide the model on machines with no GPU provider.",
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     },
     {
       "id": "fire-red-asr2-aed",
@@ -684,6 +908,16 @@
           "default": true
         },
         {
+          "key": "punct_style",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en"
+          ]
+        },
+        {
           "key": "itn",
           "type": "toggle",
           "default": true
@@ -692,19 +926,21 @@
       "variants": [
         {
           "id": "cpu-int8",
+          "target": "cpu",
           "runtime": "sherpa-onnx",
           "arch": "fire_red_asr",
           "providers": [
             "cpu"
           ],
+          "requires_pack": null,
           "files": {
             "encoder": "encoder.int8.onnx",
             "decoder": "decoder.int8.onnx",
             "tokens": "tokens.txt"
           },
-          "download": {
-            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/fire-red-asr2-aed--cpu-int8.zip",
-            "format": "zip",
+          "asset": {
+            "name": "fire-red-asr2-aed--cpu-int8.zip",
+            "release": "models-v3",
             "sha256": null,
             "size_bytes": 0,
             "upstream_url": null
@@ -725,7 +961,8 @@
         "commercial": "yes"
       },
       "status": "beta",
-      "_note": "Engine: fill upstream_url and files from the sherpa-onnx FireRedASR docs (v2 AED package)."
+      "_note": "Engine: fill upstream_url and files from the sherpa-onnx FireRedASR docs (v2 AED package).",
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     },
     {
       "id": "whisper-large-v3-turbo",
@@ -823,6 +1060,16 @@
           "default": true
         },
         {
+          "key": "punct_style",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en"
+          ]
+        },
+        {
           "key": "task",
           "type": "select",
           "default": "transcribe",
@@ -835,19 +1082,21 @@
       "variants": [
         {
           "id": "cpu-int8",
+          "target": "cpu",
           "runtime": "sherpa-onnx",
           "arch": "whisper",
           "providers": [
             "cpu"
           ],
+          "requires_pack": null,
           "files": {
             "encoder": "turbo-encoder.int8.onnx",
             "decoder": "turbo-decoder.int8.onnx",
             "tokens": "turbo-tokens.txt"
           },
-          "download": {
-            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/whisper-large-v3-turbo--cpu-int8.zip",
-            "format": "zip",
+          "asset": {
+            "name": "whisper-large-v3-turbo--cpu-int8.zip",
+            "release": "models-v3",
             "sha256": null,
             "size_bytes": 0,
             "upstream_url": null
@@ -868,7 +1117,8 @@
         "commercial": "yes"
       },
       "status": "beta",
-      "_note": "languages lists the top 32; engine may extend. Add a cuda variant only if the sherpa CUDA pack measurably wins."
+      "_note": "languages lists the top 32; engine may extend. Add a cuda variant only if the sherpa CUDA pack measurably wins.",
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     },
     {
       "id": "moonshine-v2-base-en",
@@ -898,15 +1148,17 @@
       "variants": [
         {
           "id": "cpu-int8",
+          "target": "cpu",
           "runtime": "sherpa-onnx",
           "arch": "moonshine",
           "providers": [
             "cpu"
           ],
+          "requires_pack": null,
           "files": {},
-          "download": {
-            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/moonshine-v2-base-en--cpu-int8.zip",
-            "format": "zip",
+          "asset": {
+            "name": "moonshine-v2-base-en--cpu-int8.zip",
+            "release": "models-v3",
             "sha256": null,
             "size_bytes": 0,
             "upstream_url": null
@@ -927,7 +1179,8 @@
         "commercial": "yes"
       },
       "status": "beta",
-      "_note": "English only: Moonshine's non-English models are non-commercial. Engine: fill files/upstream_url."
+      "_note": "English only: Moonshine's non-English models are non-commercial. Engine: fill files/upstream_url.",
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     },
     {
       "id": "punct-ct-transformer-zh-en",
@@ -952,17 +1205,19 @@
       "variants": [
         {
           "id": "cpu-int8",
+          "target": "cpu",
           "runtime": "sherpa-onnx",
           "arch": "ct_transformer",
           "providers": [
             "cpu"
           ],
+          "requires_pack": null,
           "files": {
             "model": "model.int8.onnx"
           },
-          "download": {
-            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/punct-ct-transformer-zh-en--cpu-int8.zip",
-            "format": "zip",
+          "asset": {
+            "name": "punct-ct-transformer-zh-en--cpu-int8.zip",
+            "release": "models-v3",
             "sha256": null,
             "size_bytes": 0,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/punctuation-models/sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12-int8.tar.bz2"
@@ -982,54 +1237,77 @@
         "id": "FunASR-Model-License",
         "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
         "commercial": "unclear"
-      }
+      },
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     }
   ],
   "engine_packs": [
     {
       "id": "cuda",
+      "target": "nvidia",
       "providers": [
         "cuda"
       ],
+      "protocol": 3,
       "platforms": {
         "win32-x64": {
-          "url": "https://github.com/ljyou001/echotype/releases/download/engine-packs-v3/engine-pack-cuda-win32-x64.zip",
-          "sha256": null,
-          "size_bytes": 0
+          "asset": {
+            "name": "engine-pack-cuda-win32-x64.zip",
+            "release": "engine-packs-v3",
+            "sha256": null,
+            "size_bytes": 0
+          }
         },
         "linux-x64": {
-          "url": "https://github.com/ljyou001/echotype/releases/download/engine-packs-v3/engine-pack-cuda-linux-x64.zip",
-          "sha256": null,
-          "size_bytes": 0
+          "asset": {
+            "name": "engine-pack-cuda-linux-x64.zip",
+            "release": "engine-packs-v3",
+            "sha256": null,
+            "size_bytes": 0
+          }
         }
       },
-      "_note": "Built by CI from the engine with GPU features; uploaded to the engine-packs-v3 release."
+      "_note": "Complete engine build + GPU libs (MODEL_MANIFEST §5). cuda: sherpa-onnx CUDA shared libs + ONNX Runtime GPU + NVIDIA runtime DLLs + CUDA llama-server."
     },
     {
       "id": "vulkan",
+      "target": "vulkan",
       "providers": [
         "vulkan"
       ],
+      "protocol": 3,
       "platforms": {
         "win32-x64": {
-          "url": "https://github.com/ljyou001/echotype/releases/download/engine-packs-v3/engine-pack-vulkan-win32-x64.zip",
-          "sha256": null,
-          "size_bytes": 0
+          "asset": {
+            "name": "engine-pack-vulkan-win32-x64.zip",
+            "release": "engine-packs-v3",
+            "sha256": null,
+            "size_bytes": 0
+          }
         },
         "win32-arm64": {
-          "url": "https://github.com/ljyou001/echotype/releases/download/engine-packs-v3/engine-pack-vulkan-win32-arm64.zip",
-          "sha256": null,
-          "size_bytes": 0
+          "asset": {
+            "name": "engine-pack-vulkan-win32-arm64.zip",
+            "release": "engine-packs-v3",
+            "sha256": null,
+            "size_bytes": 0
+          }
         },
         "linux-x64": {
-          "url": "https://github.com/ljyou001/echotype/releases/download/engine-packs-v3/engine-pack-vulkan-linux-x64.zip",
-          "sha256": null,
-          "size_bytes": 0
+          "asset": {
+            "name": "engine-pack-vulkan-linux-x64.zip",
+            "release": "engine-packs-v3",
+            "sha256": null,
+            "size_bytes": 0
+          }
         },
         "linux-arm64": {
-          "url": "https://github.com/ljyou001/echotype/releases/download/engine-packs-v3/engine-pack-vulkan-linux-arm64.zip",
-          "sha256": null,
-          "size_bytes": 0
+          "asset": {
+            "name": "engine-pack-vulkan-linux-arm64.zip",
+            "release": "engine-packs-v3",
+            "sha256": null,
+            "size_bytes": 0
+          }
         }
       },
       "_note": "Optional, low priority: llama.cpp Vulkan for AMD/Intel GPUs (Qwen3 GGUF variants)."
