@@ -22,7 +22,7 @@ frontend/package.json - 前端依赖与 electron-builder 配置
 2. 听写状态机、热键判定、输出、设置、模型安装全部在 Core。
 3. 用户设置只存在 `~/.echotype/settings.json`（Core 读写）。模型专属设置（标点、语言、provider 等）只在模型页，由 catalog 声明。
 4. 模型元数据只存在 `contracts/models.catalog.json`。代码里不得硬编码模型 id。
-5. 延迟 KPI 是 `release_to_final_ms`（松键到出字）。任何改动不得让它变差。
+5. 延迟 KPI 是 `release_to_final_ms`（松键到出字）。听写 final 必须与同一录音的 `transcribe.file` 逐字相同。满足这一点后，任何改动不得让延迟变差。
 6. 契约文件只由 orchestrator 会话修改。
 
 ## 运行

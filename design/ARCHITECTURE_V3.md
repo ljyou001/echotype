@@ -73,7 +73,7 @@ uiohook(main) → IPC → 渲染进程 App.tsx 状态机(窗口常隐藏) → WS
 ### 2.1 新的听写路径（2 跳）
 ```
 uiohook(Core) → HotkeyService 判定 → DictationSession → engine session.start
-松键 → engine 只解码尾段 → event final → Core 直接粘贴 → 推 snapshot 给 UI
+松键 → engine 只解码最后一句（停顿时已推测解码则直接复用）→ event final → Core 直接粘贴 → 推 snapshot 给 UI
 ```
 
 ### 2.2 轻按 / 长按（保留现有交互）
@@ -84,7 +84,8 @@ uiohook(Core) → HotkeyService 判定 → DictationSession → engine session.s
 
 ### 2.3 毫秒级响应
 延迟 KPI = 松键 → final（`release_to_final_ms`）。手段见 `ENGINE_PROTOCOL.md §8`：
-VAD 边说边解码已闭合的段，松键只解尾段；单飞解码，final 不排队；加载后预热；常驻麦克风预录 300 ms。
+VAD 按句（停顿 ≥ 0.6 s、最长 8 s）切出解码单元，边说边解码已闭合的句子；每个停顿推测解码当前句，松键时切片逐样本相同就复用，否则只整句解码最后一句；单飞解码，final 不排队；加载后预热；常驻麦克风预录 300 ms。
+听写 final 必须与同一录音的 `transcribe.file` 逐字相同；延迟只在这个前提下优化。
 目标：默认 instant 模型，CPU，10 s 语音，P50 ≤ 80 ms。
 
 ### 2.4 标点归模型
