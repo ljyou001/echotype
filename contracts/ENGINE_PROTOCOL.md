@@ -14,7 +14,8 @@
 
 ## 2. Process lifecycle
 
-1. Core spawns the engine: `echotype-engine --port 0 --models-dir <dir> --log-dir <dir>`.
+1. Core spawns the engine: `echotype-engine --port 0 --models-dir <dir> --packs-dir <dir> --log-dir <dir>`.
+   The engine owns any sidecar it starts (e.g. `llama-server` from a pack) and kills it on unload or exit.
 2. After bind, the engine prints exactly one line to **stdout**, then flushes:
    `{"event":"engine_ready","port":49731,"protocol":3,"engine_version":"3.0.0"}`
 3. All other output goes to stderr and to the log file. stdout carries nothing else.

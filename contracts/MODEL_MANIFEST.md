@@ -20,6 +20,7 @@
   "requires": [],                        // model ids Core installs first
   "settings": [ /* §3, model-specific settings shown ONLY on the Models page */ ],
   "variants": [ /* §2, one per runtime × hardware target */ ],
+  "license": { "id": "Apache-2.0", "url": "https://…", "commercial": "yes" }, // commercial: yes | no | unclear
   "status": "stable"                     // stable | beta | hidden
 }
 ```
@@ -75,7 +76,7 @@ Variant selection for the user's `provider` setting:
 
 The engine session owns this table: it adds a row only after a real load + decode test passes. Silero VAD ships inside the engine package; it is not a catalog entry.
 
-## 5. Engine packs (`engine_packs[]`) — optional GPU builds of the engine
+## 5. Engine packs (`engine_packs[]`) — optional GPU runtimes
 
 ```jsonc
 {
@@ -87,7 +88,11 @@ The engine session owns this table: it adds a row only after a real load + decod
   }
 }
 ```
-A pack is a complete engine build with GPU libraries. The base installer ships the CPU engine (plus Metal/CoreML on macOS). When a pack is installed, Core spawns the engine from `~/.echotype/engines/<pack id>/` instead of the bundled one.
+- A pack is a folder of GPU runtime binaries: in v3, a pinned prebuilt `llama-server` build plus its GPU libraries (CUDA 12 runtime, or Vulkan).
+- Core installs it to `~/.echotype/engines/<pack id>/` and always passes `--packs-dir ~/.echotype/engines` to the one bundled engine.
+- The engine discovers installed packs, probes the GPU, and lists the pack's providers in `hello.providers` only when they work.
+- sherpa-onnx stays CPU-only in every build (static link, one engine binary). The sherpa CUDA archive + cuDNN is 1–2 GB for little gain on int8 graphs.
+- macOS base engine bundles the Metal `llama-server`; no pack is needed there.
 
 ## 6. Add a model
 

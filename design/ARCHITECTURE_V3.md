@@ -112,9 +112,10 @@ VAD 边说边解码已闭合的段，松键只解尾段；单飞解码，final �
 
 | 会话 | 独占目录 | 不得修改 |
 |---|---|---|
-| engine | `engine/**`（新 Rust 工程）· 删除 `backend/**` `launcher.py` `echotype-backend.spec` `requirements-backend.txt` · `scripts/models/**`（模型重打包）· catalog 字段值 | `frontend/**` · `.github/**` |
+| engine | `engine/**`（新 Rust 工程）· 删除 `backend/**` `launcher.py` `echotype-backend.spec` `requirements-backend.txt` · catalog 的 `arch` `providers` `bench` `settings` 字段 | `frontend/**` · `.github/**` · `scripts/**` |
+| models | `scripts/models/**`（模型重打包与上传清单）· catalog 的 `download` `files` 字段 | 其余所有目录 |
 | core | `frontend/electron/**`（契约文件除外）· `frontend/package.json`（`build` 字段除外）· `frontend/tsconfig.*.json` | `frontend/src/**` · `engine/**` · `frontend/electron-builder.cjs` |
-| ci | `.github/workflows/build.yml` · `frontend/electron-builder.cjs` · `frontend/package.json` 的 `build` 字段 · `scripts/ci/**` | 其余所有目录 |
+| ci | `.github/workflows/build.yml` `ci.yml` · `frontend/electron-builder.cjs` · `frontend/package.json` 的 `build` 字段 · `scripts/ci/**` · `scripts/windows/**`（清理旧流水线） | 其余所有目录 |
 | ui | `frontend/src/**` · `frontend/index.html` · `frontend/vite.config.ts` | `frontend/electron/**` · `frontend/package.json` |
 | orchestrator | `contracts/**` 结构 · `frontend/electron/ipc-contract.ts` · `CLAUDE.md` · 本文档 · 最终集成 | — |
 

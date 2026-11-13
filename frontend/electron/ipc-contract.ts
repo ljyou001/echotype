@@ -125,10 +125,11 @@ export interface ModelView {
   selectedVariantId: string | null; // 按当前 provider 设置选中的版本
   settings: ModelSettingDef[];
   values: ModelUserSettings; // 当前值（已与默认值合并）
+  license: { id: string; url: string; commercial: "yes" | "no" | "unclear" };
   isActive: boolean;
 }
 
-/** 可选的 GPU 引擎包（MODEL_MANIFEST §5）。本平台不提供时不出现在列表里。 */
+/** 可选的 GPU 运行时包（MODEL_MANIFEST §5，v3 为 llama.cpp 的 GPU 版）。本平台不提供时不出现在列表里。 */
 export interface EnginePackView {
   id: string; // e.g. "cuda"
   providers: Provider[];
@@ -180,7 +181,7 @@ export interface EchotypeBridge {
 
   enginePacks: {
     list(): Promise<EnginePackView[]>;
-    install(id: string): Promise<void>; // 安装后 Core 重启引擎到该包
+    install(id: string): Promise<void>; // 安装后 Core 重启引擎，引擎从 --packs-dir 发现它
     remove(id: string): Promise<void>;
     onPacksChanged(cb: (packs: EnginePackView[]) => void): Unsubscribe;
   };
