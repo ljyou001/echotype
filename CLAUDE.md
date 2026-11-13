@@ -6,7 +6,7 @@ frontend/ - UI 层与 Core 层 (2 子目录: src=UI 层 React 视图, electron=C
 engine/ - Engine 层，独立原生推理进程 echotype-engine（Rust）：麦克风、VAD、ASR、标点；GPU 引擎包由 engine/scripts/make-pack.sh 组装
 contracts/ - 三层之间的契约：引擎协议、模型清单规范、模型目录
 design/ - 设计文档。现行架构以 design/ARCHITECTURE_V3.md 为准，其余为历史记录
-scripts/ - 构建、打包、测试脚本 (windows/ 为发布流水线)
+scripts/ - 构建与发布脚本 (3 子目录: ci=Actions 调用的引擎构建、握手检查、许可清单、发布资产, models=模型 zip 打包, windows=AppX 与测试证书)
 </directory>
 
 <config>
@@ -27,6 +27,7 @@ frontend/package.json - 前端依赖与 electron-builder 配置
 
 ## 运行
 - 开发：`cd frontend && npm run dev`（Core 拉起 `engine/target` 下的引擎；`ECHOTYPE_ENGINE=mock` 用模拟引擎）
+- 测试：`npm run test:core`（vitest）· `npm run smoke:core`（mock 引擎）· `npm run smoke:real`（真实引擎 + 真实模型安装 + 假麦克风，用法见 frontend/electron/CLAUDE.md）· `cd engine && cargo test --release`
 - 用户数据：`~/.echotype/{settings.json, history.jsonl, models/, logs/}`
 
 [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
