@@ -38,19 +38,20 @@ Keys that start with `_` are drafting notes. Readers ignore them.
 
 ## 2. `arch` values (v3 engine)
 
-| arch | sherpa-onnx factory | `files` keys |
-|---|---|---|
-| `paraformer` | `OfflineRecognizer.from_paraformer` | `model`, `tokens` |
-| `sense_voice` | `OfflineRecognizer.from_sense_voice` | `model`, `tokens` |
-| `whisper` | `OfflineRecognizer.from_whisper` | `encoder`, `decoder`, `tokens` |
-| `moonshine` | `OfflineRecognizer.from_moonshine` | per upstream release |
-| `nemo_transducer` | `OfflineRecognizer.from_transducer` (`model_type="nemo_transducer"`) | `encoder`, `decoder`, `joiner`, `tokens` |
-| `fire_red_asr` | `OfflineRecognizer.from_fire_red_asr` | `encoder`, `decoder`, `tokens` |
-| `qwen3_asr` | per sherpa-onnx 2.x Qwen3-ASR docs | per upstream release |
-| `funasr_nano` | per sherpa-onnx 2.x FunASR-Nano docs | per upstream release |
-| `ct_transformer` (kind punctuation) | `OfflinePunctuation` | `model` |
+| arch | sherpa-onnx factory | `files` keys | engine 3.0 |
+|---|---|---|---|
+| `paraformer` | `OfflineRecognizer.from_paraformer` | `model`, `tokens` | verified |
+| `sense_voice` | `OfflineRecognizer.from_sense_voice` (`use_itn` = punctuation or itn) | `model`, `tokens` | verified |
+| `nemo_transducer` | `OfflineRecognizer.from_transducer` (`model_type="nemo_transducer"`) | `encoder`, `decoder`, `joiner`, `tokens` | verified |
+| `qwen3_asr` | `OfflineRecognizer.from_qwen3_asr` | `conv_frontend`, `encoder`, `decoder`, `tokenizer` (folder) | verified |
+| `funasr_nano` | `OfflineRecognizer.from_funasr_nano` (`itn` = settings.itn) | `encoder_adaptor`, `llm`, `embedding`, `tokenizer` (folder) | verified |
+| `ct_transformer` (kind punctuation) | `OfflinePunctuation` | `model` | verified |
+| `whisper` | `OfflineRecognizer.from_whisper` | `encoder`, `decoder`, `tokens` | planned: no loader, load fails with `MODEL_LOAD_FAILED` |
+| `moonshine` | `OfflineRecognizer.from_moonshine_v2` | `encoder`, `decoder`, `tokens` | planned |
+| `fire_red_asr` | `OfflineRecognizer.from_fire_red_asr` | `encoder`, `decoder`, `tokens` | planned |
 
 The engine session owns this table: it adds a row only after a real load + decode test passes.
+"verified" = `backend/tests/test_models.py` loads the catalog entry and transcribes a Chinese and an English wav (2026-11-13).
 Silero VAD (`silero_vad.onnx`, about 2 MB) ships inside the engine package. It is not a catalog entry.
 
 ## 2.1 Providers and quantization

@@ -14,20 +14,46 @@
       "languages": ["zh", "en", "ja", "ko", "yue"],
       "files": { "model": "model.int8.onnx", "tokens": "tokens.txt" },
       "download": {
+        "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2",
+        "format": "tar.bz2",
+        "sha256": "7d1efa2138a65b0b488df37f8b89e3d91a60676e416f515b952358d83dfd347e",
+        "size_bytes": 163002883,
+        "archive_root": "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17"
+      },
+      "punctuation": { "mode": "native" },
+      "features": { "itn": "native", "lid": true, "partials": true },
+      "requires": [],
+      "providers": ["cpu"],
+      "requirements": { "ram_mb": 600, "vram_mb": 0 },
+      "defaults": { "provider": "auto", "language": "auto", "punctuation": true, "itn": true },
+      "status": "stable",
+      "_note": "2024-07-17 int8-only archive (163 MB instead of the 1 GB fp32+int8 one). The 2025-09-09 release has no punctuation. cuda was measured slower than cpu for this int8 graph (design/BENCHMARKS.md); sensevoice-small-fp32 is the GPU entry."
+    },
+    {
+      "id": "sensevoice-small-fp32",
+      "name": "SenseVoice Small (GPU)",
+      "description": "SenseVoice on an NVIDIA GPU: about 4x faster than the CPU model on long dictation. Needs the CUDA engine.",
+      "kind": "asr",
+      "runtime": "sherpa-onnx",
+      "arch": "sense_voice",
+      "tier": "instant",
+      "languages": ["zh", "en", "ja", "ko", "yue"],
+      "files": { "model": "model.onnx", "tokens": "tokens.txt" },
+      "download": {
         "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2",
         "format": "tar.bz2",
-        "sha256": null,
-        "size_bytes": 0,
+        "sha256": "f6b2a72ebcb1ac7a764d4cfccd886e6bcb2a95c4657c2199d0ba95ed4b9ea71a",
+        "size_bytes": 1047870769,
         "archive_root": "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17"
       },
       "punctuation": { "mode": "native" },
       "features": { "itn": "native", "lid": true, "partials": true },
       "requires": [],
-      "providers": ["cpu", "cuda", "coreml"],
-      "requirements": { "ram_mb": 600, "vram_mb": 0 },
+      "providers": ["cuda", "cpu"],
+      "requirements": { "ram_mb": 1500, "vram_mb": 1500 },
       "defaults": { "provider": "auto", "language": "auto", "punctuation": true, "itn": true },
-      "status": "stable",
-      "_note": "Must be the 2024-07-17 release: the 2025-09-09 release has no punctuation."
+      "status": "beta",
+      "_note": "fp32 graph for the CUDA EP (MODEL_MANIFEST 2.1). On cpu it is 2x slower than sensevoice-small-int8, so Core should offer it only when the engine reports cuda. The archive also carries model.int8.onnx, unused here."
     },
     {
       "id": "paraformer-zh-small-int8",
@@ -42,8 +68,8 @@
       "download": {
         "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-small-2024-03-09.tar.bz2",
         "format": "tar.bz2",
-        "sha256": null,
-        "size_bytes": 0,
+        "sha256": "da92b3db5218c5be53aad53e57d1b6e63e7fc98a0e054fbdd6dbe18e9c6b1450",
+        "size_bytes": 77920048,
         "archive_root": "sherpa-onnx-paraformer-zh-small-2024-03-09"
       },
       "punctuation": { "mode": "companion", "companion_id": "punct-ct-transformer-zh-en-int8" },
@@ -67,8 +93,8 @@
       "download": {
         "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2",
         "format": "tar.bz2",
-        "sha256": null,
-        "size_bytes": 0,
+        "sha256": "8c6724d0a86bd867217d353db1eaa11f2f143bca446a1f2752e8c551a6f2bde0",
+        "size_bytes": 996591364,
         "archive_root": "sherpa-onnx-paraformer-zh-2024-03-09"
       },
       "punctuation": { "mode": "companion", "companion_id": "punct-ct-transformer-zh-en-int8" },
@@ -77,7 +103,8 @@
       "providers": ["cpu"],
       "requirements": { "ram_mb": 700, "vram_mb": 0 },
       "defaults": { "provider": "cpu", "language": "zh", "punctuation": true, "itn": true },
-      "status": "stable"
+      "status": "stable",
+      "_note": "No int8-only archive exists for this release: the download also carries the unused 822 MB fp32 model.onnx. The 2025-10-07 int8 archive is a Sichuan-dialect model, not a replacement."
     },
     {
       "id": "qwen3-asr-0.6b-int8",
@@ -88,13 +115,13 @@
       "arch": "qwen3_asr",
       "tier": "accurate",
       "languages": ["zh", "en", "yue", "ar", "de", "fr", "es", "pt", "id", "it", "ko", "ru", "th", "vi", "ja", "tr", "hi", "ms", "nl", "sv", "da", "fi", "pl", "cs", "fil", "fa", "el", "hu", "mk", "ro"],
-      "files": {},
+      "files": { "conv_frontend": "conv_frontend.onnx", "encoder": "encoder.int8.onnx", "decoder": "decoder.int8.onnx", "tokenizer": "tokenizer" },
       "download": {
-        "url": null,
+        "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2",
         "format": "tar.bz2",
-        "sha256": null,
-        "size_bytes": 0,
-        "archive_root": null
+        "sha256": "393f8a14e2f5fb96746aaab342997a40641001fbd5bf9592a080a8329178ee96",
+        "size_bytes": 878702423,
+        "archive_root": "sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25"
       },
       "punctuation": { "mode": "native" },
       "features": { "itn": "native", "lid": true, "partials": false },
@@ -103,7 +130,7 @@
       "requirements": { "ram_mb": 2000, "vram_mb": 0 },
       "defaults": { "provider": "auto", "language": "auto", "punctuation": true, "itn": true },
       "status": "beta",
-      "_note": "Engine session: fill files and url from https://k2-fsa.github.io/sherpa/onnx/qwen3-asr/pretrained.html. Add a cuda-capable variant entry only if the int8 graph is slow on the CUDA EP."
+      "_note": "files.tokenizer is a folder. Only an int8 graph is published and it runs 2x slower on the CUDA EP than on cpu, so there is no GPU entry. Known issue: it can answer Mandarin audio in Traditional characters."
     },
     {
       "id": "fun-asr-nano-int8",
@@ -114,8 +141,14 @@
       "arch": "funasr_nano",
       "tier": "accurate",
       "languages": ["zh", "en", "ja"],
-      "files": {},
-      "download": { "url": null, "format": "tar.bz2", "sha256": null, "size_bytes": 0, "archive_root": null },
+      "files": { "encoder_adaptor": "encoder_adaptor.int8.onnx", "llm": "llm.int8.onnx", "embedding": "embedding.int8.onnx", "tokenizer": "Qwen3-0.6B" },
+      "download": {
+        "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-funasr-nano-int8-2025-12-30.tar.bz2",
+        "format": "tar.bz2",
+        "sha256": "eb43d7ccc2e86b243f6a03b7df361033dda66db9523d1a92bf6aca2b50c9476b",
+        "size_bytes": 841730611,
+        "archive_root": "sherpa-onnx-funasr-nano-int8-2025-12-30"
+      },
       "punctuation": { "mode": "native" },
       "features": { "itn": "native", "lid": false, "partials": false },
       "requires": [],
@@ -123,7 +156,7 @@
       "requirements": { "ram_mb": 2000, "vram_mb": 0 },
       "defaults": { "provider": "auto", "language": "auto", "punctuation": true, "itn": true },
       "status": "beta",
-      "_note": "Engine session: fill files, url and languages from the sherpa-onnx FunASR-Nano docs, or drop the entry if it fails the load test."
+      "_note": "files.tokenizer is a folder. The int8 graph runs 2x slower on the CUDA EP than on cpu; an fp16 archive exists upstream but is not measured yet."
     },
     {
       "id": "parakeet-tdt-0.6b-v3-int8",
@@ -135,15 +168,21 @@
       "tier": "balanced",
       "languages": ["en", "de", "fr", "es", "it", "pt", "nl", "pl", "ru", "uk", "cs", "sk", "sl", "hr", "bg", "ro", "hu", "el", "sv", "da", "fi", "et", "lv", "lt", "mt"],
       "files": { "encoder": "encoder.int8.onnx", "decoder": "decoder.int8.onnx", "joiner": "joiner.int8.onnx", "tokens": "tokens.txt" },
-      "download": { "url": null, "format": "tar.bz2", "sha256": null, "size_bytes": 0, "archive_root": null },
+      "download": {
+        "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2",
+        "format": "tar.bz2",
+        "sha256": "1495e91b59d7fc53ddca91f3431758ec99f8fa253fdb0e1e851be0f72b14b0f9",
+        "size_bytes": 487211443,
+        "archive_root": "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8"
+      },
       "punctuation": { "mode": "native" },
       "features": { "itn": "none", "lid": false, "partials": true },
       "requires": [],
-      "providers": ["cpu", "cuda"],
+      "providers": ["cpu"],
       "requirements": { "ram_mb": 1500, "vram_mb": 0 },
       "defaults": { "provider": "auto", "language": "en", "punctuation": true, "itn": false },
       "status": "beta",
-      "_note": "Engine session: fill url and file names from the sherpa-onnx NeMo Parakeet docs."
+      "_note": "cuda removed: the int8 graph runs slower on the CUDA EP than on cpu, and upstream publishes no fp32 sherpa-onnx archive."
     },
     {
       "id": "punct-ct-transformer-zh-en-int8",
@@ -158,8 +197,8 @@
       "download": {
         "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/punctuation-models/sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12-int8.tar.bz2",
         "format": "tar.bz2",
-        "sha256": null,
-        "size_bytes": 0,
+        "sha256": "c0d5aa5f8eeb686032345e180bedf39319dc2e0556781c6264bcadba8328a6e1",
+        "size_bytes": 64717756,
         "archive_root": "sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12-int8"
       },
       "punctuation": { "mode": "none" },
