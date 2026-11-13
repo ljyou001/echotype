@@ -10,8 +10,12 @@
 import { nativeTheme } from "electron";
 import type { ThemeMode } from "../ipc-contract.js";
 
-/** 窗口底色：浅色沿用 v2 的 #FEFEFE；深色取近黑带一点紫，ui 会话定义深色 token 后以其 --bg 为准 */
-export const WINDOW_BACKGROUND = { light: "#FEFEFE", dark: "#17161D" } as const;
+/**
+ * 窗口底色 = 渲染层的 --bg，否则首帧前会闪一下别的颜色。
+ * light 取自 frontend/src/styles/tokens.css 的 :root --bg；dark 取自 frontend/src/styles/themes.css 的 :root[data-theme="dark"] --bg。
+ * 那两处改色时同步改这里。
+ */
+export const WINDOW_BACKGROUND = { light: "#f6f5fa", dark: "#111017" } as const;
 
 export interface ThemedWindow {
   applyBackground(color: string): void;

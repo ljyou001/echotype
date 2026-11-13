@@ -7,6 +7,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createMemoryLogger } from "../core/logger.js";
 import { EngineClient } from "../engine/engine-client.js";
+import { devEngineArgs, resolveEngineCommand } from "../engine/engine-command.js";
 import { EngineSupervisor, type SupervisorState } from "../engine/engine-supervisor.js";
 import { createMockEngine } from "../dev/mock-engine.js";
 import { makeTempDir, mockEngineCommand, waitFor } from "./helpers.js";
@@ -120,5 +121,24 @@ describe("EngineSupervisor", () => {
     await waitFor(isState(sup, "failed"), 10_000, "failed");
     expect(states.filter((s) => s === "restarting").length).toBeGreaterThanOrEqual(2);
     expect(sup.status().error?.code).toMatch(/ENGINE_START_FAILED|ENGINE_CRASHED/);
+  });
+});
+
+describe("engine command", () => {
+  const dev = { isPackaged: false, resourcesPath: "/res", repoRoot: "/repo", distDir: "/repo/frontend/dist-electron" };
+  const ARGS = String.raw`--fake-mic "C:\clips dir\zh.wav" --fake-mic C:\clips\en.wav --fake-mic-speed 2`;
+
+  it("appends ECHOTYPE_ENGINE_ARGS to the bundled and pack engine in dev", () => {
+    const expected = ["--fake-mic", String.raw`C:\clips dir\zh.wav`, "--fake-mic", String.raw`C:\clips\en.wav`, "--fake-mic-speed", "2"];
+    expect(devEngineArgs(dev, { ECHOTYPE_ENGINE_ARGS: ARGS })).toEqual(expected);
+    const env = { ECHOTYPE_ENGINE_ARGS: ARGS, ECHOTYPE_ENGINE_PATH: "/bin/echotype-engine" };
+    expect(resolveEngineCommand({ layout: dev, env, execPath: "electron", pack: null }).args).toEqual(expected);
+    const pack = { id: "cuda", dir: "/home/engines/cuda", providers: ["cuda"] };
+    expect(resolveEngineCommand({ layout: dev, env, execPath: "electron", pack }).args).toEqual(expected);
+  });
+
+  it("ignores ECHOTYPE_ENGINE_ARGS when packaged", () => {
+    const packaged = { ...dev, isPackaged: true };
+    expect(resolveEngineCommand({ layout: packaged, env: { ECHOTYPE_ENGINE_ARGS: ARGS }, execPath: "electron", pack: null }).args).toEqual([]);
   });
 });

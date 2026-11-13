@@ -71,6 +71,7 @@ function bootCore(opts: BootOptions = {}) {
   const quickActions: string[] = [];
   const themes: string[] = [];
   const machine: MachineProfile = { platform: "win32", arch: "x64", gpuVendors: [], ...opts.machine };
+  const logger = createMemoryLogger();
   const core = new Core(
     {
       paths,
@@ -83,7 +84,7 @@ function bootCore(opts: BootOptions = {}) {
         ((pack) => ({ ...mockEngineCommand({ ECHOTYPE_MOCK_LOAD_MS: "40", ...(pack ? { ECHOTYPE_MOCK_PROVIDERS: `${pack.providers.join(",")},cpu` } : {}) }), packId: pack?.id ?? null })),
       licensesFile: path.join(paths.home, "missing-licenses.json"),
       appVersion: "3.0.0-test",
-      logger: createMemoryLogger(),
+      logger,
       engineTuning: { backoffMs: [20, 20] },
     },
     {
@@ -113,7 +114,7 @@ function bootCore(opts: BootOptions = {}) {
   const loads = () => requests.mock.calls.filter(([m]) => m === "model.load");
   const rctrl = (down: boolean) => keys.emit("key", { keycode: RCTRL, down, ctrl: down, alt: false, shift: false, meta: false });
   const latest = () => snapshots.at(-1);
-  return { core, paths, pastes, snapshots, quickActions, themes, loads, rctrl, latest };
+  return { core, paths, pastes, snapshots, quickActions, themes, loads, rctrl, latest, logger };
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -220,6 +221,28 @@ describe("Core against the mock engine", () => {
     expect(params.settings.provider).toBe("cuda");
     expect(latest()?.activeModel ?? core.snapshot().activeModel).toMatchObject({ id: QWEN, target: "nvidia", runtime: "llama.cpp", providerUsed: "cuda", fallback: false });
     expect(core.models().find((m) => m.id === QWEN)?.selectedVariantId).toBe("cuda-gguf-q8");
+  });
+
+  const cudaVariant = CATALOG.models.find((m) => m.id === ACTIVE)?.variants.find((v) => v.requires_pack === "cuda");
+
+  it.runIf(cudaOffered && cudaVariant)("maps PROVIDER_FALLBACK (the CUDA provider did not load) to activeModel.fallback", async () => {
+    const { core, latest, loads, logger } = bootCore({
+      machine: { gpuVendors: ["nvidia"] },
+      prepare: (paths) => {
+        fakePack(paths, "cuda");
+        fakeInstall(paths, ACTIVE, cudaVariant!.id);
+      },
+      engineCommand: (pack) => ({
+        ...mockEngineCommand({ ECHOTYPE_MOCK_LOAD_MS: "40", ECHOTYPE_MOCK_PROVIDERS: pack ? "cuda,cpu" : "cpu", ECHOTYPE_MOCK_BROKEN_PROVIDERS: "cuda" }),
+        packId: pack?.id ?? null,
+      }),
+    });
+    core.start();
+    await ready(latest);
+    expect((loads().at(-1)![1] as { settings: { provider: string } }).settings.provider).toBe("cuda");
+    expect(core.snapshot().activeModel).toMatchObject({ id: ACTIVE, variantId: cudaVariant!.id, providerUsed: "cpu", fallback: true });
+    expect(latest()?.engine.providerUsed).toBe("cpu");
+    expect(logger.lines.some((l) => l.msg === "engine warning" && JSON.stringify(l.data).includes("PROVIDER_FALLBACK"))).toBe(true);
   });
 
   it.runIf(cudaOffered)("falls back to the bundled engine and reports PACK_OUTDATED when the pack engine cannot start", async () => {

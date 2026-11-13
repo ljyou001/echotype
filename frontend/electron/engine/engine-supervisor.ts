@@ -6,6 +6,7 @@
  *        每 5 s ping → 崩溃或失联时按 1/2/4/8/8 s 退避重启（最多 5 次）→ 退出时杀进程树。
  *        上层服务只依赖 EngineGateway：重启对它们透明，它们只需在 onConnected 时重新下发配置。
  *        generation 计数让旧进程的迟到回调全部失效，杜绝"旧进程退出触发新一轮重启"。
+ *        状态记录 hello 的 providers 与 runtimes（引擎实际能跑的 provider 与推理运行时版本）。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
@@ -47,6 +48,7 @@ export interface SupervisorStatus {
   packId: string | null; // 引擎来自哪个 GPU 引擎包；null = 内置引擎
   engineVersion: string | null;
   providers: string[];
+  runtimes: Record<string, string>; // hello.runtimes：{"sherpa-onnx":"2.0.1","llama.cpp":"b…"}
   error: AppError | null;
 }
 
@@ -88,7 +90,7 @@ export class EngineSupervisor implements EngineGateway {
   private pingTimer: NodeJS.Timeout | null = null;
   private stableTimer: NodeJS.Timeout | null = null;
   private restartTimer: NodeJS.Timeout | null = null;
-  private current: SupervisorStatus = { state: "idle", pid: null, packId: null, engineVersion: null, providers: [], error: null };
+  private current: SupervisorStatus = { state: "idle", pid: null, packId: null, engineVersion: null, providers: [], runtimes: {}, error: null };
 
   constructor(private readonly options: SupervisorOptions) {
     this.log = options.logger.scope("supervisor");
@@ -233,12 +235,13 @@ export class EngineSupervisor implements EngineGateway {
         this.fail(gen, protocolMismatch(hello.protocol), false);
         return;
       }
-      this.log.info("engine ready", { pid: child.pid, port: ready.port, version: hello.engine_version, providers: hello.providers });
+      this.log.info("engine ready", { pid: child.pid, port: ready.port, version: hello.engine_version, providers: hello.providers, runtimes: hello.runtimes });
       this.setStatus({
         state: "running",
         pid: child.pid ?? null,
         engineVersion: hello.engine_version,
         providers: hello.providers,
+        runtimes: hello.runtimes ?? {},
         error: null,
       });
       this.startHeartbeat(gen);
