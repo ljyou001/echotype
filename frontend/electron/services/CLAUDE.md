@@ -14,9 +14,9 @@ model-catalog.ts: contracts/models.catalog.json（schema 2）的唯一读取点�
 variant-selection.ts: MODEL_MANIFEST §2 的选择规则，纯函数。平台层（apple 只在 darwin-arm64，带包的要求本平台有包）+ 硬件层（GPU 厂商）；auto 按 nvidia → apple → cpu → vulkan，已装可运行优先，再选可安装；显式 provider 选列出它的版本，本机不再提供时回落 auto；resolveProvider 在 model.load 前解析 auto
 model-settings.ts: MODEL_MANIFEST §3 的规则，纯函数。定义 = 隐式 provider 下拉 + catalog settings[]；存储值不合法时回落默认；UI 补丁严格校验
 model-resolver.ts: 把目录、本机、引擎包、安装态、用户取值折叠成答案的唯一位置：设置定义与当前值、选中的 variant、ModelView。runtime、registry、create-core 都问它
-asset-installer.ts: 模型 variant 与引擎包共用的安装流水线。sources 模板生成候选位置（http 下载 / local 复制），失败换下一个源 → <dir>.partial（Range 续传，换源续传）→ sha256（null 时告警跳过）→ 解 zip（文件在 zip 根）→ 核对必需文件 → .installed.json → 原子 rename；另含目录清理与占用统计
+asset-installer.ts: 模型 variant 与引擎包共用的安装流水线。sources 模板生成候选位置（http 下载 / local 复制），失败换下一个源 → <dir>.partial（Range 续传，换源续传）→ sha256（null 时告警跳过）→ 解 zip（文件在 zip 根）→ 核对必需文件 → .installed.json → 原子 rename；cloneInstalled 从已装的兄弟目录就地复制；另含目录清理与占用统计
 install-jobs.ts: 安装任务簿：每个 key 一份安装态，同 key 合并，取消回到 not_installed，失败记录 AppError
-model-registry.ts: variant 的磁盘安装态 ~/.echotype/models/<model>/<variant>/。先装 requires（依赖版本由 pickVariant 选），按 variant 或整模型取消、删除；不扫描、不删除目录外的遗留文件夹
+model-registry.ts: variant 的磁盘安装态 ~/.echotype/models/<model>/<variant>/。先装 requires（依赖版本由 pickVariant 选）；同一资产支撑多个 variant 时复制已装的兄弟 variant 而不重复下载；按 variant 或整模型取消、删除；不扫描、不删除目录外的遗留文件夹
 engine-packs.ts: GPU 引擎包 ~/.echotype/engines/<pack>/（内含完整 echotype-engine）。本平台有资产且 protocol 一致才"提供"；握手失败或反复崩溃后标记 PACK_OUTDATED 不再使用；preferred() 决定从哪个包拉起引擎
 model-runtime.ts: 引擎里加载哪个模型的哪个 variant。期望状态（模型 + variant + 目录 + 生效取值 + 已解析 provider + 配套标点）序列化成 key，相同则不动作 → 启动只加载一次；需要的引擎包不在运行时先请装配层换引擎；听写中或 SESSION_BUSY 时推迟；记录实际 provider 供状态栏判断回退；held 记录引擎实际持有的模型，删除前卸载
 

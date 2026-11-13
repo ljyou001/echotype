@@ -5,6 +5,7 @@
  * [POS]: 模型 variant 的磁盘安装态的唯一管理者：~/.echotype/models/<model id>/<variant id>/。
  *        它不和引擎说话，也不懂用户设置——"选哪个 variant"由调用方（model-resolver）决定后传入；
  *        requires（配套标点模型）的 variant 由注入的 pickVariant 选择，并先于本体安装。
+ *        同一资产（如一个 GGUF 包）支撑多个 variant 时，已装好的兄弟 variant 就地复制，不再下载第二遍。
  *        不在目录里的文件夹（v2 遗留、schema 1 草稿）既不扫描也不删除。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -12,7 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Unsubscribe } from "../core/emitter.js";
 import type { Logger } from "../core/logger.js";
-import { cleanupStaging, installAsset, InstallError, readMarker, removeDir, type AssetLocation } from "./asset-installer.js";
+import { cleanupStaging, cloneInstalled, installAsset, InstallError, readMarker, removeDir, type AssetLocation } from "./asset-installer.js";
 import { InstallJobs, type InstallState } from "./install-jobs.js";
 import type { AssetRef, CatalogModel, CatalogVariant, ModelCatalog } from "./model-catalog.js";
 
@@ -105,18 +106,30 @@ export class ModelRegistry {
         if (signal.aborted) return;
       }
       if (this.isInstalled(model.id, variant.id)) return;
-      await installAsset(
-        {
-          label: key,
-          asset: variant.asset,
-          locations: this.opts.locate(variant.asset),
-          targetDir: this.variantDir(model.id, variant.id),
-          requiredFiles: Object.values(variant.files),
-          marker: { model: model.id, variant: variant.id },
-        },
-        { signal, onProgress, fetch: this.opts.fetch, logger: this.log },
-      );
+      const spec = {
+        label: key,
+        asset: variant.asset,
+        locations: this.opts.locate(variant.asset),
+        targetDir: this.variantDir(model.id, variant.id),
+        requiredFiles: Object.values(variant.files),
+        marker: { model: model.id, variant: variant.id },
+      };
+      const sibling = this.installedSibling(model, variant);
+      if (sibling) {
+        onProgress("extracting", null);
+        this.log.info("reusing an installed variant with the same asset", { key, from: sibling.id });
+        await cloneInstalled(this.variantDir(model.id, sibling.id), spec);
+        return;
+      }
+      await installAsset(spec, { signal, onProgress, fetch: this.opts.fetch, logger: this.log });
     });
+  }
+
+  /** 同一模型里已安装、且来自同一资产（release + 文件名）的另一个 variant */
+  private installedSibling(model: CatalogModel, variant: CatalogVariant): CatalogVariant | undefined {
+    return model.variants.find(
+      (v) => v.id !== variant.id && v.asset.name === variant.asset.name && v.asset.release === variant.asset.release && this.isInstalled(model.id, v.id),
+    );
   }
 
   /** 取消该模型（全部或指定 variant）及其直接依赖正在进行的安装。 */

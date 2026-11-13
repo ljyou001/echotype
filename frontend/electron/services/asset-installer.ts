@@ -1,7 +1,8 @@
 /**
  * [INPUT]: 依赖 node:fs/crypto/stream；依赖 extract-zip；依赖 core/atomic-file 的原子写与重试 rename；
  *          依赖 ./model-catalog 的 AssetRef、AssetSource
- * [OUTPUT]: 导出 locateAsset、installAsset、readMarker、removeDir、cleanupStaging、directorySize、InstallError、AssetLocation
+ * [OUTPUT]: 导出 locateAsset、installAsset、cloneInstalled、readMarker、removeDir、cleanupStaging、directorySize、freeBytes、
+ *          InstallError、AssetLocation
  * [POS]: 一切可下载资产（模型 variant、引擎包）共用的安装流水线（MODEL_MANIFEST §2/§5/§6）：
  *        按渠道的 sources 顺序生成候选位置（http 下载 / local 复制），失败自动换下一个源 →
  *        <dir>.partial（HTTP Range 续传，换源续传同一文件，sha256 兜底）→ sha256（目录值为 null 时告警跳过）→
@@ -224,6 +225,29 @@ async function ensureDiskSpace(dir: string, archiveBytes: number): Promise<void>
 
 function abortError(): Error {
   return Object.assign(new Error("install cancelled"), { name: "AbortError" });
+}
+
+/**
+ * 同一资产已解压在别处（一个 GGUF 包可支撑多个 variant）：本地复制而不再下载。
+ * 同样经 <dir>.tmp + 核对必需文件 + 写标记 + 原子 rename，失败不留下半个目录。
+ */
+export async function cloneInstalled(fromDir: string, spec: Pick<InstallSpec, "targetDir" | "requiredFiles" | "marker" | "asset">): Promise<void> {
+  const staging = `${spec.targetDir}.tmp`;
+  fs.rmSync(staging, { recursive: true, force: true });
+  try {
+    await fs.promises.cp(fromDir, staging, { recursive: true, filter: (src) => path.basename(src) !== INSTALL_MARKER });
+    const missing = spec.requiredFiles.filter((rel) => !fs.existsSync(path.join(staging, rel)));
+    if (missing.length) throw new InstallError("ASSET_FILES_MISSING", `${spec.asset.name} lacks ${missing.join(", ")}`);
+    const source = readMarker(fromDir);
+    writeFileAtomicSync(
+      path.join(staging, INSTALL_MARKER),
+      `${JSON.stringify({ ...spec.marker, asset: spec.asset.name, sha256: source?.sha256 ?? null, clonedFrom: path.basename(fromDir), installedAt: new Date().toISOString() }, null, 2)}\n`,
+    );
+    await removeDir(spec.targetDir);
+    renameWithRetrySync(staging, spec.targetDir);
+  } finally {
+    fs.rmSync(staging, { recursive: true, force: true });
+  }
 }
 
 // ============================================================

@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 services/model-registry、engine-packs、model-catalog、asset-installer；依赖 node:http 起本地夹具服务器；./helpers 的 makeZip
  * [OUTPUT]: catalog schema 2 的安装测试：variant 目录、requires 顺序、Range 续传、多源回落、local 源、sha256、取消、
- *          缺文件、渠道许可证过滤、按 variant 删除、遗留目录、GPU 引擎包的安装/失效/删除
+ *          缺文件、同一资产支撑多个 variant（就地复制）、渠道许可证过滤、按 variant 删除、遗留目录、GPU 引擎包的安装/失效/删除
  * [POS]: 不联网。夹具服务器按 sources 模板提供 {release}/{asset}，支持 Range、404（主源宕机）、中途断流、慢速流。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -32,6 +32,7 @@ const assets: Record<string, Buffer> = {
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
 const localDir = makeTempDir("echotype-local-source-");
 const seenRanges: string[] = [];
+const requested: string[] = [];
 let mode: { cutAfter?: number; slow?: boolean; primaryDown?: boolean } = {};
 let server: http.Server;
 let base = "";
@@ -40,6 +41,7 @@ beforeAll(async () => {
   fs.writeFileSync(path.join(localDir, "test-punct--cpu-int8.zip"), assets["test-punct--cpu-int8.zip"]);
   server = http.createServer((req, res) => {
     const [, source, , asset] = (req.url ?? "").split("/");
+    requested.push(asset ?? "");
     const body = assets[asset ?? ""];
     if (!body || (source === "primary" && mode.primaryDown)) {
       res.writeHead(404).end();
@@ -299,6 +301,29 @@ describe("ModelRegistry.install (schema 2)", () => {
     mode = {};
     expect(registry.state("test-asr", "cpu-int8")).toEqual({ status: "not_installed", pct: null, error: null });
     expect(fs.statSync(partialOf(modelsDir, "test-asr", "cpu-int8")).size).toBeGreaterThan(0);
+  });
+
+  it("reuses an installed variant that shares the same asset instead of downloading it again", async () => {
+    const gguf = asset("test-asr--cuda-fp16.zip");
+    const shared = model("test-asr", {
+      variants: [
+        variant("test-asr", "cuda-gguf-q8", { target: "nvidia", providers: ["cuda"], files: { model: "model.fp16.onnx" }, asset: gguf }),
+        variant("test-asr", "vulkan-gguf-q8", { target: "vulkan", providers: ["vulkan"], files: { model: "model.fp16.onnx" }, asset: gguf }),
+      ],
+    });
+    const { registry, modelsDir } = makeRegistry([shared]);
+    await registry.install("test-asr", "cuda-gguf-q8");
+    requested.length = 0;
+    await registry.install("test-asr", "vulkan-gguf-q8");
+    expect(requested).toEqual([]); // 第二个 variant 没有走网络
+    expect(fs.existsSync(path.join(modelsDir, "test-asr", "vulkan-gguf-q8", "model.fp16.onnx"))).toBe(true);
+    expect(JSON.parse(fs.readFileSync(path.join(modelsDir, "test-asr", "vulkan-gguf-q8", ".installed.json"), "utf-8"))).toMatchObject({
+      model: "test-asr",
+      variant: "vulkan-gguf-q8",
+      clonedFrom: "cuda-gguf-q8",
+    });
+    await registry.remove("test-asr", "cuda-gguf-q8");
+    expect(registry.installedVariants("test-asr")).toEqual(["vulkan-gguf-q8"]); // 两份互不依赖
   });
 
   it("removes one variant or all of them", async () => {

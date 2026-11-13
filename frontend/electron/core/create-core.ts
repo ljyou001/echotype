@@ -4,7 +4,8 @@
  * [POS]: Core 层的组合根，不 import electron。main.ts 注入 Electron 适配器后得到一个可运行的 Core；
  *        smoke 与测试注入假适配器得到同一个 Core。服务之间的连线（谁在何时通知谁）只写在这里：
  *        热键 → 听写 · 听写空闲 → 补做被推迟的模型加载 · 设置变化 → 热键/麦克风/模型/开机启动 ·
- *        引擎包装卸或失效 → 换引擎二进制 · 状态变化 → ≤ 30 Hz 推送 AppSnapshot · 安装进度 → ≤ 10 Hz 推送列表。
+ *        引擎包装卸或失效 → 换引擎二进制 · 装需要引擎包的 variant → 先装引擎包 ·
+ *        状态变化 → ≤ 30 Hz 推送 AppSnapshot · 安装进度 → ≤ 10 Hz 推送列表。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import fs from "node:fs";
@@ -241,13 +242,20 @@ export class Core {
     return this.settings.update(patch);
   }
 
-  /** 省略 variantId = 按当前 provider 设置选中的版本 */
+  /** 省略 variantId = 按当前 provider 设置选中的版本。该版本需要的 GPU 引擎包未安装时先装引擎包（并换引擎）。 */
   async installModel(id: string, variantId?: string): Promise<void> {
     const model = this.requireModel(id);
-    const variant = variantId ?? this.resolver.selectedVariant(model)?.id;
-    if (!variant) throw new CoreError({ code: "NO_VARIANT", message: `No version of ${model.name} runs on this computer.` });
+    const variant = variantId ? model.variants.find((v) => v.id === variantId) : this.resolver.selectedVariant(model);
+    if (!variant) {
+      throw new CoreError(
+        variantId
+          ? { code: "VARIANT_NOT_FOUND", message: `${model.name} has no version “${variantId}”.` }
+          : { code: "NO_VARIANT", message: `No version of ${model.name} runs on this computer.` },
+      );
+    }
+    if (variant.requires_pack && !this.packs.isInstalled(variant.requires_pack)) await this.installPack(variant.requires_pack);
     try {
-      await this.registry.install(model.id, variant);
+      await this.registry.install(model.id, variant.id);
     } catch (err) {
       if (isAbort(err)) return; // 取消不是错误
       throw asCoreError(err, "INSTALL_FAILED");

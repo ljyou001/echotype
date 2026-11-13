@@ -2,10 +2,13 @@
  * [INPUT]: 依赖 core/create-core、core/paths、dev/mock-engine（以子进程运行）、真实 contracts/models.catalog.json；./helpers
  * [OUTPUT]: Core 端到端集成测试：真实 supervisor + mock 引擎进程 + 全部服务，只有 Electron 适配器是假的
  * [POS]: 验证跨服务的连线：启动只加载一次模型、热键 → 粘贴 → 历史、activeModel、模型设置只经专用入口且只在必要时重载、
- *        引擎崩溃后自动恢复、未安装模型的错误码、从 GPU 引擎包拉起引擎并加载需要它的 variant、引擎包失效回落内置引擎。
+ *        引擎崩溃后自动恢复、未安装模型的错误码、从 GPU 引擎包拉起引擎并加载需要它的 variant、引擎包失效回落内置引擎、
+ *        安装需要引擎包的 variant 时先装引擎包并换引擎。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import fs from "node:fs";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -19,10 +22,11 @@ import { ENGINE_EXECUTABLE, type EngineCommand, type EnginePackRef } from "../en
 import type { CatalogData } from "../services/model-catalog.js";
 import type { KeyEvent } from "../services/hotkey-service.js";
 import type { MachineProfile } from "../services/variant-selection.js";
-import { makeTempDir, mockEngineCommand, waitFor } from "./helpers.js";
+import { makeTempDir, makeZip, mockEngineCommand, waitFor } from "./helpers.js";
 
 const catalogFile = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../contracts/models.catalog.json");
 const CATALOG = JSON.parse(fs.readFileSync(catalogFile, "utf-8")) as CatalogData;
+let activeCatalog: CatalogData = CATALOG;
 const ACTIVE = CATALOG.default_model_id;
 const RCTRL = 3613;
 const cores: Core[] = [];
@@ -32,7 +36,7 @@ afterEach(async () => {
 });
 
 function fakeInstall(paths: CorePaths, modelId: string, variantId: string) {
-  const variant = CATALOG.models.find((m) => m.id === modelId)!.variants.find((v) => v.id === variantId)!;
+  const variant = activeCatalog.models.find((m) => m.id === modelId)!.variants.find((v) => v.id === variantId)!;
   const dir = path.join(paths.modelsDir, modelId, variantId);
   fs.mkdirSync(dir, { recursive: true });
   for (const rel of Object.values(variant.files)) fs.writeFileSync(path.join(dir, rel), "x");
@@ -47,6 +51,7 @@ function fakePack(paths: CorePaths, id: string) {
 }
 
 interface BootOptions {
+  catalog?: CatalogData;
   machine?: Partial<MachineProfile>;
   prepare?: (paths: CorePaths) => void;
   engineCommand?: (pack: EnginePackRef | null) => EngineCommand;
@@ -54,7 +59,10 @@ interface BootOptions {
 
 function bootCore(opts: BootOptions = {}) {
   const paths = resolveCorePaths({ ECHOTYPE_HOME: makeTempDir("echotype-core-") });
-  fakeInstall(paths, ACTIVE, "cpu-int8");
+  activeCatalog = opts.catalog ?? CATALOG;
+  const bootCatalogFile = opts.catalog ? path.join(paths.home, "catalog.json") : catalogFile;
+  if (opts.catalog) fs.writeFileSync(bootCatalogFile, JSON.stringify(opts.catalog));
+  fakeInstall(paths, activeCatalog.default_model_id, "cpu-int8");
   opts.prepare?.(paths);
   const keys = new Emitter<{ key: KeyEvent }>();
   let clipboard = "";
@@ -65,7 +73,7 @@ function bootCore(opts: BootOptions = {}) {
   const core = new Core(
     {
       paths,
-      catalogFile,
+      catalogFile: bootCatalogFile,
       channel: "github",
       machine,
       templateVars: { platform: `${machine.platform}-${machine.arch}` },
@@ -225,6 +233,66 @@ describe("Core against the mock engine", () => {
     await ready(latest);
     expect(core.supervisor.status().packId).toBeNull();
     expect(core.packViews().find((p) => p.id === "cuda")?.install.error?.code).toBe("PACK_OUTDATED");
+  });
+
+  it("installing a variant whose pack is missing installs the pack first and switches the engine to it", async () => {
+    const platform = "win32-x64"; // 与 bootCore 默认的 machine 一致
+    const zips: Record<string, Buffer> = {
+      "pack.zip": makeZip({ [ENGINE_EXECUTABLE]: "fake engine" }),
+      "gpu.zip": makeZip({ "model.gguf": "gguf", "mmproj.gguf": "mm" }),
+    };
+    const order: string[] = [];
+    const server = http.createServer((req, res) => {
+      const name = path.basename(req.url ?? "");
+      order.push(name);
+      if (!zips[name]) return void res.writeHead(404).end();
+      res.writeHead(200, { "Content-Length": zips[name].length }).end(zips[name]);
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+    try {
+      const base = CATALOG.models.find((m) => m.id === ACTIVE)!;
+      const catalog: CatalogData = {
+        ...CATALOG,
+        sources: [{ id: "local", type: "http", url_template: `http://127.0.0.1:${(server.address() as AddressInfo).port}/{release}/{asset}` }],
+        channels: { github: { sources: ["local"], remote_catalog: null, allow_commercial: ["yes", "unclear", "no"] } },
+        models: [
+          {
+            ...base,
+            variants: [
+              ...base.variants,
+              {
+                id: "cuda-gguf-q8",
+                target: "nvidia",
+                runtime: "llama.cpp",
+                arch: "mtmd_asr",
+                providers: ["cuda"],
+                requires_pack: "cuda",
+                files: { model: "model.gguf", mmproj: "mmproj.gguf" },
+                asset: { name: "gpu.zip", release: "models-v3", sha256: null, size_bytes: 0 },
+              },
+            ],
+          },
+        ],
+        engine_packs: [{ id: "cuda", target: "nvidia", providers: ["cuda"], protocol: 3, platforms: { [platform]: { asset: { name: "pack.zip", release: "engine-packs-v3", sha256: null, size_bytes: 0 } } } }],
+      };
+      const { core, latest } = bootCore({ catalog, machine: { gpuVendors: ["nvidia"] } });
+      core.start();
+      await ready(latest);
+      expect(core.supervisor.status().packId).toBeNull();
+
+      await core.installModel(ACTIVE, "cuda-gguf-q8");
+      expect(order).toEqual(["pack.zip", "gpu.zip"]); // 先装引擎包
+      expect(core.packs.isInstalled("cuda")).toBe(true);
+      expect(core.registry.isInstalled(ACTIVE, "cuda-gguf-q8")).toBe(true);
+      await waitFor(() => core.supervisor.status().state === "running" && core.supervisor.status().packId === "cuda", 10_000, "engine from pack");
+
+      core.updateModelSettings(ACTIVE, { provider: "cuda" });
+      await waitFor(() => core.snapshot().activeModel?.variantId === "cuda-gguf-q8", 10_000, "gpu variant loaded");
+      expect(core.snapshot().activeModel).toMatchObject({ target: "nvidia", runtime: "llama.cpp", providerUsed: "cuda", fallback: false });
+    } finally {
+      server.closeAllConnections();
+      server.close();
+    }
   });
 
   it("lists licenses and storage", async () => {
