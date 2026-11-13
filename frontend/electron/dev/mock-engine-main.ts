@@ -48,7 +48,7 @@ const engine = await createMockEngine({
 });
 
 log(`listening on 127.0.0.1:${engine.port} (models-dir=${arg("--models-dir")}, log-dir=${arg("--log-dir")})`);
-process.stdout.write(`${JSON.stringify({ event: "engine_ready", port: engine.port, protocol: 3, engine_version: "3.0.0-mock" })}\n`);
+process.stdout.write(`${JSON.stringify({ event: "engine_ready", port: engine.port, protocol: 3, engine_version: "4.0.0-mock" })}\n`);
 
 // §2.5：stdin EOF → 释放资源并以 0 退出
 process.stdin.on("end", () => void engine.close().then(() => process.exit(0)));
