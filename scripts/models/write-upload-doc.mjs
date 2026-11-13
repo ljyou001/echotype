@@ -18,7 +18,7 @@ const mib = (n) => (n / 1024 ** 2).toFixed(1) + ' MiB'
 const fwd = (p) => p.replaceAll('\\', '/')
 const BT = '`'
 
-// models-v3：按资产名去重（GGUF 变体共享一个资产）
+// models-v4：按资产名去重（GGUF 变体共享一个资产）
 const rows = []
 const seen = new Set()
 for (const m of catalog.models) {
@@ -51,7 +51,7 @@ const doc = `# 上传 Release 资产
 
 先确认已登录：${BT}gh auth status${BT}。Core 按 catalog 的 ${BT}sources.url_template${BT} 用 ${BT}{release}/{asset}${BT} 拼下载地址，资产名和 release 名必须与下表一致。
 
-## 1. release ${BT}models-v3${BT}（模型）
+## 1. release ${BT}models-v4${BT}（模型）
 
 共 ${rows.length} 个 zip，合计 **${gib(total)}**（${mib(total)}）。每个都小于 GitHub 单文件 2 GiB 上限。zip 在 ${BT}${OUT_DIR}${BT}。
 三个 GGUF 变体（cuda / apple-metal / vulkan）共用一个 ${BT}*--gguf-q8.zip${BT}，只传一次。
@@ -63,21 +63,21 @@ ${table}
 **release 还不存在**（首次）:
 
 ${BT}${BT}${BT}bash
-gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes "EchoType v3 model packages. Each zip is one model asset; files sit at the zip root. Checksums are in contracts/models.catalog.json." \\
+gh release create models-v4 --repo ljyou001/echotype --title "Models v4" --notes "EchoType v4 model packages. Each zip is one model asset; files sit at the zip root. Checksums are in contracts/models.catalog.json." \\
 ${bash}
 ${BT}${BT}${BT}
 
 **release 已存在**（补传或覆盖）:
 
 ${BT}${BT}${BT}bash
-gh release upload models-v3 --repo ljyou001/echotype --clobber \\
+gh release upload models-v4 --repo ljyou001/echotype --clobber \\
 ${bash}
 ${BT}${BT}${BT}
 
 PowerShell 版（反引号续行）:
 
 ${BT}${BT}${BT}powershell
-gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes "EchoType v3 model packages." ${BT}
+gh release create models-v4 --repo ljyou001/echotype --title "Models v4" --notes "EchoType v4 model packages." ${BT}
 ${ps}
 ${BT}${BT}${BT}
 
@@ -92,7 +92,7 @@ ${packTable}
 ## 上传后
 
 - 链接在上传完成的那一刻才生效。上传前应用内下载会 404，所以先上传，再发布依赖这些资产的构建。
-- 抽查: ${BT}curl -sIL https://github.com/ljyou001/echotype/releases/download/models-v3/<文件名>${BT}，确认 200 且 content-length 与上表一致。
+- 抽查: ${BT}curl -sIL https://github.com/ljyou001/echotype/releases/download/models-v4/<文件名>${BT}，确认 200 且 content-length 与上表一致。
 - 换文件内容必须重新打包并同步 catalog 的 sha256，否则 Core 校验失败。
 `
 writeFileSync(resolve(HERE, 'UPLOAD.md'), doc)

@@ -4,7 +4,7 @@
 
 先确认已登录：`gh auth status`。Core 按 catalog 的 `sources.url_template` 用 `{release}/{asset}` 拼下载地址，资产名和 release 名必须与下表一致。
 
-## 1. release `models-v3`（模型）
+## 1. release `models-v4`（模型）
 
 共 12 个 zip，合计 **6.72 GiB**（6880.0 MiB）。每个都小于 GitHub 单文件 2 GiB 上限。zip 在 `C:\Users\YouYouLab\.echotype-staging\models-v3`。
 三个 GGUF 变体（cuda / apple-metal / vulkan）共用一个 `*--gguf-q8.zip`，只传一次。
@@ -27,7 +27,7 @@
 **release 还不存在**（首次）:
 
 ```bash
-gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes "EchoType v3 model packages. Each zip is one model asset; files sit at the zip root. Checksums are in contracts/models.catalog.json." \
+gh release create models-v4 --repo ljyou001/echotype --title "Models v4" --notes "EchoType v4 model packages. Each zip is one model asset; files sit at the zip root. Checksums are in contracts/models.catalog.json." \
   "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" \
   "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" \
   "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" \
@@ -45,7 +45,7 @@ gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes
 **release 已存在**（补传或覆盖）:
 
 ```bash
-gh release upload models-v3 --repo ljyou001/echotype --clobber \
+gh release upload models-v4 --repo ljyou001/echotype --clobber \
   "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" \
   "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" \
   "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" \
@@ -63,7 +63,7 @@ gh release upload models-v3 --repo ljyou001/echotype --clobber \
 PowerShell 版（反引号续行）:
 
 ```powershell
-gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes "EchoType v3 model packages." `
+gh release create models-v4 --repo ljyou001/echotype --title "Models v4" --notes "EchoType v4 model packages." `
   "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" `
   "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" `
   "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" `
@@ -94,5 +94,5 @@ gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes
 ## 上传后
 
 - 链接在上传完成的那一刻才生效。上传前应用内下载会 404，所以先上传，再发布依赖这些资产的构建。
-- 抽查: `curl -sIL https://github.com/ljyou001/echotype/releases/download/models-v3/<文件名>`，确认 200 且 content-length 与上表一致。
+- 抽查: `curl -sIL https://github.com/ljyou001/echotype/releases/download/models-v4/<文件名>`，确认 200 且 content-length 与上表一致。
 - 换文件内容必须重新打包并同步 catalog 的 sha256，否则 Core 校验失败。
