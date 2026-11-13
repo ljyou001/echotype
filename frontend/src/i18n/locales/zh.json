@@ -170,7 +170,8 @@
       "comingSoon": "即将推出",
       "auxiliary": "辅助模型",
       "auxiliaryNote": "随需要它的模型自动安装。",
-      "active": "使用中"
+      "active": "使用中",
+      "needsGpu": "需要 GPU"
     },
     "info": {
       "family": "家族",
@@ -180,7 +181,9 @@
       "deviceSupport": "设备支持",
       "currentDevice": "当前设备",
       "notes": "说明",
-      "languagesMore": "{{list}} 等 {{count}} 种"
+      "languagesMore": "{{list}} 等 {{count}} 种",
+      "benchShort": "约 {{ms}} 毫秒",
+      "benchHint": "10 秒语音从松开热键到出字的典型耗时"
     },
     "types": {
       "asr": "语音识别",
@@ -189,7 +192,6 @@
     "settings": {
       "title": "设置",
       "device": "设备",
-      "language": "语言",
       "qwenBackend": "Qwen3 运行方式",
       "streaming": "识别模式",
       "streamingOn": "流式识别",
@@ -202,15 +204,42 @@
         "qwenBackend": "推荐使用 transformers",
         "streaming": "流式识别：实时显示结果；离线识别：录音完成后显示"
       },
-      "provider": "运行设备",
-      "providerHint": "自动会选这台电脑上最快的方式。",
-      "providerCpuOnly": "此模型只在 CPU 上运行。",
-      "punctuation": "标点",
-      "punctuationNative": "模型自带标点。关闭后输出不带标点的纯文本。",
-      "punctuationCompanion": "由随此模型安装的小型标点模型添加。关闭后跳过这一步。",
-      "itn": "数字格式化",
-      "itnDescription": "把念出来的数字写成阿拉伯数字，例如“三点五”写成 3.5。",
-      "appliesNow": "改动从下一次听写生效。更改运行设备会重新加载模型。"
+      "provider": {
+        "label": "运行设备",
+        "help": "自动会选本机已安装的最快版本。",
+        "help_single": "这台电脑只能运行此模型的 {{name}} 版本。"
+      },
+      "language": {
+        "label": "语言",
+        "help": "如果自动识别总认错语言，可以在这里固定一种。"
+      },
+      "punctuation": {
+        "label": "标点",
+        "help": "为文字加上标点。",
+        "help_native": "模型自带标点。关闭后输出不带标点的纯文本。",
+        "help_companion": "由随此模型安装的小型标点模型添加。关闭后跳过这一步。"
+      },
+      "itn": {
+        "label": "数字格式化",
+        "help": "把念出来的数字写成阿拉伯数字，例如“三点五”写成 3.5。"
+      },
+      "hotwords": {
+        "label": "热词",
+        "help": "希望它认准的人名和术语，用逗号分隔。",
+        "placeholder": "EchoType, Kubernetes, 张伟"
+      },
+      "task": {
+        "label": "任务",
+        "help": "翻译会把任何语言的语音转成英文文字。",
+        "options": {
+          "transcribe": "转写",
+          "translate": "翻译成英文"
+        }
+      },
+      "num_threads": {
+        "label": "CPU 线程数",
+        "help": "0 表示由 EchoType 决定。"
+      }
     },
     "empty": {
       "title": "暂无可用模型",
@@ -253,7 +282,52 @@
       "cpu": "CPU",
       "cuda": "NVIDIA 显卡（CUDA）",
       "coreml": "Apple 神经网络引擎（Core ML）",
-      "directml": "显卡（DirectML）"
+      "directml": "显卡（DirectML）",
+      "metal": "Apple 显卡（Metal）",
+      "vulkan": "显卡（Vulkan）"
+    },
+    "panel": {
+      "title": "设置",
+      "auto": "自动",
+      "autoDetect": "自动识别",
+      "appliesNow": "改动从下一次听写生效。更改运行设备会重新加载模型。"
+    },
+    "variants": {
+      "title": "版本",
+      "selected": "当前选择",
+      "downloadGpu": "下载 GPU 版本（{{size}}）",
+      "downloadCpu": "下载 CPU 版本（{{size}}）",
+      "noneUsable": "这台电脑上暂时没有能运行此模型的版本。",
+      "targets": {
+        "cpu": "CPU",
+        "gpu": "GPU",
+        "cuda": "CUDA",
+        "metal": "Metal",
+        "vulkan": "Vulkan"
+      },
+      "noneUsableWithPack": "需要 GPU。在本页顶部下载 GPU 加速后即可使用。"
+    },
+    "license": {
+      "open": "查看许可证",
+      "checkCommercial": "商用前请先确认许可证。"
+    },
+    "packs": {
+      "title": "GPU 加速",
+      "description": "下载 {{name}} 引擎（约 {{size}}），在显卡上运行支持的模型。",
+      "descriptions": {
+        "cuda": "下载 CUDA 引擎（约 {{size}}），在 NVIDIA 显卡上运行支持的模型。",
+        "vulkan": "下载 Vulkan 引擎（约 {{size}}），在 AMD 或 Intel 显卡上运行支持的模型。"
+      },
+      "names": {
+        "cuda": "CUDA",
+        "vulkan": "Vulkan"
+      },
+      "download": "下载（{{size}}）",
+      "installed": "{{name}} 引擎已安装。在模型设置的「运行设备」里选择它。",
+      "inUse": "当前模型正在显卡上运行。",
+      "badgeInUse": "使用中",
+      "removeTitle": "删除 {{name}} 引擎？",
+      "removeMessage": "设为在此显卡上运行的模型会改回 CPU。将释放 {{size}}。"
     }
   },
   "integrations": {
@@ -484,7 +558,7 @@
     "log": {
       "title": "模型日志"
     },
-    "modelSettingsMoved": "标点、数字格式化和识别语言按模型设置，在「模型」页。",
+    "modelSettingsMoved": "模型的运行设备、语言、标点和数字格式化按模型设置，在「模型」页。",
     "sections": {
       "general": "通用",
       "dictation": "听写",
@@ -616,6 +690,7 @@
     "snapshotTitle": "应用状态",
     "snapshotDescription": "核心层推送的最新快照。反馈问题时请附上。",
     "showSnapshot": "查看快照",
-    "snapshotCopied": "快照已复制"
+    "snapshotCopied": "快照已复制",
+    "enginePacks": "引擎包"
   }
 }

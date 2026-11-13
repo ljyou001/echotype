@@ -15,11 +15,11 @@ App.tsx: 主窗口外壳。快照未到显示占位，引导未完成显示 Onbo
 
 bridge/
 index.ts: `bridge()` 访问器（UI 通往 Core 的唯一出口）与 `installMockBridgeIfMissing()`（动态加载 mock，Electron 中不加载）
-mockBridge.ts: 内存版 EchotypeBridge。模拟快照推送、引擎启动/加载/崩溃、20 Hz 电平、partial→final、历史、设置合并；`?mock=ready|fresh|error|loading` 切换场景
-mockModels.ts: mock 的模型子系统。直接读 `contracts/models.catalog.json`，模拟下载→校验→解压进度、取消、删除、无下载地址的错误
+mockBridge.ts: 内存版 EchotypeBridge（ipcVersion 2）。模拟快照推送、引擎启动/加载/崩溃、20 Hz 电平、partial→final、历史、模型专属设置、GPU 引擎包；`?mock=ready|fresh|error|loading` 切换场景
+mockModels.ts: mock 的模型与引擎包子系统。直接读 `contracts/models.catalog.json`；按 variant 模拟下载→校验→解压；按本机硬件生成 provider 选项与选中版本；模拟一台有 NVIDIA 显卡、未装 CUDA 包的 win32-x64
 
 store/
-appStore.ts: 唯一状态容器。镜像 snapshot 与 models，外加本地 UI 状态（当前页、提示条）；动作全部转发 bridge；`connectStore()` 先订阅后拉取；按 `settings.ui.language` 同步 i18n
+appStore.ts: 唯一状态容器。镜像 snapshot、models 与 packs，外加本地 UI 状态（当前页、提示条）；动作全部转发 bridge；模型专属设置只经 `updateModelSettings` → `models.updateSettings`；`connectStore()` 先订阅后拉取；按 `settings.ui.language` 同步 i18n
 integrationsStore.ts: 集成实例缓存。整份经 `bridge().integrations.saveConfig` 写回；首次运行播种三个默认集成；`load()` 并发去重
 
 hooks/
@@ -42,14 +42,15 @@ components.css: 以上全部组件的样式
 pages/
 HomePage.tsx(.css): 状态光球与提示、录音按钮、实时文本与电平、上一次结果（弱化显示松键到出字耗时）、四张摘要卡
 HistoryPage.tsx(.css): Core 持久化的历史，按天分组；搜索、复制、发送到默认集成、删除、清空
-ModelsPage.tsx(.css): 语音模型按档位稳定排序；辅助模型可切换显示
-model-catalog/ModelCard.tsx: 单个模型卡片：下载/进度/取消/启用/删除/重试，档位与体积徽标；导出 TIER_ORDER
-model-catalog/ModelSettingsPanel.tsx: 单模型设置：运行设备（Auto + providers）、语言（Auto + languages）、标点（none 时隐藏）、数字格式化；整对象写回 perModel[id]
+ModelsPage.tsx(.css): 顶部 GPU 引擎包卡片（列表为空不显示）；语音模型按档位稳定排序；辅助模型可切换显示
+model-catalog/ModelCard.tsx: 单个模型卡片。操作跟随选中版本：下载/进度/取消/启用/删除全部版本/重试；档位、体积、实测延迟（~45 ms）、许可证链接与商用提醒；无可运行硬件时标"需要 GPU"
+model-catalog/ModelSettingsPanel.tsx: 由 `ModelView.settings` 驱动的通用设置渲染（select/toggle/text/number，文案取 `models.settings.<key>.label/.help`，未知键退回键名）；所选硬件版本未装时就地下载；多版本模型列出各版本
+model-catalog/EnginePackCard.tsx: 可选 GPU 引擎包的一行卡片：下载进度、已安装/使用中、删除确认
 SettingsPage.tsx(.css): 通用、听写（热键、录音方式、输出三选一）、麦克风（设备、测试、保持就绪）、隐私
 IntegrationsPage.tsx(.css): 集成拖拽排序、启停、设默认、配置、删除；按类别列出可用插件
 integrations/IntegrationDialogs.tsx: 新增与配置弹窗，共用 InstanceForm
-DebugPage.tsx(.css): 引擎状态事实表、重启引擎、打开日志目录、按键监听、快照 JSON
-Onboarding.tsx(.css): 三步引导：权限 → 麦克风（自动开测试）→ 下载模型（首个装好的自动启用）
+DebugPage.tsx(.css): 引擎状态事实表（含平台架构、IPC 版本、引擎包）、重启引擎、打开日志目录、按键监听、快照 JSON
+Onboarding.tsx(.css): 三步引导：权限 → 麦克风（自动开测试）→ 下载模型（只列本机能跑的；首个装好的自动启用）
 QuickActionWindow.tsx(.css): `#/quick-action` 小窗。文本经 `quickAction.getText`，窗口再次可见时刷新；有回复时 `resize`；标题栏指针拖动经 `move`
 
 services/integrations/
@@ -68,6 +69,7 @@ base.css: 重置、排版、按钮 `.btn--*`、表单 `.input/.select/.textarea`
 shell.css: 应用网格、侧栏、页面通用块（.page / .page-header / .card / .eyebrow）
 
 utils/
+models.ts: ModelView 的纯函数视图：选中版本、是否可用、体积、版本名拆分、TIER_ORDER
 status.ts: 引擎状态 × 听写阶段 × 是否选模型 → 单一界面状态（侧栏、首页、诊断页共用）
 level.ts: dBFS → 0..1 映射与起落平滑的纯函数
 format.ts: 体积、相对时间、秒数、日期分组、语言名（Intl），以及 KEY_TOKEN
@@ -83,7 +85,7 @@ global.d.ts: 声明 `window.echotype: EchotypeBridge`
 ## 法则
 1. 依赖只向下：pages → components/hooks → store → bridge → 契约类型。页面不直接读 `window.echotype`。
 2. 业务真相在 Core。store 只镜像；乐观更新只限 `updateSettings` 的返回值回填。
-3. 代码里不出现模型 id；推荐模型、排序都从 ModelView 字段推导。
+3. 代码里不出现模型 id；设置键只对契约的标准键（provider/language/punctuation/itn）做文案特化；推荐模型、排序、设置项都从 ModelView 字段推导。模型专属设置只在模型页，全局设置页不出现。
 4. 样式不写裸色值与魔法数字，一律引用 tokens.css；每个 CSS 文件 ≤ 800 行。
 5. 文案进 i18n；按键嵌入句子用 KEY_TOKEN + KeyHint，不拆 prefix/suffix。
 

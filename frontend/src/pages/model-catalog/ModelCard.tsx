@@ -1,23 +1,35 @@
 /**
- * [INPUT]: 依赖 store/appStore 的 run；依赖 bridge().models 的 install/cancelInstall/remove/activate；
- *          依赖 components 的 Badge、ProgressBar、ConfirmDialog；依赖 ./ModelSettingsPanel；依赖 utils/format
- * [OUTPUT]: 导出 ModelCard 组件与 TIER_ORDER
- * [POS]: Models 页的单个模型卡片。按 install.status 切换操作：下载 → 进度/取消 → 启用/删除；
- *        错误时显示原因与重试。ASR 模型可展开设置区。删除需二次确认。
+ * [INPUT]: 依赖 store/appStore 的 run；依赖 bridge().models 的 install/cancelInstall/remove/activate 与 bridge().system.openExternal；
+ *          依赖 components 的 Badge、ProgressBar、ConfirmDialog；依赖 ./ModelSettingsPanel；依赖 utils/models 与 utils/format
+ * [OUTPUT]: 导出 ModelCard 组件
+ * [POS]: Models 页的单个模型卡片。操作跟随"选中的版本"（由运行设备设置决定）：下载 → 进度/取消 → 启用；
+ *        本机没有能跑它的硬件时标"需要 GPU"。展示档位、体积、实测延迟（~45 ms）与许可证；
+ *        许可证不明确或不可商用时多一行提醒。删除移除全部版本，需二次确认。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FiAlertTriangle, FiCheck, FiChevronDown, FiDownload, FiGlobe, FiHardDrive, FiTrash2, FiType } from "react-icons/fi";
+import {
+  FiAlertTriangle,
+  FiCheck,
+  FiChevronDown,
+  FiDownload,
+  FiExternalLink,
+  FiGlobe,
+  FiHardDrive,
+  FiTrash2,
+  FiType,
+  FiZap,
+} from "react-icons/fi";
 import type { ModelView } from "../../../electron/ipc-contract";
 import { bridge } from "../../bridge";
 import { Badge, ProgressBar } from "../../components/controls";
 import { ConfirmDialog } from "../../components/Modal";
 import { useAppStore } from "../../store/appStore";
 import { formatBytes, languageName } from "../../utils/format";
+import { hasAnyInstalled, isBusy, isReady, modelSizeBytes, selectedVariant } from "../../utils/models";
 import { ModelSettingsPanel } from "./ModelSettingsPanel";
 
-export const TIER_ORDER: Record<ModelView["tier"], number> = { instant: 0, balanced: 1, accurate: 2 };
 const TIER_TONE = { instant: "info", balanced: "brand", accurate: "warning" } as const;
 const VISIBLE_LANGUAGES = 4;
 
@@ -27,11 +39,17 @@ export function ModelCard({ model }: { model: ModelView }) {
   const [expanded, setExpanded] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
 
-  const { status, pct, error } = model.install;
-  const installing = status === "downloading" || status === "verifying" || status === "extracting";
-  const installed = status === "installed";
+  const variant = selectedVariant(model);
+  const { status, pct, error } = variant?.install ?? { status: "not_installed" as const, pct: null, error: null };
+  const installing = isBusy(status);
+  const ready = isReady(model);
+  const anyInstalled = hasAnyInstalled(model);
   const isAsr = model.kind === "asr";
-  const size = formatBytes(model.sizeBytes, i18n.language);
+  const size = formatBytes(modelSizeBytes(model), i18n.language);
+  const installedSize = formatBytes(
+    model.variants.filter((v) => v.install.status === "installed").reduce((sum, v) => sum + v.sizeBytes, 0),
+    i18n.language,
+  );
 
   const langNames = model.languages.map((c) => languageName(c, i18n.language));
   const langSummary =
@@ -40,9 +58,7 @@ export function ModelCard({ model }: { model: ModelView }) {
       : langNames.join(", ");
 
   const progressLabel =
-    status === "downloading" && pct !== null
-      ? t("models.install.downloadingPct", { pct })
-      : t(`models.install.${status}`);
+    status === "downloading" && pct !== null ? t("models.install.downloadingPct", { pct }) : t(`models.install.${status}`);
 
   return (
     <article className={`card model-card${model.isActive ? " model-card--active" : ""}`}>
@@ -56,7 +72,7 @@ export function ModelCard({ model }: { model: ModelView }) {
                 {t("models.status.active")}
               </Badge>
             )}
-            {installed && !model.isActive && <Badge>{t("models.status.installed")}</Badge>}
+            {ready && !model.isActive && <Badge>{t("models.status.installed")}</Badge>}
           </div>
           <p className="model-card__desc">{model.description}</p>
           <div className="model-card__facts">
@@ -68,26 +84,41 @@ export function ModelCard({ model }: { model: ModelView }) {
                 <FiHardDrive /> {size}
               </span>
             )}
+            {variant?.benchP50Ms != null && (
+              <span title={t("models.info.benchHint")}>
+                <FiZap /> {t("models.info.benchShort", { ms: variant.benchP50Ms })}
+              </span>
+            )}
             {isAsr && model.punctuationMode !== "none" && (
               <span>
                 <FiType /> {t(`models.punctuationMode.${model.punctuationMode}`)}
               </span>
             )}
+            <button
+              type="button"
+              className="model-card__license"
+              onClick={() => void bridge().system.openExternal(model.license.url)}
+              title={t("models.license.open")}
+            >
+              {model.license.id} <FiExternalLink />
+            </button>
           </div>
+          {model.license.commercial !== "yes" && <p className="model-card__license-note">{t("models.license.checkCommercial")}</p>}
         </div>
 
         <div className="model-card__actions">
-          {(status === "not_installed" || status === "error") && (
-            <button type="button" className="btn btn--secondary" onClick={() => run(() => bridge().models.install(model.id))}>
+          {!variant && <Badge tone="warning">{t("models.status.needsGpu")}</Badge>}
+          {variant && (status === "not_installed" || status === "error") && (
+            <button type="button" className="btn btn--secondary" onClick={() => run(() => bridge().models.install(model.id, variant.id))}>
               <FiDownload /> {status === "error" ? t("models.actions.retry") : t("models.actions.download")}
             </button>
           )}
-          {installing && (
-            <button type="button" className="btn btn--ghost" onClick={() => run(() => bridge().models.cancelInstall(model.id))}>
+          {variant && installing && (
+            <button type="button" className="btn btn--ghost" onClick={() => run(() => bridge().models.cancelInstall(model.id, variant.id))}>
               {t("common.cancel")}
             </button>
           )}
-          {installed && isAsr && !model.isActive && (
+          {ready && isAsr && !model.isActive && (
             <button type="button" className="btn btn--primary" onClick={() => run(() => bridge().models.activate(model.id))}>
               <FiCheck /> {t("models.actions.use")}
             </button>
@@ -108,7 +139,7 @@ export function ModelCard({ model }: { model: ModelView }) {
         </div>
       )}
 
-      {(isAsr || installed) && (
+      {(isAsr || anyInstalled) && (
         <div className="model-card__footer">
           {isAsr ? (
             <button
@@ -117,13 +148,13 @@ export function ModelCard({ model }: { model: ModelView }) {
               aria-expanded={expanded}
               onClick={() => setExpanded((v) => !v)}
             >
-              {t("models.settings.title")}
+              {t("models.panel.title")}
               <FiChevronDown className={expanded ? "rotate-180" : undefined} />
             </button>
           ) : (
             <span className="muted model-card__helper-note">{t("models.status.auxiliaryNote")}</span>
           )}
-          {installed && (
+          {anyInstalled && (
             <button type="button" className="btn btn--danger-ghost btn--sm" onClick={() => setConfirmRemove(true)}>
               <FiTrash2 /> {t("models.actions.remove")}
             </button>
@@ -137,7 +168,7 @@ export function ModelCard({ model }: { model: ModelView }) {
         <ConfirmDialog
           danger
           title={t("models.remove.title", { name: model.name })}
-          message={t(model.isActive ? "models.remove.messageActive" : "models.remove.message", { size: size || "—" })}
+          message={t(model.isActive ? "models.remove.messageActive" : "models.remove.message", { size: installedSize || "—" })}
           confirmLabel={t("models.actions.remove")}
           onCancel={() => setConfirmRemove(false)}
           onConfirm={() => {

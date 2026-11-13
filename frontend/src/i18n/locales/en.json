@@ -170,7 +170,8 @@
       "comingSoon": "Coming soon",
       "auxiliary": "Auxiliary Model",
       "auxiliaryNote": "Installed automatically with the models that need it.",
-      "active": "Active"
+      "active": "Active",
+      "needsGpu": "Needs a GPU"
     },
     "info": {
       "family": "Family",
@@ -180,7 +181,9 @@
       "deviceSupport": "Device Support",
       "currentDevice": "Current Device",
       "notes": "Notes",
-      "languagesMore": "{{list}} +{{count}} more"
+      "languagesMore": "{{list}} +{{count}} more",
+      "benchShort": "~{{ms}} ms",
+      "benchHint": "Typical time from releasing the hotkey to text, for 10 seconds of speech"
     },
     "types": {
       "asr": "ASR",
@@ -189,7 +192,6 @@
     "settings": {
       "title": "Settings",
       "device": "Device",
-      "language": "Language",
       "qwenBackend": "Qwen3 runtime",
       "streaming": "Recognition Mode",
       "streamingOn": "Streaming",
@@ -202,15 +204,42 @@
         "qwenBackend": "transformers is recommended for general use",
         "streaming": "Streaming: real-time results; Offline: results after recording completes"
       },
-      "provider": "Run on",
-      "providerHint": "Auto picks the fastest option on this computer.",
-      "providerCpuOnly": "This model runs on the CPU.",
-      "punctuation": "Punctuation",
-      "punctuationNative": "Built into this model. Turn it off to get plain text with no punctuation.",
-      "punctuationCompanion": "Added by a small companion model that installs with this one. Turn it off to skip that step.",
-      "itn": "Number formatting",
-      "itnDescription": "Write spoken numbers as digits, so “three point five” becomes 3.5.",
-      "appliesNow": "Changes apply to your next dictation. Changing where it runs reloads the model."
+      "provider": {
+        "label": "Run on",
+        "help": "Auto picks the fastest version installed on this computer.",
+        "help_single": "Only the {{name}} version runs on this computer."
+      },
+      "language": {
+        "label": "Language",
+        "help": "Pin a language if detection picks the wrong one."
+      },
+      "punctuation": {
+        "label": "Punctuation",
+        "help": "Add punctuation to the text.",
+        "help_native": "Built into this model. Turn it off to get plain text with no punctuation.",
+        "help_companion": "Added by a small companion model that installs with this one. Turn it off to skip that step."
+      },
+      "itn": {
+        "label": "Number formatting",
+        "help": "Write spoken numbers as digits, so “three point five” becomes 3.5."
+      },
+      "hotwords": {
+        "label": "Hotwords",
+        "help": "Names and terms it should recognize, separated by commas.",
+        "placeholder": "EchoType, Kubernetes, Zhang Wei"
+      },
+      "task": {
+        "label": "Task",
+        "help": "Translate turns speech in any language into English text.",
+        "options": {
+          "transcribe": "Transcribe",
+          "translate": "Translate to English"
+        }
+      },
+      "num_threads": {
+        "label": "CPU threads",
+        "help": "0 lets EchoType decide."
+      }
     },
     "empty": {
       "title": "No models available",
@@ -253,7 +282,52 @@
       "cpu": "CPU",
       "cuda": "NVIDIA GPU (CUDA)",
       "coreml": "Apple Neural Engine (Core ML)",
-      "directml": "GPU (DirectML)"
+      "directml": "GPU (DirectML)",
+      "metal": "Apple GPU (Metal)",
+      "vulkan": "GPU (Vulkan)"
+    },
+    "panel": {
+      "title": "Settings",
+      "auto": "Auto",
+      "autoDetect": "Detect automatically",
+      "appliesNow": "Changes apply to your next dictation. Changing where it runs reloads the model."
+    },
+    "variants": {
+      "title": "Versions",
+      "selected": "Selected",
+      "downloadGpu": "Download GPU version ({{size}})",
+      "downloadCpu": "Download CPU version ({{size}})",
+      "noneUsable": "No version of this model runs on this computer yet.",
+      "targets": {
+        "cpu": "CPU",
+        "gpu": "GPU",
+        "cuda": "CUDA",
+        "metal": "Metal",
+        "vulkan": "Vulkan"
+      },
+      "noneUsableWithPack": "Needs a GPU. Download GPU acceleration at the top of this page to use it."
+    },
+    "license": {
+      "open": "View license",
+      "checkCommercial": "Check the license before commercial use."
+    },
+    "packs": {
+      "title": "GPU acceleration",
+      "description": "Download the {{name}} engine (≈{{size}}) to run supported models on your GPU.",
+      "descriptions": {
+        "cuda": "Download the CUDA engine (≈{{size}}) to run supported models on your NVIDIA GPU.",
+        "vulkan": "Download the Vulkan engine (≈{{size}}) to run supported models on your AMD or Intel GPU."
+      },
+      "names": {
+        "cuda": "CUDA",
+        "vulkan": "Vulkan"
+      },
+      "download": "Download ({{size}})",
+      "installed": "The {{name}} engine is installed. Choose it under “Run on” in a model's settings.",
+      "inUse": "Your active model is running on the GPU.",
+      "badgeInUse": "In use",
+      "removeTitle": "Remove the {{name}} engine?",
+      "removeMessage": "Models set to run on this GPU switch back to the CPU. Frees up {{size}}."
     }
   },
   "integrations": {
@@ -484,7 +558,7 @@
     "log": {
       "title": "Model log"
     },
-    "modelSettingsMoved": "Punctuation, number formatting, and recognition language are set per model on the Models page.",
+    "modelSettingsMoved": "Where a model runs, its language, punctuation and number formatting are set per model on the Models page.",
     "sections": {
       "general": "General",
       "dictation": "Dictation",
@@ -616,6 +690,7 @@
     "snapshotTitle": "App state",
     "snapshotDescription": "The latest snapshot from the app core. Attach it when you report a problem.",
     "showSnapshot": "Show snapshot",
-    "snapshotCopied": "Snapshot copied"
+    "snapshotCopied": "Snapshot copied",
+    "enginePacks": "Engine packs"
   }
 }

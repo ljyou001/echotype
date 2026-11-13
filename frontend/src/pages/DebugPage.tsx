@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 store/appStore 的快照、模型、run；依赖 bridge().system（restartEngine/openLogsFolder/platform）与 ipcVersion；
+ * [INPUT]: 依赖 store/appStore 的快照、模型、引擎包、run；依赖 bridge().system（restartEngine/openLogsFolder/platform/arch）与 ipcVersion；
  *          依赖 components 的 PageHeader、Section、Badge；依赖 utils/status
  * [OUTPUT]: 导出 DebugPage 组件
  * [POS]: 诊断页。展示引擎状态、实际运行设备、引擎版本、加载进度与错误码；提供重启引擎、打开日志目录；
@@ -13,6 +13,7 @@ import { bridge } from "../bridge";
 import { Badge } from "../components/controls";
 import { PageHeader, Section } from "../components/layout";
 import { selectActiveModel, useAppStore } from "../store/appStore";
+import { hasAnyInstalled } from "../utils/models";
 import { STATUS_TONE, statusOf } from "../utils/status";
 import "./DebugPage.css";
 
@@ -32,6 +33,7 @@ export function DebugPage() {
   const { t } = useTranslation();
   const snapshot = useAppStore((s) => s.snapshot!);
   const models = useAppStore((s) => s.models);
+  const packs = useAppStore((s) => s.packs);
   const activeModel = useAppStore(selectActiveModel);
   const run = useAppStore((s) => s.run);
   const showToast = useAppStore((s) => s.showToast);
@@ -45,9 +47,10 @@ export function DebugPage() {
     [t("debug.engineVersion"), engine.engineVersion ?? "—"],
     [t("debug.loadProgress"), engine.loadProgress ? `${engine.loadProgress.stage} · ${engine.loadProgress.pct}%` : "—"],
     [t("debug.activeModel"), activeModel ? `${activeModel.name} (${activeModel.id})` : "—"],
-    [t("debug.modelsInstalled"), `${models.filter((m) => m.install.status === "installed").length} / ${models.length}`],
+    [t("debug.modelsInstalled"), `${models.filter(hasAnyInstalled).length} / ${models.length}`],
+    [t("debug.enginePacks"), packs.map((p) => `${p.id}: ${p.install.status}`).join(", ") || "—"],
     [t("debug.dictationPhase"), snapshot.dictation.phase],
-    [t("debug.platform"), `${b.system.platform} · IPC v${b.ipcVersion}`],
+    [t("debug.platform"), `${b.system.platform}-${b.system.arch} · IPC v${b.ipcVersion}`],
   ];
 
   const copySnapshot = () =>

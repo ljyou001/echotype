@@ -18,7 +18,7 @@ import { useAudioInputs } from "../hooks/useAudioInputs";
 import { useMicTest } from "../hooks/useMicTest";
 import { useAppStore } from "../store/appStore";
 import { formatBytes } from "../utils/format";
-import { TIER_ORDER } from "./model-catalog/ModelCard";
+import { TIER_ORDER, isBusy, isReady, modelSizeBytes, selectedVariant } from "../utils/models";
 import "./Onboarding.css";
 
 type Step = 0 | 1 | 2;
@@ -34,7 +34,7 @@ export function Onboarding() {
   const activeId = useAppStore((s) => s.snapshot!.settings.models.activeId);
   const update = useAppStore((s) => s.updateSettings);
   const run = useAppStore((s) => s.run);
-  const hasModel = models.some((m) => m.kind === "asr" && m.install.status === "installed");
+  const hasModel = models.some((m) => m.kind === "asr" && isReady(m));
 
   // 第一个装好的语音模型自动启用，用户不必再去模型页。
   // models 推送往往先于 activeId 快照到达：用 activating 记住在途的 id，同一模型只激活一次
@@ -44,7 +44,7 @@ export function Onboarding() {
       activating.current = null;
       return;
     }
-    const first = models.find((m) => m.kind === "asr" && m.install.status === "installed");
+    const first = models.find((m) => m.kind === "asr" && isReady(m));
     if (!first || activating.current === first.id) return;
     activating.current = first.id;
     void run(() => bridge().models.activate(first.id));
@@ -229,12 +229,16 @@ function ModelStep() {
   const models = useAppStore((s) => s.models);
   const run = useAppStore((s) => s.run);
 
-  // 推荐 = 最快档里自带标点的最小模型，置顶；其余按档位从快到准、同档按体积从小到大
+  // 只列本机能跑的语音模型。推荐的模型置顶；其余按档位从快到准、同档按体积从小到大
   const { speech, recommended } = useMemo(() => {
     const byTier = models
-      .filter((m) => m.kind === "asr")
-      .sort((a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier] || a.sizeBytes - b.sizeBytes);
-    const pick: ModelView | undefined = byTier.find((m) => m.punctuationMode === "native") ?? byTier[0];
+      .filter((m) => m.kind === "asr" && selectedVariant(m))
+      .sort((a, b) => TIER_ORDER[a.tier] - TIER_ORDER[b.tier] || modelSizeBytes(a) - modelSizeBytes(b));
+    // 契约没有 isDefault：最快档、自带标点的模型里取覆盖语言最多的，避免把单语模型推荐给所有人
+    const pick: ModelView | undefined =
+      byTier
+        .filter((m) => m.tier === byTier[0]?.tier && m.punctuationMode === "native")
+        .sort((a, b) => b.languages.length - a.languages.length)[0] ?? byTier[0];
     return { speech: pick ? [pick, ...byTier.filter((m) => m !== pick)] : byTier, recommended: pick };
   }, [models]);
 
@@ -242,8 +246,9 @@ function ModelStep() {
     <div className="onboarding__list">
       <p className="onboarding__row-desc">{t("onboarding.models.description")}</p>
       {speech.map((m) => {
-        const { status, pct, error } = m.install;
-        const installing = status === "downloading" || status === "verifying" || status === "extracting";
+        const variant = selectedVariant(m)!;
+        const { status, pct, error } = variant.install;
+        const installing = isBusy(status);
         return (
           <div key={m.id} className="onboarding__row onboarding__row--model">
             <div className="onboarding__row-text">
@@ -267,12 +272,12 @@ function ModelStep() {
                   <FiCheckCircle /> {t(m.isActive ? "models.status.active" : "onboarding.models.installed")}
                 </span>
               ) : installing ? (
-                <button type="button" className="btn btn--ghost btn--sm" onClick={() => run(() => bridge().models.cancelInstall(m.id))}>
+                <button type="button" className="btn btn--ghost btn--sm" onClick={() => run(() => bridge().models.cancelInstall(m.id, variant.id))}>
                   {t("common.cancel")}
                 </button>
               ) : (
-                <button type="button" className="btn btn--secondary btn--sm" onClick={() => run(() => bridge().models.install(m.id))}>
-                  <FiDownload /> {status === "error" ? t("models.actions.retry") : formatBytes(m.sizeBytes, i18n.language) || t("onboarding.models.download")}
+                <button type="button" className="btn btn--secondary btn--sm" onClick={() => run(() => bridge().models.install(m.id, variant.id))}>
+                  <FiDownload /> {status === "error" ? t("models.actions.retry") : formatBytes(variant.sizeBytes, i18n.language) || t("onboarding.models.download")}
                 </button>
               )}
             </div>
