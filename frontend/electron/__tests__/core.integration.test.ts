@@ -84,7 +84,7 @@ function bootCore(opts: BootOptions = {}) {
         opts.engineCommand ??
         ((pack) => ({ ...mockEngineCommand({ ECHOTYPE_MOCK_LOAD_MS: "40", ...(pack ? { ECHOTYPE_MOCK_PROVIDERS: `${pack.providers.join(",")},cpu` } : {}) }), packId: pack?.id ?? null })),
       licensesFile: path.join(paths.home, "missing-licenses.json"),
-      appVersion: "3.0.0-test",
+      appVersion: "4.0.0-test",
       logger,
       engineTuning: { backoffMs: [20, 20] },
       hotkeyLimitation: opts.hotkeyLimitation,
@@ -155,7 +155,7 @@ describe("Core against the mock engine", () => {
     expect(params.model.variants).toBeUndefined(); // §6：model 不含 variants
     expect(params.variant.id).toBe("cpu-int8");
     expect(params.settings.provider).toBe("cpu"); // auto 已解析
-    expect(latest()!.engine).toMatchObject({ providerUsed: "cpu", engineVersion: "3.0.0-mock", error: null });
+    expect(latest()!.engine).toMatchObject({ providerUsed: "cpu", engineVersion: "4.0.0-mock", error: null });
     expect(latest()!.activeModel).toMatchObject({ id: ACTIVE, variantId: "cpu-int8", target: "cpu", runtime: "sherpa-onnx", providerUsed: "cpu", fallback: false });
     expect(latest()!.hotkey).toEqual({ error: null });
     expect(latest()!.dictation.error).toBeNull();
@@ -318,12 +318,12 @@ describe("Core against the mock engine", () => {
                 providers: ["cuda"],
                 requires_pack: "cuda",
                 files: { model: "model.gguf", mmproj: "mmproj.gguf" },
-                asset: { name: "gpu.zip", release: "models-v3", sha256: null, size_bytes: 0 },
+                asset: { name: "gpu.zip", release: "models-v4", sha256: null, size_bytes: 0 },
               },
             ],
           },
         ],
-        engine_packs: [{ id: "cuda", target: "nvidia", providers: ["cuda"], protocol: 3, platforms: { [platform]: { asset: { name: "pack.zip", release: "engine-packs-v3", sha256: null, size_bytes: 0 } } } }],
+        engine_packs: [{ id: "cuda", target: "nvidia", providers: ["cuda"], protocol: 3, platforms: { [platform]: { asset: { name: "pack.zip", release: "engine-packs-v4", sha256: null, size_bytes: 0 } } } }],
       };
       const { core, latest } = bootCore({ catalog, machine: { gpuVendors: ["nvidia"] } });
       core.start();
@@ -360,7 +360,7 @@ describe("Core against the mock engine", () => {
     const { core } = bootCore();
     core.start();
     const lic = core.licenses();
-    expect(lic.appVersion).toBe("3.0.0-test");
+    expect(lic.appVersion).toBe("4.0.0-test");
     expect(lic.models.find((m) => m.id === ACTIVE)?.license.id).toBeTruthy();
     expect(lic.components).toEqual([]);
     const storage = await core.modelStorage();
