@@ -1,6 +1,7 @@
 # ============================================================================
-# [INPUT]: 依赖 scripts/ci/build-engine.sh（基础引擎与 GPU 引擎包）、frontend/electron-builder.cjs（安装包、
-#          渠道、许可清单）、scripts/ci/release-assets.mjs（校验和、pack 清单与发布）、engine/scripts/bench.sh
+# [INPUT]: 依赖 scripts/ci/build-engine.sh（基础引擎与 GPU 引擎包，内部调用 engine/scripts/make-pack.sh）、
+#          frontend/electron-builder.cjs（安装包、渠道、许可清单）、scripts/ci/check-engine.mjs（打包态握手检查）、
+#          scripts/ci/release-assets.mjs（校验和、pack 清单与发布）、engine/scripts/bench.sh
 # [OUTPUT]: 每个目标一个 artifact（installer-<target> / engine-pack-<pack>-<target>）；
 #           tag v* 时生成草稿 Release（安装包）并把 GPU 引擎包补传到 engine-packs-v3；手动触发可跑 macOS 基准
 # [POS]: 发布流水线。6 个安装包行 + 6 个 GPU 引擎包行并行，每行在本机原生构建，不交叉编译。
@@ -43,8 +44,6 @@ defaults:
 env:
   # mac 用 ad-hoc 签名（mac.identity "-"）；Windows 不查找证书
   CSC_IDENTITY_AUTO_DISCOVERY: "false"
-  # tag 发布时缺少引擎或 make-pack 直接失败；手动触发只告警
-  ECHOTYPE_STRICT: ${{ startsWith(github.ref, 'refs/tags/v') && '1' || '0' }}
   # 构建时渠道常量：tag 发布固定为 github
   ECHOTYPE_CHANNEL: ${{ inputs.channel || 'github' }}
 
@@ -58,7 +57,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # --- 安装包（基础引擎只含 CPU；mac 另含 CoreML + Metal）---
+          # --- 安装包（基础引擎只含 CPU；mac 另含 CoreML + Metal llama-server）---
           - { target: win-x64,     os: windows-2025,     gpu: "" }
           - { target: win-arm64,   os: windows-11-arm,   gpu: "" }
           - { target: linux-x64,   os: ubuntu-22.04,     gpu: "" }
@@ -85,18 +84,17 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      # 安装包行编基础引擎并读 cargo metadata（许可清单）；GPU 行由 make-pack 编整套引擎
+      # 安装包行编基础引擎并读 cargo metadata（许可清单）；GPU 行由 make-pack 以 GPU feature 编整套引擎
       - name: Set up Rust
-        if: hashFiles('engine/Cargo.toml') != ''
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Rust build
-        if: hashFiles('engine/Cargo.toml') != ''
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: engine
           key: ${{ matrix.target }}-${{ matrix.gpu || 'cpu' }}
 
+      # make-pack 用 Python 校验 sha256、解压；build-engine.sh 用它查 catalog、打 zip
       - name: Set up Python
         if: matrix.gpu != ''
         uses: actions/setup-python@v7
@@ -106,16 +104,18 @@ jobs:
       - name: Install Linux build packages
         if: runner.os == 'Linux'
         run: |
-          # ALSA：引擎采集麦克风；X11/XTest：uiohook-napi 与 robotjs 无预编译时的源码构建
+          # ALSA + PulseAudio：引擎的 cpal（pulseaudio feature）；X11/XTest：uiohook-napi 与 robotjs 无预编译时的源码构建
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libasound2-dev libx11-dev libxtst-dev libxrandr-dev libxt-dev
+            pkg-config libasound2-dev libpulse-dev libx11-dev libxtst-dev libxrandr-dev libxt-dev
 
       # ---- 引擎 / GPU 引擎包 ------------------------------------------------
       - name: Build engine
         env:
           TARGET: ${{ matrix.target }}
           GPU: ${{ matrix.gpu }}
+          # make-pack 的下载缓存（CUDA 轮子等数 GB）放在 runner 临时目录，不进 Rust 缓存
+          ECHOTYPE_PACK_CACHE: ${{ runner.temp }}/pack-cache
         run: bash scripts/ci/build-engine.sh "$TARGET" "$GPU"
 
       # ---- 安装包（仅 CPU 行）----------------------------------------------
@@ -151,6 +151,11 @@ jobs:
           npx electron-builder "${args[@]}"
           ls -la dist-package
 
+      # 解包应用里的引擎由 Core 的选路与 supervisor 拉起，必须完成 hello 握手（mac 上即已签名的二进制）
+      - name: Check packaged engine
+        if: matrix.gpu == ''
+        run: node scripts/ci/check-engine.mjs frontend/dist-package
+
       # ---- 上传 ------------------------------------------------------------
       - name: Upload installers
         if: matrix.gpu == ''
@@ -173,8 +178,7 @@ jobs:
         with:
           name: engine-pack-${{ matrix.gpu }}-${{ matrix.target }}
           path: engine/dist/packs/*.zip
-          # make-pack 未合入前 build-engine.sh 已给出告警；tag 发布时它会先失败
-          if-no-files-found: warn
+          if-no-files-found: error
           compression-level: 0
 
   # ---- tag：安装包进草稿 Release ---------------------------------------------
@@ -244,9 +248,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: |
-          mkdir -p packs
-          node scripts/ci/release-assets.mjs packs packs --publish
+        run: node scripts/ci/release-assets.mjs packs packs --publish
 
       - name: Upload catalog fragment
         uses: actions/upload-artifact@v7
@@ -263,29 +265,25 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - id: probe
-        run: bash scripts/ci/probe.sh "macOS bench" file:engine/Cargo.toml file:engine/scripts/bench.sh
-
       - uses: dtolnay/rust-toolchain@stable
-        if: steps.probe.outputs.run == 'true'
 
       - uses: Swatinem/rust-cache@v2
-        if: steps.probe.outputs.run == 'true'
         with:
           workspaces: engine
           key: mac-arm64-cpu
 
       - name: Build engine
-        if: steps.probe.outputs.run == 'true'
+        env:
+          ECHOTYPE_PACK_CACHE: ${{ runner.temp }}/pack-cache
         run: bash scripts/ci/build-engine.sh mac-arm64
 
+      # bench.sh <engine-dir> <out-dir>：按 catalog 从 models-v3 下载模型，构建 echotype-bench，输出 bench.json 与 BENCHMARKS.md
       - name: Run benchmark
-        if: steps.probe.outputs.run == 'true'
-        # 约定：bench.sh <engine-dir> <out-dir>，结果写进 <out-dir>
+        env:
+          ECHOTYPE_BENCH_WORK: ${{ runner.temp }}/bench-work
         run: bash engine/scripts/bench.sh engine/dist/mac-arm64 bench-results
 
       - name: Upload results
-        if: steps.probe.outputs.run == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: bench-macos-arm64

@@ -5,7 +5,7 @@
  * [OUTPUT]: electron-builder 配置对象。这是唯一配置源，package.json 不再有 build 字段
  * [POS]: 打包层配置。build.yml、make-appx.ps1 与本地 `npx electron-builder` 都读它（26.x 自动发现 .cjs）。
  *        资源布局与 Core 对齐：resources/engine/echotype-engine[.exe]（engine/engine-command.ts）、
- *        resources/contracts/models.catalog.json（core/paths.ts）、resources/licenses/third-party.json（LicensesView）。
+ *        resources/contracts/{models,integrations}.catalog.json（core/paths.ts）、resources/licenses/third-party.json（LicensesView）。
  *        渠道写进打包后 package.json 的 echotype.channel，Core 读它决定模型来源。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -136,6 +136,7 @@ module.exports = {
   },
   deb: {
     // 写 depends 会替换默认列表，所以先列 electron-builder 26 的默认项，再加 XTest/Xt/XRandR（uiohook、robotjs）
+    // 与 ALSA/PulseAudio 客户端库（引擎的 cpal 动态链接；t64 发行版的 libasound2t64 提供 libasound2）
     depends: [
       "libgtk-3-0",
       "libnotify4",
@@ -148,6 +149,8 @@ module.exports = {
       "libsecret-1-0",
       "libxt6",
       "libxrandr2",
+      "libasound2",
+      "libpulse0",
     ],
   },
 };

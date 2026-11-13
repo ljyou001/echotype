@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # ============================================================================
-# [INPUT]: 依赖 engine/Cargo.toml 与 cargo/rustc（基础引擎）；依赖 engine/scripts/make-pack.{sh,ps1}
-#          （GPU 引擎包，以及 mac 基础引擎的 Metal 运行时）；依赖 contracts/models.catalog.json 的
+# [INPUT]: 依赖 engine/ 的 Cargo 工程与 cargo/rustc（基础引擎）；依赖 engine/scripts/make-pack.sh（GPU 引擎包，
+#          以及 mac 基础引擎的 Metal llama-server）；依赖 contracts/models.catalog.json 的
 #          engine_packs[].platforms[].asset.name；依赖 python3 或 python（catalog 查询与打 zip）
-# [OUTPUT]: 基础引擎 → engine/dist/<target-id>/echotype-engine[.exe]（mac 另含 Metal llama-server）
+# [OUTPUT]: 基础引擎 → engine/dist/<target-id>/echotype-engine[.exe]（mac 另含 Metal llama-server 及其 dylib）
 #           GPU 引擎包 → engine/dist/packs/<catalog asset.name>（可复现 zip，文件位于 zip 根）
 # [POS]: 打包流水线中唯一构建引擎的入口。build.yml 每个矩阵行调用一次，本地也可直接运行。
 #        electron-builder 以 engine/dist/${os}-${arch} 读取基础引擎，所以 target-id 必须等于 <os>-<arch>。
+#        GPU 引擎包的内容全部由 make-pack 决定（engine/scripts/CLAUDE.md），这里只负责命名、校验、打包。
 # [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 # ============================================================================
 #
@@ -15,14 +16,8 @@
 #   pack      ∈ contracts/models.catalog.json 的 engine_packs[].id（cuda、vulkan）
 #
 # 环境变量：
-#   ECHOTYPE_STRICT=1  缺少引擎工程或 make-pack 时报错退出（tag 发布开启）。默认提示并跳过。
-#   CARGO_TARGET_DIR   与 cargo 语义相同，默认 engine/target。
-#
-# make-pack 约定（engine 会话实现）：
-#   make-pack <pack> <platform> <out-dir>
-#   把该运行时的全部文件写进 <out-dir> 根目录；退出码非 0 即失败。
-#   GPU 引擎包是一套完整引擎（MODEL_MANIFEST §5）：echotype-engine 由 make-pack 自己以 GPU feature 编译，
-#   CI 只提供 Rust 工具链。mac 行的 <pack>=metal，<out-dir> 就是基础引擎暂存目录。
+#   CARGO_TARGET_DIR      与 cargo 语义相同，默认 engine/target
+#   ECHOTYPE_PACK_CACHE   透传给 make-pack 的下载缓存目录（CI 指向 runner.temp，不进 Rust 缓存）
 set -euo pipefail
 
 # GitHub Release 单个资产的上限
@@ -40,15 +35,6 @@ annotate() {
   fi
 }
 die() { annotate error "$*"; exit 1; }
-
-# 缺件时结束本脚本：严格模式报错，否则提示并以 0 退出。从不静默跳过。
-skip_rest() {
-  if [ "${ECHOTYPE_STRICT:-0}" = "1" ]; then
-    die "$* (ECHOTYPE_STRICT=1 requires it)"
-  fi
-  annotate warning "$* Skipped."
-  exit 0
-}
 
 usage() {
   echo "usage: build-engine.sh <target-id> [pack]" >&2
@@ -70,6 +56,7 @@ esac
 ENGINE_DIR="$ROOT/engine"
 DIST_DIR="$ENGINE_DIR/dist"
 CATALOG="$ROOT/contracts/models.catalog.json"
+MAKE_PACK="$ENGINE_DIR/scripts/make-pack.sh"
 
 # target-id → catalog 平台名（Node 的 process.platform-arch）与 Rust 主机三元组
 case "$TARGET" in
@@ -84,6 +71,13 @@ esac
 EXE=echotype-engine
 case "$TARGET" in win-*) EXE=echotype-engine.exe ;; esac
 
+[ -f "$ENGINE_DIR/Cargo.toml" ] || die "engine/Cargo.toml not found."
+command -v cargo >/dev/null || die "cargo not found on PATH."
+
+# 本机原生构建：rustc 的 host 必须等于目标三元组，从不暂存错架构的二进制
+HOST=$(rustc -vV | sed -n 's/^host: //p')
+[ "$HOST" = "$TRIPLE" ] || die "Rust host is $HOST but $TARGET needs $TRIPLE. CI builds each target natively on its own runner."
+
 # ---------------------------------------------------------------------------
 # 工具函数
 # ---------------------------------------------------------------------------
@@ -96,25 +90,11 @@ find_python() {
   return 1
 }
 
-# 定位 make-pack 并存入 MAKE_PACK：优先 .sh，只有 .ps1 时用 pwsh；都没有则 skip_rest。
-# 在创建任何暂存目录之前调用，跳过时不留空目录。
-MAKE_PACK=()
-require_make_pack() {
-  local pack=$1
-  if [ -f "$ENGINE_DIR/scripts/make-pack.sh" ]; then
-    MAKE_PACK=(bash "$ENGINE_DIR/scripts/make-pack.sh")
-  elif [ -f "$ENGINE_DIR/scripts/make-pack.ps1" ]; then
-    command -v pwsh >/dev/null || die "engine/scripts/make-pack.ps1 needs pwsh on PATH."
-    MAKE_PACK=(pwsh -NoLogo -NoProfile -NonInteractive -File "$ENGINE_DIR/scripts/make-pack.ps1")
-  else
-    skip_rest "engine/scripts/make-pack.{sh,ps1} not found, so the $pack runtime for $PLATFORM was not staged."
-  fi
-}
-
-# make_pack <pack> <out-dir>
+# make_pack <pack> <out-dir>：make-pack.sh 把运行时文件写进 out-dir 根目录
 make_pack() {
+  [ -f "$MAKE_PACK" ] || die "engine/scripts/make-pack.sh not found."
   echo "==> make-pack $1 $PLATFORM"
-  "${MAKE_PACK[@]}" "$1" "$PLATFORM" "$2"
+  bash "$MAKE_PACK" "$1" "$PLATFORM" "$2"
 }
 
 # 资产名只取自 catalog（唯一真相源）。未声明该包与平台则失败。
@@ -133,7 +113,7 @@ sys.exit(1)
 PY
 }
 
-# 可复现 zip：路径排序、时间戳固定为 1980-01-01、权限只保留可执行位。
+# 可复现 zip：路径排序、时间戳固定为 1980-01-01、权限只保留可执行位；软链按目标内容存入。
 # 内容不变则 sha256 不变，发布任务据此判断 engine-packs-v3 上的资产是否需要更新。
 zip_reproducible() {
   local py=$1 src=$2 out=$3
@@ -160,22 +140,11 @@ PY
 file_size() { wc -c < "$1" | tr -d ' '; }
 
 # ---------------------------------------------------------------------------
-# 基础引擎：cargo build --release（主机目标）→ 暂存到 engine/dist/<target-id>/
+# 基础引擎：cargo build --release（默认 feature static，CPU）→ 暂存到 engine/dist/<target-id>/
 # ---------------------------------------------------------------------------
 build_engine() {
-  [ -f "$ENGINE_DIR/Cargo.toml" ] || skip_rest "engine/Cargo.toml not found, so no engine binary was built for $TARGET."
-  command -v cargo >/dev/null || die "cargo not found on PATH."
-
-  local host
-  host=$(rustc -vV | sed -n 's/^host: //p')
-  [ "$host" = "$TRIPLE" ] || die "Rust host is $host but $TARGET needs $TRIPLE. CI builds each target natively on its own runner."
-
-  echo "==> cargo build --release ($TRIPLE)"
-  if [ -f "$ENGINE_DIR/Cargo.lock" ]; then
-    (cd "$ENGINE_DIR" && cargo build --release --locked)
-  else
-    (cd "$ENGINE_DIR" && cargo build --release)
-  fi
+  echo "==> cargo build --release --bin echotype-engine ($TRIPLE)"
+  (cd "$ENGINE_DIR" && cargo build --release --locked --bin echotype-engine)
 
   local bin="${CARGO_TARGET_DIR:-$ENGINE_DIR/target}/release/$EXE"
   [ -f "$bin" ] || die "cargo build succeeded but $bin is missing. Core spawns resources/engine/$EXE, so the binary must keep that name."
@@ -186,12 +155,11 @@ build_engine() {
   cp "$bin" "$out/"
   annotate notice "Staged $EXE into engine/dist/$TARGET/."
 
-  # macOS 基础引擎自带 CoreML + Metal（MODEL_MANIFEST §5），Metal llama-server 与引擎放在同一目录
+  # macOS 基础引擎自带 CoreML + Metal（MODEL_MANIFEST §5）：Metal llama-server 与引擎放在同一目录
   case "$TARGET" in
     mac-*)
-      require_make_pack metal
       make_pack metal "$out"
-      annotate notice "Staged the Metal runtime into engine/dist/$TARGET/."
+      annotate notice "Staged the Metal llama-server into engine/dist/$TARGET/."
       ;;
   esac
   ls -la "$out"
@@ -204,7 +172,6 @@ build_pack() {
   local pack=$1 py asset
   py=$(find_python) || die "Python 3 not found; it reads the catalog and writes the pack zip."
   asset=$(catalog_asset_name "$py" "$pack")
-  require_make_pack "$pack"
 
   local stage="$DIST_DIR/packs/${asset%.zip}"
   local zip="$DIST_DIR/packs/$asset"
@@ -212,7 +179,6 @@ build_pack() {
   mkdir -p "$stage"
 
   make_pack "$pack" "$stage"
-  [ -n "$(ls -A "$stage")" ] || die "make-pack $pack $PLATFORM left $stage empty."
   [ -f "$stage/$EXE" ] || die "make-pack $pack $PLATFORM did not produce $EXE. A pack is a complete engine build (MODEL_MANIFEST §5)."
 
   zip_reproducible "$py" "$stage" "$zip"
