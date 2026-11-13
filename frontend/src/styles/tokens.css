@@ -1,0 +1,140 @@
+/*
+ * [INPUT]: 无依赖
+ * [OUTPUT]: :root 上的设计令牌：品牌色、语义色、表面、文字、圆角、阴影、间距、字号、层级、动效
+ * [POS]: 样式系统的唯一数值源。其余 CSS 只引用这些变量，不写裸色值与魔法数字。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+:root {
+  /* ---------- 品牌 ---------- */
+  --brand: #5a2799;
+  --brand-strong: #461e7d;
+  --brand-soft: rgba(90, 39, 153, 0.08);
+  --brand-ring: rgba(90, 39, 153, 0.22);
+  --blue: #418bf3;
+  --pink: #c844a9;
+  --orange: #f19748;
+  --lavender: #b0a7ef;
+
+  /* ---------- 语义 ---------- */
+  --success: #1f9d6b;
+  --success-soft: rgba(31, 157, 107, 0.12);
+  --warning: #c26a12;
+  --warning-soft: rgba(241, 151, 72, 0.16);
+  --danger: #d23b3b;
+  --danger-soft: rgba(210, 59, 59, 0.1);
+  --info: var(--blue);
+  --info-soft: rgba(65, 139, 243, 0.12);
+
+  /* ---------- 表面与文字 ---------- */
+  --bg: #f6f5fa;
+  --surface: #ffffff;
+  --surface-sunken: #f1eff7;
+  --surface-hover: #f7f5fc;
+  --text: #1f1b2e;
+  --text-muted: #6f6c7d;
+  --text-subtle: #9a97a8;
+  --text-on-brand: #ffffff;
+  --border: rgba(31, 27, 46, 0.09);
+  --border-strong: rgba(31, 27, 46, 0.16);
+
+  /* ---------- 侧栏 ---------- */
+  --sidebar-width: 208px;
+  --sidebar-bg: linear-gradient(180deg, #5a2799 0%, #431c78 100%);
+  --sidebar-text: rgba(255, 255, 255, 0.78);
+  --sidebar-hover: rgba(255, 255, 255, 0.1);
+  --sidebar-active: rgba(255, 255, 255, 0.18);
+  --sidebar-divider: rgba(255, 255, 255, 0.12);
+
+  /* ---------- 电平表 ---------- */
+  --meter-track: #ebe8f3;
+  --meter-fill: linear-gradient(90deg, #418bf3 0%, #5a2799 70%, #c844a9 100%);
+
+  /* ---------- 圆角 ---------- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  /* ---------- 阴影 ---------- */
+  --shadow-sm: 0 1px 2px rgba(31, 27, 46, 0.06);
+  --shadow-md: 0 4px 14px rgba(31, 27, 46, 0.07);
+  --shadow-lg: 0 18px 48px rgba(31, 27, 46, 0.18);
+  --focus-ring: 0 0 0 3px var(--brand-ring);
+
+  /* ---------- 间距（4px 栅格） ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* ---------- 字体与字号 ---------- */
+  --font-sans: "Inter", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "PingFang SC",
+    "Microsoft YaHei UI", sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", "SF Mono", ui-monospace, monospace;
+  --text-xs: 11.5px;
+  --text-sm: 12.5px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+
+  /* ---------- 布局 ---------- */
+  --page-max-width: 920px;
+  --page-pad-x: 32px;
+  --page-pad-y: 28px;
+  --control-height: 34px;
+  --control-max-width: 300px;
+
+  /* ---------- 层级 ---------- */
+  --z-sidebar: 10;
+  --z-modal: 100;
+  --z-toast: 200;
+
+  /* ---------- 动效 ---------- */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration: 200ms;
+
+  /* ---------- 衍生色（状态点、光球、遮罩、深色底上的文字） ---------- */
+  --border-hover: rgba(31, 27, 46, 0.26);
+  --scrollbar-thumb: rgba(31, 27, 46, 0.16);
+  --scrollbar-thumb-hover: rgba(31, 27, 46, 0.28);
+  --switch-off: rgba(31, 27, 46, 0.18);
+  --shadow-thumb: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --info-text: #2f6fd0;
+  --overlay: rgba(20, 16, 34, 0.42);
+  --on-dark-muted: rgba(255, 255, 255, 0.7);
+  --on-dark-hover: rgba(255, 255, 255, 0.12);
+  --on-dark-focus: rgba(255, 255, 255, 0.6);
+  --on-dark-dot: rgba(255, 255, 255, 0.5);
+  --toast-error-icon: #fca5a5;
+  --pink-ring: rgba(200, 68, 169, 0.4);
+  --success-ring: rgba(31, 157, 107, 0.45);
+  --success-halo: rgba(31, 157, 107, 0.15);
+  --warning-ring: rgba(241, 151, 72, 0.5);
+  --glow-lavender: rgba(176, 167, 239, 0.35);
+  --glow-blue: rgba(65, 139, 243, 0.16);
+  --orb-highlight: rgba(255, 255, 255, 0.95);
+  --orb-ready: rgba(90, 39, 153, 0.55);
+  --orb-recording: rgba(200, 68, 169, 0.65);
+  --orb-finalizing: rgba(65, 139, 243, 0.6);
+  --orb-error: rgba(241, 151, 72, 0.75);
+  --orb-idle: rgba(176, 167, 239, 0.55);
+  --orb-shadow: 0 12px 30px rgba(90, 39, 153, 0.22);
+  --orb-shadow-idle: 0 8px 20px rgba(90, 39, 153, 0.12);
+  --logo-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+  --dot-success: #4ade80;
+  --dot-success-halo: rgba(74, 222, 128, 0.22);
+  --dot-warning: #fbbf24;
+  --dot-danger: #f87171;
+  --dot-danger-halo: rgba(248, 113, 113, 0.25);
+  --dot-brand: #f9a8d4;
+  --run-mode-fallback-bg: rgba(251, 191, 36, 0.16);
+  --run-mode-fallback-ring: rgba(251, 191, 36, 0.45);
+}

@@ -1,0 +1,339 @@
+/*
+ * [INPUT]: 依赖 ./tokens.css 的变量
+ * [OUTPUT]: 应用外壳（.app 网格、侧栏 .sidebar、主区 .app__main、启动占位）与页面通用块（.page、.page-header、.card、.eyebrow）
+ * [POS]: 样式系统第三层：页面骨架。侧栏在任何窗宽下都是固定宽度的竖排栏，不存在横向滚动的顶栏形态。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/* ============================================================
+ * 外壳
+ * ============================================================ */
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app__main {
+  min-width: 0;
+  height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.app-splash {
+  height: 100vh;
+  background: var(--bg);
+}
+
+/* ============================================================
+ * 侧栏
+ * ============================================================ */
+.sidebar {
+  position: relative;
+  z-index: var(--z-sidebar);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  height: 100vh;
+  padding: var(--space-5) var(--space-3) var(--space-4);
+  overflow: hidden;
+  background: var(--sidebar-bg);
+  color: var(--text-on-brand);
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: 0 var(--space-2);
+}
+
+.sidebar__logo {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--logo-shadow);
+}
+
+.sidebar__brand-text {
+  min-width: 0;
+}
+
+.sidebar__name {
+  font-size: var(--text-lg);
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.sidebar__tagline {
+  font-size: var(--text-xs);
+  line-height: 1.3;
+  color: var(--sidebar-text);
+  overflow-wrap: anywhere;
+}
+
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--sidebar-text);
+  font-size: var(--text-md);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.sidebar__item:hover {
+  background: var(--sidebar-hover);
+  color: var(--text-on-brand);
+}
+
+.sidebar__item--active {
+  background: var(--sidebar-active);
+  color: var(--text-on-brand);
+  font-weight: 600;
+}
+
+.sidebar__item:focus-visible {
+  box-shadow: 0 0 0 2px var(--on-dark-focus);
+}
+
+.sidebar__icon {
+  display: flex;
+  flex-shrink: 0;
+  font-size: 17px;
+}
+
+.sidebar__label {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar__footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2) 0;
+  border-top: 1px solid var(--sidebar-divider);
+}
+
+.sidebar__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--text-sm);
+  font-weight: 550;
+}
+
+.sidebar__status-text {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar__status-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--on-dark-dot);
+}
+
+.sidebar__status--success .sidebar__status-dot {
+  background: var(--dot-success);
+  box-shadow: 0 0 0 3px var(--dot-success-halo);
+}
+
+.sidebar__status--warning .sidebar__status-dot {
+  background: var(--dot-warning);
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.sidebar__status--danger .sidebar__status-dot {
+  background: var(--dot-danger);
+  box-shadow: 0 0 0 3px var(--dot-danger-halo);
+}
+
+.sidebar__status--brand .sidebar__status-dot {
+  background: var(--dot-brand);
+  animation: pulse-dot 0.9s ease-in-out infinite;
+}
+
+/* 状态栏：当前模型 + 运行方式，两行各自省略 */
+.run-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--on-dark-hover);
+  color: var(--text-on-brand);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease);
+}
+
+.run-mode:hover {
+  background: var(--sidebar-active);
+}
+
+.run-mode:focus-visible {
+  box-shadow: 0 0 0 2px var(--on-dark-focus);
+}
+
+.run-mode__name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.run-mode__name svg {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.run-mode__text,
+.run-mode__mode {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.run-mode__mode {
+  font-size: var(--text-xs);
+  color: var(--sidebar-text);
+}
+
+.run-mode--empty .run-mode__name {
+  font-weight: 500;
+  color: var(--sidebar-text);
+}
+
+.run-mode--fallback {
+  background: var(--run-mode-fallback-bg);
+  box-shadow: inset 0 0 0 1px var(--run-mode-fallback-ring);
+}
+
+.run-mode--fallback .run-mode__name svg,
+.run-mode--fallback .run-mode__mode {
+  color: var(--dot-warning);
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* ============================================================
+ * 页面通用
+ * ============================================================ */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+  max-width: var(--page-max-width);
+  min-width: 0;
+  margin: 0 auto;
+  padding: var(--page-pad-y) var(--page-pad-x) var(--space-10);
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.page-header__text {
+  min-width: 0;
+}
+
+.page-header__title {
+  font-size: var(--text-2xl);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.page-header__description {
+  margin-top: var(--space-1);
+  color: var(--text-muted);
+}
+
+.page-header__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.card {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.eyebrow {
+  font-size: var(--text-xs);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
+}
+
+/* ============================================================
+ * Quick Action 窗口：去掉主窗口背景
+ * ============================================================ */
+body.is-quick-action {
+  background: var(--surface);
+}

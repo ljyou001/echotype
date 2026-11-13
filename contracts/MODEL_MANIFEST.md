@@ -1,77 +1,127 @@
-# Model Manifest v1
+# Model Manifest v2.2
 
 > L3 contract | Parent: contracts/CLAUDE.md
-> Instances: `contracts/models.catalog.json` → `{"schema":1,"models":[…]}`
-> Readers: Core (download, install, UI list), Engine (load). UI sees only `ModelView` (ipc-contract.ts).
+> Instances: `contracts/models.catalog.json` → `{"schema":2, "sources":[…], "channels":{…}, "models":[…], "engine_packs":[…]}`
+> Readers: Core (resolve, download, install, ModelView), Engine (load). UI sees only `ModelView` / `EnginePackView` (ipc-contract.ts).
+> Keys that start with `_` are drafting notes. Readers ignore them.
 
-## 1. Fields
+## 1. Model object
 
 ```jsonc
 {
-  "id": "sensevoice-small-int8",        // stable folder name under ~/.echotype/models/<id>/
-  "name": "SenseVoice Small",            // display name (English; UI translates the description key only)
+  "id": "qwen3-asr-0.6b",                // stable id; folder ~/.echotype/models/<id>/<variant.id>/
+  "name": "Qwen3 ASR 0.6B",
   "description": "…",                    // one sentence, English
   "kind": "asr",                         // asr | punctuation
-  "runtime": "sherpa-onnx",              // engine runtime key; v3 engine ships only "sherpa-onnx"
-  "arch": "sense_voice",                 // engine dispatch key, see §2
-  "tier": "instant",                     // instant | balanced | accurate
-  "languages": ["zh","en","ja","ko","yue"], // ISO 639 codes; "auto" is implied when features.lid is true
-  "files": { "model": "model.int8.onnx", "tokens": "tokens.txt" }, // arch-specific keys → paths relative to the model folder
-  "download": {
-    "url": "https://…/x.tar.bz2",
-    "format": "tar.bz2",                 // tar.bz2 | tar.gz | zip | file (a single file saved as files.model)
-    "sha256": "…",                       // of the archive; null only while drafting, never in a release
-    "size_bytes": 0,                     // archive size, for the progress bar and the disk check
-    "archive_root": "folder-inside-archive" // top-level folder to strip; null when files sit at the root
-  },
-  "punctuation": { "mode": "native" },   // native | companion | none; companion adds "companion_id": "<punctuation model id>"
-  "features": { "itn": "native", "lid": true, "partials": true }, // itn: native | rule | none
-  "requires": [],                        // model ids Core installs first (e.g. the companion punctuation model)
-  "providers": ["cpu", "cuda", "coreml"], // in preference order for provider:"auto"
-  "requirements": { "ram_mb": 600, "vram_mb": 0 },
-  "defaults": { "provider": "auto", "language": "auto", "punctuation": true, "itn": true },
+  "tier": "accurate",                    // instant | balanced | accurate
+  "languages": ["zh","en", "…"],         // ISO 639 codes
+  "punctuation": { "mode": "native" },   // native | companion | none; companion adds "companion_id"
+  "features": { "itn": "native", "lid": true, "partials": false }, // itn: native | rule | none
+  "requires": [],                        // model ids Core installs first
+  "settings": [ /* §3 — shown ONLY on the Models page */ ],
+  "variants": [ /* §2 — one per runtime × hardware target */ ],
+  "license": { "id": "Apache-2.0", "url": "https://…", "commercial": "yes" }, // yes | no | unclear
   "status": "stable"                     // stable | beta | hidden
 }
 ```
 
-Keys that start with `_` are drafting notes. Readers ignore them.
+## 2. Variant object — one model, separately optimized per hardware
 
-## 2. `arch` values (v3 engine)
+Every model is evaluated on three targets: **cpu**, **nvidia** (CUDA), **apple** (Apple Silicon: CoreML and/or Metal).
+A variant exists for a target only after it measurably beats the cpu variant on that hardware.
 
-| arch | sherpa-onnx factory | `files` keys | engine 3.0 |
-|---|---|---|---|
-| `paraformer` | `OfflineRecognizer.from_paraformer` | `model`, `tokens` | verified |
-| `sense_voice` | `OfflineRecognizer.from_sense_voice` (`use_itn` = punctuation or itn) | `model`, `tokens` | verified |
-| `nemo_transducer` | `OfflineRecognizer.from_transducer` (`model_type="nemo_transducer"`) | `encoder`, `decoder`, `joiner`, `tokens` | verified |
-| `qwen3_asr` | `OfflineRecognizer.from_qwen3_asr` | `conv_frontend`, `encoder`, `decoder`, `tokenizer` (folder) | verified |
-| `funasr_nano` | `OfflineRecognizer.from_funasr_nano` (`itn` = settings.itn) | `encoder_adaptor`, `llm`, `embedding`, `tokenizer` (folder) | verified |
-| `ct_transformer` (kind punctuation) | `OfflinePunctuation` | `model` | verified |
-| `whisper` | `OfflineRecognizer.from_whisper` | `encoder`, `decoder`, `tokens` | planned: no loader, load fails with `MODEL_LOAD_FAILED` |
-| `moonshine` | `OfflineRecognizer.from_moonshine_v2` | `encoder`, `decoder`, `tokens` | planned |
-| `fire_red_asr` | `OfflineRecognizer.from_fire_red_asr` | `encoder`, `decoder`, `tokens` | planned |
+```jsonc
+{
+  "id": "cuda-fp16",                     // "<target>-<format>": cpu-int8 | cuda-fp16 | apple-coreml | apple-metal-q8 | …
+  "target": "nvidia",                    // cpu | nvidia | apple | vulkan
+  "runtime": "sherpa-onnx",              // sherpa-onnx | llama.cpp | whisper.cpp  (engine dispatch, §4)
+  "arch": "sense_voice",                 // loader key inside that runtime
+  "providers": ["cuda"],                 // engine providers this variant runs on, in preference order
+  "requires_pack": "cuda",               // engine pack needed (§5), or null
+  "files": { "…": "relative/path" },     // arch-specific keys, relative to the variant folder
+  "asset": {
+    "name": "sensevoice-small--cuda-fp16.zip", // file name on every source (§6); files sit at the zip root
+    "release": "models-v3",              // release/bucket name a source template may use
+    "sha256": "…",                       // null only while drafting
+    "size_bytes": 0,
+    "upstream_url": "https://…"          // original source, for re-packaging only — Core never downloads it
+  },
+  "requirements": { "ram_mb": 2000, "vram_mb": 0 },
+  "bench": { "release_to_final_ms_p50_10s": null, "host": null } // filled by the engine benchmark
+}
+```
 
-The engine session owns this table: it adds a row only after a real load + decode test passes.
-"verified" = `backend/tests/test_models.py` loads the catalog entry and transcribes a Chinese and an English wav (2026-11-13).
-Silero VAD (`silero_vad.onnx`, about 2 MB) ships inside the engine package. It is not a catalog entry.
+Variant selection for the user's `provider` setting:
+1. `auto` → the best installed-or-installable variant for this machine, in target order nvidia → apple → cpu, skipping variants whose `requires_pack` is missing and not installable here.
+2. An explicit provider → the variant that lists it. If it is not installed, the Model Manager offers its download (and its pack).
 
-## 2.1 Providers and quantization
+## 3. Model settings (`settings[]`) — model-specific, never global
 
-int8 graphs from dynamic quantization run fast on CPU but often fall back or slow down on the CUDA EP.
-A model that should use the GPU gets its own catalog entry with an fp32/fp16 graph and `"providers":["cuda","cpu"]`.
-List `cuda` or `coreml` in `providers` only after a measured speed-up over `cpu` on that model.
+```jsonc
+{ "key": "punctuation", "type": "toggle", "default": true }
+{ "key": "punct_style", "type": "select", "default": "auto", "options": ["auto","zh","en"] }
+{ "key": "language", "type": "select", "default": "auto", "options": ["auto","zh","en"] }
+{ "key": "hotwords", "type": "text", "default": "" }
+```
 
-## 3. Text pipeline per `punctuation.mode`
+- `provider` is implicit for every model; Core builds its options from the variants this machine can run.
+- Standard keys: `provider`, `language`, `punctuation`, `punct_style`, `itn`. Other keys are model-specific and passed to the engine untouched.
+- `punct_style`: `auto` = punctuation follows the script of each sentence (CJK → full-width `，。？！：；`, Latin → half-width `, . ? ! : ;` plus a following space); `zh` / `en` force one style. Present on every model whose punctuation can be wrong for English (all `companion` models and native zh/en models that emit full-width marks).
+- UI label/help come from i18n keys `models.settings.<key>.label` / `.help`; unknown keys fall back to the key name.
+- Values live in `settings.models.perModel[<model id>][<key>]`. The global Settings page never shows them.
 
-| mode | punctuation=true | punctuation=false |
+## 4. Runtimes and arch keys (native engine, no Python, no torch)
+
+| runtime | arch | notes |
 |---|---|---|
-| `native` | keep model output | strip punctuation from model output |
-| `companion` | run `companion_id` model on the joined text | skip the companion model |
-| `none` | toggle hidden in UI | — |
+| sherpa-onnx | `paraformer`, `sense_voice`, `whisper`, `moonshine`, `nemo_transducer`, `fire_red_asr`, `qwen3_asr` | C API via the official Rust crate; cpu static in the base engine; cuda via the cuda pack; coreml on macOS |
+| sherpa-onnx | `ct_transformer` (kind punctuation) | offline punctuation |
+| llama.cpp | `mtmd_asr` | GGUF + mmproj via a pinned `llama-server` sidecar (CUDA / Metal / Vulkan) |
+| whisper.cpp | `whisper_ggml` | optional; only if it beats sherpa for Whisper on Metal/CUDA |
 
-After punctuation: `itn` (when `features.itn` is `rule`, run `backend/common/chinese_itn.py`; when `native`, pass the flag to the model) → CJK/Latin spacing (`adjust_space`).
+The engine session owns this table: a row exists only after a real load + decode test passes. Silero VAD ships inside the engine.
 
-## 4. Add a model (the whole procedure)
+## 5. Engine packs (`engine_packs[]`) — optional GPU builds of the whole engine
+
+```jsonc
+{
+  "id": "cuda",
+  "target": "nvidia",
+  "providers": ["cuda"],
+  "protocol": 3,                         // must equal the bundled engine's protocol
+  "platforms": {
+    "win32-x64": { "asset": { "name": "engine-pack-cuda-win32-x64.zip", "release": "engine-packs-v3", "sha256": "…", "size_bytes": 0 } },
+    "linux-x64": { "asset": { "name": "engine-pack-cuda-linux-x64.zip", "release": "engine-packs-v3", "sha256": "…", "size_bytes": 0 } }
+  }
+}
+```
+- A pack is a complete engine build plus its GPU libraries: `echotype-engine`, sherpa-onnx shared CUDA libs, ONNX Runtime GPU, the NVIDIA runtime DLLs it needs (cudart, cuBLAS, cuDNN, cuFFT — redistributable), and the CUDA `llama-server`.
+- Core installs it to `~/.echotype/engines/<pack id>/`. While a pack is installed and its `hello.protocol` matches, Core spawns the engine from the pack folder instead of the bundled one. On mismatch or crash loop, Core falls back to the bundled engine and reports `PACK_OUTDATED`.
+- The macOS base engine already includes CoreML + Metal; Apple Silicon needs no pack.
+- Packs appear in the Model Manager next to the models.
+
+## 6. Sources and channels — where assets come from
+
+```jsonc
+"sources": [
+  { "id": "github", "type": "http",  "url_template": "https://github.com/ljyou001/echotype/releases/download/{release}/{asset}" },
+  { "id": "steam",  "type": "local", "path_template": "{steam_app_dir}/models/{asset}" }
+],
+"channels": {
+  "github":  { "sources": ["github"],          "remote_catalog": null, "allow_commercial": ["yes", "unclear"] },
+  "steam":   { "sources": ["steam", "github"], "remote_catalog": null, "allow_commercial": ["yes"] },
+  "msstore": { "sources": ["github"],          "remote_catalog": null, "allow_commercial": ["yes"] }
+}
+```
+- Assets are referenced by `{release, asset}` only. Core builds the URL or path from the channel's sources, in order, and falls back to the next source on failure. Changing hosts = editing `sources`, never the models.
+- The channel is a build-time constant (`ECHOTYPE_CHANNEL`, default `github`) set by CI per store build.
+- `allow_commercial` filters models by `license.commercial` for that store. The policy is provisional; the user will decide per store later.
+- `remote_catalog`: optional URL. When set, Core fetches it at startup, accepts it only if `schema` matches and `updated` is newer, caches it, and falls back to the bundled catalog on any error. This lets sources and models change without an app update.
+- Template variables: `{release}`, `{asset}`, `{platform}` (e.g. `win32-x64`), `{steam_app_dir}` (resolved by Core; a `local` source whose variable cannot be resolved is skipped).
+
+## 7. Add a model
 
 1. Add one object to `contracts/models.catalog.json`.
-2. If its `arch` is new, add one loader branch in the engine and one row in §2.
-3. Nothing else. Core and UI must not need a code change.
+2. If its `arch` is new, add one loader in the engine and one row in §4.
+3. Package each variant as `<model id>--<variant id>.zip` (files at the zip root) and upload it to the `models-v3` release on each source.
+4. Nothing else. Core and UI need no code change.

@@ -24,14 +24,15 @@ export interface AppError {
 // Settings — persisted by Core in ~/.echotype/settings.json (schemaVersion 2)
 // ============================================================
 export type RecordingMode = "push-to-talk" | "toggle";
-export type Provider = "auto" | "cpu" | "cuda" | "coreml" | "directml";
+export type Provider = "auto" | "cpu" | "cuda" | "metal" | "coreml" | "vulkan" | "directml";
+export type SettingValue = string | number | boolean;
 
-export interface ModelUserSettings {
-  provider: Provider;
-  language: string; // "auto" or an ISO code from manifest.languages
-  punctuation: boolean; // honored per manifest.punctuation.mode
-  itn: boolean; // numbers as digits ("三点五" → "3.5")
-}
+/**
+ * 模型专属设置。键由 catalog 里该模型的 settings[] 声明（MODEL_MANIFEST §3）。
+ * 标准键：provider · language · punctuation · itn；其余键为模型特有，原样交给引擎。
+ * 只在模型页展示，全局设置页不得出现。
+ */
+export type ModelUserSettings = Record<string, SettingValue>;
 
 export interface Settings {
   schemaVersion: 2;
@@ -50,7 +51,7 @@ export interface Settings {
   };
   models: {
     activeId: string | null;
-    perModel: Record<string, ModelUserSettings>;
+    perModel: Record<string, ModelUserSettings>; // 只经 bridge.models.updateSettings 写入，不经 updateSettings
   };
   ui: { language: string; onboardingCompleted: boolean; launchAtStartup: boolean };
   privacy: { saveRecordings: boolean }; // default false
@@ -79,6 +80,16 @@ export interface AppSnapshot {
     loadProgress: { stage: string; pct: number } | null;
     error: AppError | null;
   };
+  /** 当前运行方式，状态栏一眼可见：例如 "Qwen3 ASR 0.6B · NVIDIA · CUDA · llama.cpp"。未加载模型时为 null */
+  activeModel: {
+    id: string;
+    name: string;
+    variantId: string;
+    target: "cpu" | "nvidia" | "apple" | "vulkan";
+    runtime: "sherpa-onnx" | "llama.cpp" | "whisper.cpp";
+    providerUsed: string; // 引擎实际使用的 provider（可能因回退与所选不同）
+    fallback: boolean; // true = 所选硬件不可用，已回退到 CPU
+  } | null;
   dictation: {
     phase: DictationPhase;
     partialText: string;
@@ -92,6 +103,30 @@ export interface AppSnapshot {
 // ============================================================
 export type InstallStatus = "not_installed" | "downloading" | "verifying" | "extracting" | "installed" | "error";
 
+/** 模型设置项的渲染描述。Core 由 catalog 的 settings[] 生成，并补上 provider 一项。 */
+export interface ModelSettingDef {
+  key: string;
+  type: "select" | "toggle" | "text" | "number";
+  default: SettingValue;
+  options?: string[]; // select 的取值；provider 一项只含本机可用且有对应 variant 的硬件
+  min?: number;
+  max?: number;
+}
+
+/** 同一模型针对不同硬件分别优化的版本（MODEL_MANIFEST §2）。 */
+export type HardwareTarget = "cpu" | "nvidia" | "apple" | "vulkan";
+
+export interface VariantView {
+  id: string; // e.g. "cpu-int8", "cuda-fp16", "apple-metal-gguf-q8"
+  target: HardwareTarget; // UI 分组：CPU / NVIDIA GPU / Apple Silicon / Vulkan
+  runtime: "sherpa-onnx" | "llama.cpp" | "whisper.cpp";
+  requiresPack: string | null; // 需要的引擎包 id（如 "cuda"），未安装时模型管理器一并提供下载
+  providers: Provider[];
+  sizeBytes: number;
+  install: { status: InstallStatus; pct: number | null; error: AppError | null };
+  benchP50Ms: number | null; // 10 s 语音松键到出字的实测中位数
+}
+
 export interface ModelView {
   id: string;
   name: string;
@@ -99,11 +134,30 @@ export interface ModelView {
   kind: "asr" | "punctuation";
   tier: "instant" | "balanced" | "accurate";
   languages: string[];
-  providers: Provider[]; // providers this model supports AND this build of the engine offers
   punctuationMode: "native" | "companion" | "none";
+  variants: VariantView[];
+  selectedVariantId: string | null; // 按当前 provider 设置选中的版本
+  settings: ModelSettingDef[];
+  values: ModelUserSettings; // 当前值（已与默认值合并）
+  license: { id: string; url: string; commercial: "yes" | "no" | "unclear" };
+  isActive: boolean;
+}
+
+/** 可选的 GPU 引擎包：整套引擎 + GPU 运行库（MODEL_MANIFEST §5）。本平台不提供时不出现在列表里。 */
+export interface EnginePackView {
+  id: string; // e.g. "cuda"
+  target: HardwareTarget;
+  providers: Provider[];
   sizeBytes: number;
   install: { status: InstallStatus; pct: number | null; error: AppError | null };
-  isActive: boolean;
+  inUse: boolean;
+}
+
+/** 设置 → 关于：模型许可证来自 catalog，组件许可证来自打包时生成的 resources/licenses/third-party.json */
+export interface LicensesView {
+  appVersion: string;
+  models: { id: string; name: string; license: { id: string; url: string; commercial: "yes" | "no" | "unclear" } }[];
+  components: { name: string; version: string; license: string; url: string }[];
 }
 
 export interface AudioInput {
@@ -123,7 +177,7 @@ export interface HistoryEntry {
 // Bridge — what preload exposes as window.echotype
 // ============================================================
 export interface EchotypeBridge {
-  ipcVersion: 1;
+  ipcVersion: 2;
 
   getSnapshot(): Promise<AppSnapshot>;
   onSnapshot(cb: (snapshot: AppSnapshot) => void): Unsubscribe;
@@ -139,11 +193,20 @@ export interface EchotypeBridge {
 
   models: {
     list(): Promise<ModelView[]>;
-    install(id: string): Promise<void>; // progress arrives through onModelsChanged
-    cancelInstall(id: string): Promise<void>;
-    remove(id: string): Promise<void>;
-    activate(id: string): Promise<void>; // sets settings.models.activeId and loads it
+    install(id: string, variantId?: string): Promise<void>; // 省略 variantId = 按当前 provider 选；进度经 onModelsChanged
+    cancelInstall(id: string, variantId?: string): Promise<void>;
+    remove(id: string, variantId?: string): Promise<void>; // 省略 variantId = 删除全部版本
+    activate(id: string): Promise<void>; // 设置 settings.models.activeId 并加载
+    updateSettings(id: string, patch: ModelUserSettings): Promise<ModelView>; // 模型专属设置的唯一入口
+    getStorage(): Promise<{ dir: string; usedBytes: number; freeBytes: number }>; // 模型管理器的磁盘占用
     onModelsChanged(cb: (models: ModelView[]) => void): Unsubscribe;
+  };
+
+  enginePacks: {
+    list(): Promise<EnginePackView[]>;
+    install(id: string): Promise<void>; // 安装后 Core 改从该包目录拉起引擎；协议不符时回退内置引擎
+    remove(id: string): Promise<void>;
+    onPacksChanged(cb: (packs: EnginePackView[]) => void): Unsubscribe;
   };
 
   audio: {
@@ -183,7 +246,10 @@ export interface EchotypeBridge {
   };
 
   system: {
+    channel: string; // 发行渠道：github | steam | msstore …（构建时常量，决定模型来源与可用模型）
+    getLicenses(): Promise<LicensesView>; // 设置 → 关于 页的许可证列表
     platform: "win32" | "darwin" | "linux";
+    arch: "x64" | "arm64";
     restartEngine(): Promise<void>;
     openExternal(url: string): Promise<void>;
     openLogsFolder(): Promise<void>;
@@ -209,7 +275,13 @@ export const IPC = {
   modelsCancelInstall: "models:cancel-install",
   modelsRemove: "models:remove",
   modelsActivate: "models:activate",
+  modelsUpdateSettings: "models:update-settings",
+  modelsStorage: "models:storage",
   modelsPush: "models:push",
+  packsList: "packs:list",
+  packsInstall: "packs:install",
+  packsRemove: "packs:remove",
+  packsPush: "packs:push",
   audioListInputs: "audio:list-inputs",
   audioMicTest: "audio:mic-test",
   hotkeyValidate: "hotkey:validate",
@@ -231,6 +303,7 @@ export const IPC = {
   systemPermissions: "system:permissions",
   systemOpenPermission: "system:open-permission",
   systemWindow: "system:window",
+  systemLicenses: "system:licenses",
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

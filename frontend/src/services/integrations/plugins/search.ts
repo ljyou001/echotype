@@ -1,14 +1,11 @@
-// Search Engine Plugins
-
+/**
+ * [INPUT]: 依赖 ../types 的插件接口；依赖 ../host 的 openExternal、copyText
+ * [OUTPUT]: 导出 GoogleSearchPlugin、BingSearchPlugin、BaiduSearchPlugin
+ * [POS]: 搜索引擎插件。direct 模式把文本拼进搜索 URL，clipboard 模式只复制并打开首页。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
 import { IntegrationPlugin, ConfigField, OutputMode } from '../types';
-
-// Helper function to handle clipboard copy
-async function copyToClipboard(text: string): Promise<void> {
-  if (text && navigator.clipboard) {
-    await navigator.clipboard.writeText(text);
-    console.log('[Plugin] Text copied to clipboard');
-  }
-}
+import { host } from '../host';
 
 export class GoogleSearchPlugin implements IntegrationPlugin {
   id = 'google-search';
@@ -23,7 +20,7 @@ export class GoogleSearchPlugin implements IntegrationPlugin {
     const shouldDirect = outputMode === 'direct' || outputMode === 'both';
 
     if (shouldCopy) {
-      await copyToClipboard(text);
+      await host.copyText(text);
     }
 
     const query = encodeURIComponent(text);
@@ -31,7 +28,7 @@ export class GoogleSearchPlugin implements IntegrationPlugin {
       ? `https://www.google.com/search?q=${query}`
       : `https://www.google.com/`;
     
-    await window.echotype?.openExternal?.(url);
+    await host.openExternal(url);
   }
 
   validateConfig(): boolean {
@@ -60,7 +57,7 @@ export class BingSearchPlugin implements IntegrationPlugin {
     const shouldDirect = outputMode === 'direct' || outputMode === 'both';
 
     if (shouldCopy) {
-      await copyToClipboard(text);
+      await host.copyText(text);
     }
 
     const query = encodeURIComponent(text);
@@ -68,7 +65,7 @@ export class BingSearchPlugin implements IntegrationPlugin {
       ? `https://www.bing.com/search?q=${query}`
       : `https://www.bing.com/`;
     
-    await window.echotype?.openExternal?.(url);
+    await host.openExternal(url);
   }
 
   validateConfig(): boolean {
@@ -97,7 +94,7 @@ export class BaiduSearchPlugin implements IntegrationPlugin {
     const shouldDirect = outputMode === 'direct' || outputMode === 'both';
 
     if (shouldCopy) {
-      await copyToClipboard(text);
+      await host.copyText(text);
     }
 
     const query = encodeURIComponent(text);
@@ -105,7 +102,7 @@ export class BaiduSearchPlugin implements IntegrationPlugin {
       ? `https://www.baidu.com/s?wd=${query}`
       : `https://www.baidu.com/`;
     
-    await window.echotype?.openExternal?.(url);
+    await host.openExternal(url);
   }
 
   validateConfig(): boolean {

@@ -7,11 +7,13 @@
     "outDir": "dist-electron",
     "rootDir": "electron",
     "strict": true,
+    "noUnusedLocals": true,
     "skipLibCheck": true,
     "sourceMap": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "types": ["node", "electron"]
   },
-  "include": ["electron"]
+  "include": ["electron"],
+  "exclude": ["electron/preload.ts", "electron/**/__tests__/**"]
 }

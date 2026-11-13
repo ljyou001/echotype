@@ -1,0 +1,96 @@
+/*
+ * [INPUT]: 依赖 styles/tokens.css 的变量
+ * [OUTPUT]: 调试页样式：事实表 .debug__facts、错误条、按键控制台、快照 JSON
+ * [POS]: pages/DebugPage.tsx 的专属样式。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+.debug__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.debug__fact {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+}
+
+.debug__fact:nth-child(odd) {
+  border-right: 1px solid var(--border);
+}
+
+.debug__fact:nth-last-child(-n + 2) {
+  border-bottom: none;
+}
+
+.debug__fact dt {
+  color: var(--text-muted);
+}
+
+.debug__fact dd {
+  margin: 0;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debug__fact dd .badge {
+  font-family: var(--font-sans);
+}
+
+.debug__error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--border);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: var(--text-sm);
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
+
+.debug__key-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.debug__console {
+  min-height: 120px;
+  max-height: 260px;
+  padding: var(--space-4) var(--space-5);
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+}
+
+.debug__details summary {
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.debug__json {
+  max-height: 360px;
+  margin: 0;
+  padding: var(--space-4) var(--space-5);
+  overflow: auto;
+  border-top: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  user-select: text;
+}
