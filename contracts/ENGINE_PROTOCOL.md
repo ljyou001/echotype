@@ -42,11 +42,11 @@ Event (Engine → Core), unsolicited:
 
 | method | params | result |
 |---|---|---|
-| `hello` | `{protocol:3}` | `{engine_version, protocol, runtime:"sherpa-onnx x.y.z", platform, providers:["cpu","cuda",…]}` |
+| `hello` | `{protocol:3}` | `{engine_version, protocol, runtimes:{"sherpa-onnx":"2.0.1","llama.cpp":"b…"}, platform:"win32", arch:"x64", providers:["cpu","cuda",…]}` |
 | `ping` | `{}` | `{t}` (engine monotonic ms) |
 | `devices.list` | `{}` | `{inputs:[{id, name, is_default, default_sample_rate, max_channels}]}` |
 | `mic.configure` | `{device_id: string\|null, keep_warm: bool}` | `{device_id_used, sample_rate}` |
-| `model.load` | `{manifest, model_dir, settings}` (§6) | `{model_id, provider_used, load_ms, warmup_ms}` |
+| `model.load` | `{model, variant, model_dir, settings, companion?}` (§6) | `{model_id, variant_id, provider_used, load_ms, warmup_ms}` |
 | `model.unload` | `{}` | `{}` |
 | `session.start` | `{session_id, language: string\|null, record_to: string\|null}` | `{started_at_ms}` (`record_to`: absolute .wav path, or null = keep no audio) |
 | `session.stop` | `{session_id}` | `{}` (the text arrives in event `final`) |
@@ -81,15 +81,16 @@ Rules:
 
 ## 6. `model.load` params
 
-- `manifest`: one model object from `contracts/models.catalog.json`, unchanged.
-- `model_dir`: absolute path of the installed model folder.
-- `settings`:
+- `model`: one model object from `contracts/models.catalog.json`, unchanged (without its `variants` array).
+- `variant`: the one variant object Core selected (MODEL_MANIFEST §2); the engine dispatches on `variant.runtime` + `variant.arch`.
+- `model_dir`: absolute path of the installed variant folder.
+- `settings`: the user's values for this model, keyed as in `model.settings[]`, plus the resolved `provider`:
 ```json
-{"provider":"auto","language":"auto","punctuation":true,"itn":true,"num_threads":0}
+{"provider":"cpu","language":"auto","punctuation":true,"itn":true,"hotwords":""}
 ```
-`provider:"auto"` means: the first entry of `manifest.providers` that is available on this machine.
-`num_threads:0` means: the engine chooses (physical cores, capped at 4).
-- For a model with `punctuation.mode:"companion"`, Core also sends `companion: {manifest, model_dir}`.
+Core resolves `provider:"auto"` before sending. Unknown keys are model-specific; the engine passes them to the loader or ignores them.
+`num_threads` absent or 0 means: the engine chooses (physical cores, capped at 4 for CPU variants).
+- For a model with `punctuation.mode:"companion"`, Core also sends `companion: {model, variant, model_dir}`.
 
 ## 7. Error codes
 

@@ -1,174 +1,652 @@
 {
-  "schema": 1,
+  "schema": 2,
   "updated": "2026-11-13",
-  "default_model_id": "sensevoice-small-int8",
+  "default_model_id": "sensevoice-small",
+  "release_base_url": "https://github.com/ljyou001/echotype/releases/download/models-v3/",
   "models": [
     {
-      "id": "sensevoice-small-int8",
+      "id": "sensevoice-small",
       "name": "SenseVoice Small",
       "description": "Instant dictation for Chinese, English, Japanese, Korean and Cantonese, with built-in punctuation and number formatting.",
       "kind": "asr",
-      "runtime": "sherpa-onnx",
-      "arch": "sense_voice",
       "tier": "instant",
-      "languages": ["zh", "en", "ja", "ko", "yue"],
-      "files": { "model": "model.int8.onnx", "tokens": "tokens.txt" },
-      "download": {
-        "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2",
-        "format": "tar.bz2",
-        "sha256": null,
-        "size_bytes": 0,
-        "archive_root": "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17"
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "yue"
+      ],
+      "punctuation": {
+        "mode": "native"
       },
-      "punctuation": { "mode": "native" },
-      "features": { "itn": "native", "lid": true, "partials": true },
+      "features": {
+        "itn": "native",
+        "lid": true,
+        "partials": true
+      },
       "requires": [],
-      "providers": ["cpu", "cuda", "coreml"],
-      "requirements": { "ram_mb": 600, "vram_mb": 0 },
-      "defaults": { "provider": "auto", "language": "auto", "punctuation": true, "itn": true },
+      "settings": [
+        {
+          "key": "language",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en",
+            "ja",
+            "ko",
+            "yue"
+          ]
+        },
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "itn",
+          "type": "toggle",
+          "default": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "runtime": "sherpa-onnx",
+          "arch": "sense_voice",
+          "providers": [
+            "cpu"
+          ],
+          "files": {
+            "model": "model.int8.onnx",
+            "tokens": "tokens.txt"
+          },
+          "download": {
+            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/sensevoice-small--cpu-int8.zip",
+            "format": "zip",
+            "sha256": null,
+            "size_bytes": 0,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 600,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        }
+      ],
       "status": "stable",
-      "_note": "Must be the 2024-07-17 release: the 2025-09-09 release has no punctuation."
+      "_note": "Must be the 2024-07-17 release (the 2025-09-09 one has no punctuation). Add a GPU variant only if measured faster than CPU."
     },
     {
-      "id": "paraformer-zh-small-int8",
+      "id": "paraformer-zh-small",
       "name": "Paraformer Small (Chinese)",
       "description": "The smallest download. Fast Chinese and English dictation for low-end machines.",
       "kind": "asr",
-      "runtime": "sherpa-onnx",
-      "arch": "paraformer",
       "tier": "instant",
-      "languages": ["zh", "en"],
-      "files": { "model": "model.int8.onnx", "tokens": "tokens.txt" },
-      "download": {
-        "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-small-2024-03-09.tar.bz2",
-        "format": "tar.bz2",
-        "sha256": null,
-        "size_bytes": 0,
-        "archive_root": "sherpa-onnx-paraformer-zh-small-2024-03-09"
+      "languages": [
+        "zh",
+        "en"
+      ],
+      "punctuation": {
+        "mode": "companion",
+        "companion_id": "punct-ct-transformer-zh-en"
       },
-      "punctuation": { "mode": "companion", "companion_id": "punct-ct-transformer-zh-en-int8" },
-      "features": { "itn": "rule", "lid": false, "partials": true },
-      "requires": ["punct-ct-transformer-zh-en-int8"],
-      "providers": ["cpu"],
-      "requirements": { "ram_mb": 300, "vram_mb": 0 },
-      "defaults": { "provider": "cpu", "language": "zh", "punctuation": true, "itn": true },
+      "features": {
+        "itn": "rule",
+        "lid": false,
+        "partials": true
+      },
+      "requires": [
+        "punct-ct-transformer-zh-en"
+      ],
+      "settings": [
+        {
+          "key": "language",
+          "type": "select",
+          "default": "zh",
+          "options": [
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "itn",
+          "type": "toggle",
+          "default": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "runtime": "sherpa-onnx",
+          "arch": "paraformer",
+          "providers": [
+            "cpu"
+          ],
+          "files": {
+            "model": "model.int8.onnx",
+            "tokens": "tokens.txt"
+          },
+          "download": {
+            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/paraformer-zh-small--cpu-int8.zip",
+            "format": "zip",
+            "sha256": null,
+            "size_bytes": 0,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-small-2024-03-09.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 300,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        }
+      ],
       "status": "stable"
     },
     {
-      "id": "paraformer-zh-int8",
+      "id": "paraformer-zh",
       "name": "Paraformer (Chinese)",
       "description": "Balanced Chinese and English dictation. Replaces the v2 Paraformer Offline model.",
       "kind": "asr",
-      "runtime": "sherpa-onnx",
-      "arch": "paraformer",
       "tier": "balanced",
-      "languages": ["zh", "en"],
-      "files": { "model": "model.int8.onnx", "tokens": "tokens.txt" },
-      "download": {
-        "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2",
-        "format": "tar.bz2",
-        "sha256": null,
-        "size_bytes": 0,
-        "archive_root": "sherpa-onnx-paraformer-zh-2024-03-09"
+      "languages": [
+        "zh",
+        "en"
+      ],
+      "punctuation": {
+        "mode": "companion",
+        "companion_id": "punct-ct-transformer-zh-en"
       },
-      "punctuation": { "mode": "companion", "companion_id": "punct-ct-transformer-zh-en-int8" },
-      "features": { "itn": "rule", "lid": false, "partials": true },
-      "requires": ["punct-ct-transformer-zh-en-int8"],
-      "providers": ["cpu"],
-      "requirements": { "ram_mb": 700, "vram_mb": 0 },
-      "defaults": { "provider": "cpu", "language": "zh", "punctuation": true, "itn": true },
+      "features": {
+        "itn": "rule",
+        "lid": false,
+        "partials": true
+      },
+      "requires": [
+        "punct-ct-transformer-zh-en"
+      ],
+      "settings": [
+        {
+          "key": "language",
+          "type": "select",
+          "default": "zh",
+          "options": [
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "itn",
+          "type": "toggle",
+          "default": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "runtime": "sherpa-onnx",
+          "arch": "paraformer",
+          "providers": [
+            "cpu"
+          ],
+          "files": {
+            "model": "model.int8.onnx",
+            "tokens": "tokens.txt"
+          },
+          "download": {
+            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/paraformer-zh--cpu-int8.zip",
+            "format": "zip",
+            "sha256": null,
+            "size_bytes": 0,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 700,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        }
+      ],
       "status": "stable"
     },
     {
-      "id": "qwen3-asr-0.6b-int8",
+      "id": "qwen3-asr-0.6b",
       "name": "Qwen3 ASR 0.6B",
       "description": "Highest accuracy. 30 languages and 22 Chinese dialects, with built-in punctuation. Needs more memory.",
       "kind": "asr",
-      "runtime": "sherpa-onnx",
-      "arch": "qwen3_asr",
       "tier": "accurate",
-      "languages": ["zh", "en", "yue", "ar", "de", "fr", "es", "pt", "id", "it", "ko", "ru", "th", "vi", "ja", "tr", "hi", "ms", "nl", "sv", "da", "fi", "pl", "cs", "fil", "fa", "el", "hu", "mk", "ro"],
-      "files": {},
-      "download": {
-        "url": null,
-        "format": "tar.bz2",
-        "sha256": null,
-        "size_bytes": 0,
-        "archive_root": null
+      "languages": [
+        "zh",
+        "en",
+        "yue",
+        "ar",
+        "de",
+        "fr",
+        "es",
+        "pt",
+        "id",
+        "it",
+        "ko",
+        "ru",
+        "th",
+        "vi",
+        "ja",
+        "tr",
+        "hi",
+        "ms",
+        "nl",
+        "sv",
+        "da",
+        "fi",
+        "pl",
+        "cs",
+        "fil",
+        "fa",
+        "el",
+        "hu",
+        "mk",
+        "ro"
+      ],
+      "punctuation": {
+        "mode": "native"
       },
-      "punctuation": { "mode": "native" },
-      "features": { "itn": "native", "lid": true, "partials": false },
+      "features": {
+        "itn": "native",
+        "lid": true,
+        "partials": false
+      },
       "requires": [],
-      "providers": ["cpu"],
-      "requirements": { "ram_mb": 2000, "vram_mb": 0 },
-      "defaults": { "provider": "auto", "language": "auto", "punctuation": true, "itn": true },
+      "settings": [
+        {
+          "key": "language",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en",
+            "yue",
+            "ar",
+            "de",
+            "fr",
+            "es",
+            "pt",
+            "id",
+            "it",
+            "ko",
+            "ru",
+            "th",
+            "vi",
+            "ja",
+            "tr",
+            "hi",
+            "ms",
+            "nl",
+            "sv",
+            "da",
+            "fi",
+            "pl",
+            "cs",
+            "fil",
+            "fa",
+            "el",
+            "hu",
+            "mk",
+            "ro"
+          ]
+        },
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "itn",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "hotwords",
+          "type": "text",
+          "default": ""
+        }
+      ],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "runtime": "sherpa-onnx",
+          "arch": "qwen3_asr",
+          "providers": [
+            "cpu"
+          ],
+          "files": {},
+          "download": {
+            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/qwen3-asr-0.6b--cpu-int8.zip",
+            "format": "zip",
+            "sha256": null,
+            "size_bytes": 0,
+            "upstream_url": null
+          },
+          "requirements": {
+            "ram_mb": 2000,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        },
+        {
+          "id": "gpu-gguf-q8",
+          "runtime": "llama.cpp",
+          "arch": "mtmd_asr",
+          "providers": [
+            "cuda",
+            "metal",
+            "vulkan"
+          ],
+          "files": {
+            "model": "Qwen3-ASR-0.6B-Q8_0.gguf",
+            "mmproj": "mmproj-Qwen3-ASR-0.6B-Q8_0.gguf"
+          },
+          "download": {
+            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/qwen3-asr-0.6b--gpu-gguf-q8.zip",
+            "format": "zip",
+            "sha256": null,
+            "size_bytes": 0,
+            "upstream_url": "https://huggingface.co/ggml-org/Qwen3-ASR-0.6B-GGUF"
+          },
+          "requirements": {
+            "ram_mb": 1500,
+            "vram_mb": 1500
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        }
+      ],
       "status": "beta",
-      "_note": "Engine session: fill files and url from https://k2-fsa.github.io/sherpa/onnx/qwen3-asr/pretrained.html. Add a cuda-capable variant entry only if the int8 graph is slow on the CUDA EP."
+      "_note": "Engine: verify file names; benchmark sherpa-onnx int8 vs llama.cpp on CPU too and keep the faster CPU path. Keep the GGUF variant only if it beats cpu-int8 on GPU."
     },
     {
-      "id": "fun-asr-nano-int8",
+      "id": "fun-asr-nano",
       "name": "Fun-ASR Nano",
       "description": "Strong on Chinese dialects and accents, with built-in punctuation.",
       "kind": "asr",
-      "runtime": "sherpa-onnx",
-      "arch": "funasr_nano",
       "tier": "accurate",
-      "languages": ["zh", "en", "ja"],
-      "files": {},
-      "download": { "url": null, "format": "tar.bz2", "sha256": null, "size_bytes": 0, "archive_root": null },
-      "punctuation": { "mode": "native" },
-      "features": { "itn": "native", "lid": false, "partials": false },
+      "languages": [
+        "zh",
+        "en",
+        "ja"
+      ],
+      "punctuation": {
+        "mode": "native"
+      },
+      "features": {
+        "itn": "native",
+        "lid": false,
+        "partials": false
+      },
       "requires": [],
-      "providers": ["cpu"],
-      "requirements": { "ram_mb": 2000, "vram_mb": 0 },
-      "defaults": { "provider": "auto", "language": "auto", "punctuation": true, "itn": true },
+      "settings": [
+        {
+          "key": "language",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "zh",
+            "en",
+            "ja"
+          ]
+        },
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "itn",
+          "type": "toggle",
+          "default": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "runtime": "sherpa-onnx",
+          "arch": "funasr_nano",
+          "providers": [
+            "cpu"
+          ],
+          "files": {},
+          "download": {
+            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/fun-asr-nano--cpu-int8.zip",
+            "format": "zip",
+            "sha256": null,
+            "size_bytes": 0,
+            "upstream_url": null
+          },
+          "requirements": {
+            "ram_mb": 2000,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        }
+      ],
       "status": "beta",
       "_note": "Engine session: fill files, url and languages from the sherpa-onnx FunASR-Nano docs, or drop the entry if it fails the load test."
     },
     {
-      "id": "parakeet-tdt-0.6b-v3-int8",
+      "id": "parakeet-tdt-0.6b-v3",
       "name": "Parakeet TDT 0.6B v3",
       "description": "Fast, accurate English and 24 other European languages. No Chinese.",
       "kind": "asr",
-      "runtime": "sherpa-onnx",
-      "arch": "nemo_transducer",
       "tier": "balanced",
-      "languages": ["en", "de", "fr", "es", "it", "pt", "nl", "pl", "ru", "uk", "cs", "sk", "sl", "hr", "bg", "ro", "hu", "el", "sv", "da", "fi", "et", "lv", "lt", "mt"],
-      "files": { "encoder": "encoder.int8.onnx", "decoder": "decoder.int8.onnx", "joiner": "joiner.int8.onnx", "tokens": "tokens.txt" },
-      "download": { "url": null, "format": "tar.bz2", "sha256": null, "size_bytes": 0, "archive_root": null },
-      "punctuation": { "mode": "native" },
-      "features": { "itn": "none", "lid": false, "partials": true },
+      "languages": [
+        "en",
+        "de",
+        "fr",
+        "es",
+        "it",
+        "pt",
+        "nl",
+        "pl",
+        "ru",
+        "uk",
+        "cs",
+        "sk",
+        "sl",
+        "hr",
+        "bg",
+        "ro",
+        "hu",
+        "el",
+        "sv",
+        "da",
+        "fi",
+        "et",
+        "lv",
+        "lt",
+        "mt"
+      ],
+      "punctuation": {
+        "mode": "native"
+      },
+      "features": {
+        "itn": "none",
+        "lid": false,
+        "partials": true
+      },
       "requires": [],
-      "providers": ["cpu", "cuda"],
-      "requirements": { "ram_mb": 1500, "vram_mb": 0 },
-      "defaults": { "provider": "auto", "language": "en", "punctuation": true, "itn": false },
+      "settings": [
+        {
+          "key": "language",
+          "type": "select",
+          "default": "en",
+          "options": [
+            "en",
+            "de",
+            "fr",
+            "es",
+            "it",
+            "pt",
+            "nl",
+            "pl",
+            "ru",
+            "uk",
+            "cs",
+            "sk",
+            "sl",
+            "hr",
+            "bg",
+            "ro",
+            "hu",
+            "el",
+            "sv",
+            "da",
+            "fi",
+            "et",
+            "lv",
+            "lt",
+            "mt"
+          ]
+        },
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "runtime": "sherpa-onnx",
+          "arch": "nemo_transducer",
+          "providers": [
+            "cpu"
+          ],
+          "files": {
+            "encoder": "encoder.int8.onnx",
+            "decoder": "decoder.int8.onnx",
+            "joiner": "joiner.int8.onnx",
+            "tokens": "tokens.txt"
+          },
+          "download": {
+            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/parakeet-tdt-0.6b-v3--cpu-int8.zip",
+            "format": "zip",
+            "sha256": null,
+            "size_bytes": 0,
+            "upstream_url": null
+          },
+          "requirements": {
+            "ram_mb": 1500,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        }
+      ],
       "status": "beta",
       "_note": "Engine session: fill url and file names from the sherpa-onnx NeMo Parakeet docs."
     },
     {
-      "id": "punct-ct-transformer-zh-en-int8",
+      "id": "punct-ct-transformer-zh-en",
       "name": "Punctuation (Chinese/English)",
       "description": "Adds punctuation for models without built-in punctuation. Installed automatically.",
       "kind": "punctuation",
-      "runtime": "sherpa-onnx",
-      "arch": "ct_transformer",
       "tier": "instant",
-      "languages": ["zh", "en"],
-      "files": { "model": "model.int8.onnx" },
-      "download": {
-        "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/punctuation-models/sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12-int8.tar.bz2",
-        "format": "tar.bz2",
-        "sha256": null,
-        "size_bytes": 0,
-        "archive_root": "sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12-int8"
+      "languages": [
+        "zh",
+        "en"
+      ],
+      "punctuation": {
+        "mode": "none"
       },
-      "punctuation": { "mode": "none" },
-      "features": { "itn": "none", "lid": false, "partials": false },
+      "features": {
+        "itn": "none",
+        "lid": false,
+        "partials": false
+      },
       "requires": [],
-      "providers": ["cpu"],
-      "requirements": { "ram_mb": 150, "vram_mb": 0 },
-      "defaults": { "provider": "cpu", "language": "zh", "punctuation": true, "itn": false },
+      "settings": [],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "runtime": "sherpa-onnx",
+          "arch": "ct_transformer",
+          "providers": [
+            "cpu"
+          ],
+          "files": {
+            "model": "model.int8.onnx"
+          },
+          "download": {
+            "url": "https://github.com/ljyou001/echotype/releases/download/models-v3/punct-ct-transformer-zh-en--cpu-int8.zip",
+            "format": "zip",
+            "sha256": null,
+            "size_bytes": 0,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/punctuation-models/sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12-int8.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 150,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        }
+      ],
       "status": "hidden"
+    }
+  ],
+  "engine_packs": [
+    {
+      "id": "cuda",
+      "providers": [
+        "cuda"
+      ],
+      "platforms": {
+        "win32-x64": {
+          "url": "https://github.com/ljyou001/echotype/releases/download/engine-packs-v3/engine-pack-cuda-win32-x64.zip",
+          "sha256": null,
+          "size_bytes": 0
+        },
+        "linux-x64": {
+          "url": "https://github.com/ljyou001/echotype/releases/download/engine-packs-v3/engine-pack-cuda-linux-x64.zip",
+          "sha256": null,
+          "size_bytes": 0
+        }
+      },
+      "_note": "Built by CI from the engine with GPU features; uploaded to the engine-packs-v3 release."
     }
   ]
 }
