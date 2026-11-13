@@ -1,0 +1,109 @@
+# Engine Protocol v3 (Core ⇄ Engine)
+
+> L3 contract | Parent: contracts/CLAUDE.md
+> Owners: engine session implements the server side. Core session implements the client side.
+> Rule: change this file only through the orchestrator session. Bump `protocol` on breaking change.
+
+## 1. Transport
+
+- WebSocket. Text frames carry JSON. Binary frames are not used in v3.
+- Bind `127.0.0.1` only. Start with `--port 0`; the OS picks a free port.
+- Core generates a random token. Core passes it in env `ECHOTYPE_ENGINE_TOKEN`.
+- Core connects to `ws://127.0.0.1:<port>/?token=<token>`. The engine rejects a wrong token with close code 4401.
+- The engine accepts exactly one client. A second client gets close code 4409.
+
+## 2. Process lifecycle
+
+1. Core spawns the engine: `echotype-engine --port 0 --models-dir <dir> --log-dir <dir>`.
+2. After bind, the engine prints exactly one line to **stdout**, then flushes:
+   `{"event":"engine_ready","port":49731,"protocol":3,"engine_version":"3.0.0"}`
+3. All other output goes to stderr and to the log file. stdout carries nothing else.
+4. Core sends `ping` every 5 s. Three missed `pong` mean a dead engine. Core then kills it and restarts it with backoff 1 s → 2 s → 4 s → 8 s (max 5 tries).
+5. On stdin EOF or on `shutdown`, the engine releases the mic and exits with code 0.
+6. The engine persists **nothing**. Core sends every setting it needs. Do not write `backend_config.json` or `config.ini`.
+
+## 3. Envelope
+
+Request (Core → Engine):
+```json
+{"type":"request","id":"r-17","method":"model.load","params":{}}
+```
+Response (Engine → Core), exactly one per request:
+```json
+{"type":"response","id":"r-17","ok":true,"result":{}}
+{"type":"response","id":"r-17","ok":false,"error":{"code":"MODEL_NOT_FOUND","message":"…"}}
+```
+Event (Engine → Core), unsolicited:
+```json
+{"type":"event","event":"final","data":{}}
+```
+
+## 4. Methods
+
+| method | params | result |
+|---|---|---|
+| `hello` | `{protocol:3}` | `{engine_version, protocol, runtime:"sherpa-onnx x.y.z", platform, providers:["cpu","cuda",…]}` |
+| `ping` | `{}` | `{t}` (engine monotonic ms) |
+| `devices.list` | `{}` | `{inputs:[{id, name, is_default, default_sample_rate, max_channels}]}` |
+| `mic.configure` | `{device_id: string\|null, keep_warm: bool}` | `{device_id_used, sample_rate}` |
+| `model.load` | `{manifest, model_dir, settings}` (§6) | `{model_id, provider_used, load_ms, warmup_ms}` |
+| `model.unload` | `{}` | `{}` |
+| `session.start` | `{session_id, language: string\|null, record_to: string\|null}` | `{started_at_ms}` (`record_to`: absolute .wav path, or null = keep no audio) |
+| `session.stop` | `{session_id}` | `{}` (the text arrives in event `final`) |
+| `session.cancel` | `{session_id}` | `{}` (drop audio, emit no `final`) |
+| `mic.test` | `{enabled: bool}` | `{}` (emit `level` without a session) |
+| `transcribe.file` | `{path, language}` | `{text, duration_s, timings}` (debug and bulk scripts) |
+| `shutdown` | `{}` | `{}` then exit |
+
+Rules:
+- `model.load` while another model is loaded: the engine unloads the old one first. A load during an active session returns `SESSION_BUSY`.
+- `session.start` while a session is active returns `SESSION_BUSY`.
+- `session.start` with no loaded model returns `MODEL_NOT_LOADED`.
+- If the requested provider fails, the engine falls back to `cpu`. It reports `provider_used` and emits event `warning` with code `PROVIDER_FALLBACK`.
+
+## 5. Events
+
+| event | data | when |
+|---|---|---|
+| `status` | `{state:"idle"\|"loading"\|"ready"\|"error", model_id?}` | on every state change |
+| `progress` | `{stage:"runtime"\|"model"\|"punctuation"\|"vad"\|"warmup", pct:0-100}` | during `model.load` |
+| `level` | `{session_id\|null, rms_dbfs, peak_dbfs}` | 20 Hz while a session or mic test runs |
+| `partial` | `{session_id, text}` | only for models with `partials:true`; at most every 300 ms |
+| `final` | `{session_id, text, raw_text, language, duration_s, timings}` | once per stopped session |
+| `warning` | `{code, message}` | non-fatal |
+| `error` | `{code, message, session_id?, fatal:bool}` | failure outside a request |
+
+`timings` (all integers, milliseconds):
+```json
+{"release_to_final_ms":42,"decode_tail_ms":31,"punct_ms":6,"segments":3,"audio_ms":8400}
+```
+`release_to_final_ms` is the latency KPI. It is the time from `session.stop` receipt to `final` send.
+
+## 6. `model.load` params
+
+- `manifest`: one model object from `contracts/models.catalog.json`, unchanged.
+- `model_dir`: absolute path of the installed model folder.
+- `settings`:
+```json
+{"provider":"auto","language":"auto","punctuation":true,"itn":true,"num_threads":0}
+```
+`provider:"auto"` means: the first entry of `manifest.providers` that is available on this machine.
+`num_threads:0` means: the engine chooses (physical cores, capped at 4).
+- For a model with `punctuation.mode:"companion"`, Core also sends `companion: {manifest, model_dir}`.
+
+## 7. Error codes
+
+`INVALID_REQUEST` · `UNKNOWN_METHOD` · `MODEL_NOT_FOUND` · `MODEL_NOT_LOADED` · `MODEL_LOAD_FAILED` ·
+`PROVIDER_UNAVAILABLE` · `PROVIDER_FALLBACK` (warning) · `DEVICE_UNAVAILABLE` · `SESSION_BUSY` ·
+`SESSION_UNKNOWN` · `DECODE_FAILED` · `INTERNAL`.
+
+## 8. Latency design (normative)
+
+The engine must meet this flow for every model:
+1. The mic stream feeds Silero VAD (sherpa-onnx built-in) in 30 ms frames.
+2. When VAD closes a speech segment, the engine decodes that segment at once, in a worker thread.
+3. At `session.stop`, the engine flushes VAD and decodes only the open tail segment.
+4. The engine joins the segment texts, runs the punctuation step and the text post-processing, then emits `final`.
+5. One decode runs at a time per session. A newer `partial` request replaces an older queued one. `final` never waits behind a `partial`.
+6. After `model.load`, the engine runs one warm-up decode on 1 s of silence.
+7. With `keep_warm:true`, the engine keeps the stream open and holds a 300 ms pre-roll ring buffer. `session.start` prepends the pre-roll, so the first syllable is never cut.
