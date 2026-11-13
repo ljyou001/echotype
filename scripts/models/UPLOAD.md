@@ -6,7 +6,7 @@
 
 ## 1. release `models-v3`（模型）
 
-共 12 个 zip，合计 **6.72 GiB**（6880.0 MiB）。每个都小于 GitHub 单文件 2 GiB 上限。zip 在 `C:\Users\YouYouLab\.echotype-staging\models-v3`。
+共 12 个 zip，合计 **6.72 GiB**（6880.0 MiB）。每个都小于 GitHub 单文件 2 GiB 上限。zip 在 `~/.echotype-staging/models-v3`。
 三个 GGUF 变体（cuda / apple-metal / vulkan）共用一个 `*--gguf-q8.zip`，只传一次。
 
 | 文件 | 大小 | sha256 |
@@ -28,54 +28,54 @@
 
 ```bash
 gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes "EchoType v3 model packages. Each zip is one model asset; files sit at the zip root. Checksums are in contracts/models.catalog.json." \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/qwen3-asr-0.6b--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/qwen3-asr-0.6b--gguf-q8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/parakeet-tdt-0.6b-v3--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/qwen3-asr-1.7b--gguf-q8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/fire-red-asr2-aed--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/whisper-large-v3-turbo--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/moonshine-v2-base-en--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/punct-ct-transformer-zh-en--cpu-int8.zip"
+  "$HOME/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" \
+  "$HOME/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/paraformer-zh--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/qwen3-asr-0.6b--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/qwen3-asr-0.6b--gguf-q8.zip" \
+  "$HOME/.echotype-staging/models-v3/parakeet-tdt-0.6b-v3--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/qwen3-asr-1.7b--gguf-q8.zip" \
+  "$HOME/.echotype-staging/models-v3/fire-red-asr2-aed--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/whisper-large-v3-turbo--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/moonshine-v2-base-en--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/punct-ct-transformer-zh-en--cpu-int8.zip"
 ```
 
 **release 已存在**（补传或覆盖）:
 
 ```bash
 gh release upload models-v3 --repo ljyou001/echotype --clobber \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/qwen3-asr-0.6b--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/qwen3-asr-0.6b--gguf-q8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/parakeet-tdt-0.6b-v3--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/qwen3-asr-1.7b--gguf-q8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/fire-red-asr2-aed--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/whisper-large-v3-turbo--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/moonshine-v2-base-en--cpu-int8.zip" \
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/punct-ct-transformer-zh-en--cpu-int8.zip"
+  "$HOME/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" \
+  "$HOME/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/paraformer-zh--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/qwen3-asr-0.6b--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/qwen3-asr-0.6b--gguf-q8.zip" \
+  "$HOME/.echotype-staging/models-v3/parakeet-tdt-0.6b-v3--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/qwen3-asr-1.7b--gguf-q8.zip" \
+  "$HOME/.echotype-staging/models-v3/fire-red-asr2-aed--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/whisper-large-v3-turbo--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/moonshine-v2-base-en--cpu-int8.zip" \
+  "$HOME/.echotype-staging/models-v3/punct-ct-transformer-zh-en--cpu-int8.zip"
 ```
 
 PowerShell 版（反引号续行）:
 
 ```powershell
 gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes "EchoType v3 model packages." `
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" `
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" `
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" `
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh--cpu-int8.zip" `
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/qwen3-asr-0.6b--cpu-int8.zip" `
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/qwen3-asr-0.6b--gguf-q8.zip" `
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/parakeet-tdt-0.6b-v3--cpu-int8.zip" `
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/qwen3-asr-1.7b--gguf-q8.zip" `
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/fire-red-asr2-aed--cpu-int8.zip" `
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/whisper-large-v3-turbo--cpu-int8.zip" `
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/moonshine-v2-base-en--cpu-int8.zip" `
-  "C:/Users/YouYouLab/.echotype-staging/models-v3/punct-ct-transformer-zh-en--cpu-int8.zip"
+  "$HOME/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" `
+  "$HOME/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v3/paraformer-zh--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v3/qwen3-asr-0.6b--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v3/qwen3-asr-0.6b--gguf-q8.zip" `
+  "$HOME/.echotype-staging/models-v3/parakeet-tdt-0.6b-v3--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v3/qwen3-asr-1.7b--gguf-q8.zip" `
+  "$HOME/.echotype-staging/models-v3/fire-red-asr2-aed--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v3/whisper-large-v3-turbo--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v3/moonshine-v2-base-en--cpu-int8.zip" `
+  "$HOME/.echotype-staging/models-v3/punct-ct-transformer-zh-en--cpu-int8.zip"
 ```
 
 ## 2. release `engine-packs-v3`（引擎包）
