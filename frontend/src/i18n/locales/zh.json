@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Echotype",
+    "name": "EchoType",
     "subtitle": "不止语音输入"
   },
   "hotkeyLabel": {
@@ -31,23 +31,28 @@
     "LCmd": "左 Command ⌘"
   },
   "nav": {
-    "home": "主页",
+    "home": "首页",
     "history": "历史记录",
     "models": "模型",
-    "integrations": "整合",
+    "integrations": "集成",
     "settings": "设置",
-    "debug": "调试"
+    "debug": "诊断",
+    "label": "主导航"
   },
   "status": {
     "loading": "加载中",
     "ready": "就绪",
     "capturing": "捕获中",
-    "recording": "录音中",
-    "error": "错误",
+    "recording": "正在听",
+    "error": "出错",
     "offline": "离线",
     "standby": "待机",
     "connected": "已连接",
-    "disconnected": "未连接"
+    "disconnected": "未连接",
+    "starting": "启动中",
+    "noModel": "未选模型",
+    "finalizing": "转写中",
+    "stopped": "已停止"
   },
   "home": {
     "statusMessage": {
@@ -64,10 +69,11 @@
     },
     "cards": {
       "model": "模型",
-      "hotkey": "快捷键",
+      "hotkey": "热键",
       "mode": "模式",
-      "input": "输入",
-      "recordingMode": "录音模式"
+      "input": "麦克风",
+      "recordingMode": "录音方式",
+      "noModel": "未选择"
     },
     "modes": {
       "streaming": "流式",
@@ -93,24 +99,70 @@
       "togglePrefix": "按 ",
       "toggleSuffix": " 开始输入，再按一次停止",
       "integrationShortPressPrefix": "轻点一下 ",
-      "integrationShortPressSuffix": " 打开整合工具",
+      "integrationShortPressSuffix": " 打开集成工具",
       "integrationLongPressPrefix": "长按 ",
-      "integrationLongPressSuffix": " 打开整合工具"
+      "integrationLongPressSuffix": " 打开集成工具"
+    },
+    "hero": {
+      "starting": "正在启动语音引擎…",
+      "loading": "正在加载语音模型…",
+      "loadingModel": "正在加载 {{name}}…",
+      "ready": "随时可以听写",
+      "noModel": "先选一个语音模型",
+      "recording": "正在听…",
+      "finalizing": "正在转写…",
+      "error": "语音引擎出了问题",
+      "stopped": "语音引擎已关闭"
+    },
+    "hint": {
+      "hold": "按住 {{key}} 说话，松开即出字。",
+      "toggle": "按一下 {{key}} 开始听写，再按一下出字。",
+      "quickActionHold": "轻按 {{key}} 打开快捷操作。",
+      "quickActionToggle": "按住 {{key}} 半秒打开快捷操作。",
+      "starting": "通常只需一两秒。",
+      "finalizing": "文字马上就到。",
+      "noModel": "到「模型」页下载一个模型。模型完全在本机运行。",
+      "stopped": "启动引擎后即可继续听写。"
+    },
+    "actions": {
+      "start": "开始听写",
+      "stop": "停止",
+      "chooseModel": "选择模型",
+      "restart": "重启引擎",
+      "startEngine": "启动引擎"
+    },
+    "live": {
+      "title": "实时转写",
+      "placeholder": "请开始说话…"
+    },
+    "result": {
+      "title": "上一次听写",
+      "meta": "音频 {{duration}} · {{ms}} 毫秒出字",
+      "latencyHint": "从松开热键到文字出现的耗时"
     }
   },
   "history": {
     "title": "历史记录",
-    "description": "最近的听写结果。",
-    "empty": "暂无历史记录。",
+    "description": "你听写过的全部内容，只保存在本机。",
+    "empty": "还没有听写记录",
     "actions": {
       "play": "播放音频",
       "search": "搜索",
-      "delete": "删除"
-    }
+      "delete": "删除",
+      "sendTo": "发送到 {{name}}",
+      "openInQuickAction": "在快捷操作中打开"
+    },
+    "emptyDescription": "按住热键说话，内容会出现在这里。",
+    "searchPlaceholder": "搜索历史",
+    "noMatches": "没有找到“{{query}}”",
+    "clearAll": "清空历史",
+    "clearConfirmTitle": "清空全部历史？",
+    "clearConfirmMessage_one": "将从本机永久删除 {{count}} 条听写记录。",
+    "clearConfirmMessage_other": "将从本机永久删除 {{count}} 条听写记录。"
   },
   "models": {
     "title": "模型",
-    "description": "切换模型并查看功能。",
+    "description": "选择 EchoType 使用的语音模型。全部在本机运行。",
     "showAuxiliaryModels": "显示辅助模型",
     "waitingForModel": "暂无模型。正在连接模型...",
     "status": {
@@ -118,7 +170,9 @@
       "installed": "已安装",
       "comingSoon": "即将推出",
       "auxiliary": "辅助模型",
-      "auxiliaryNote": "自动配合 ASR 模型使用"
+      "auxiliaryNote": "随需要它的模型自动安装。",
+      "active": "使用中",
+      "needsGpu": "需要 GPU"
     },
     "info": {
       "family": "家族",
@@ -127,152 +181,296 @@
       "devices": "设备",
       "deviceSupport": "设备支持",
       "currentDevice": "当前设备",
-      "notes": "说明"
+      "notes": "说明",
+      "languagesMore": "{{list}} 等 {{count}} 种",
+      "benchShort": "约 {{ms}} 毫秒",
+      "benchHint": "10 秒语音从松开热键到出字的典型耗时",
+      "moreLanguages": "+{{count}}"
     },
     "types": {
       "asr": "语音识别",
       "punctuation": "标点"
     },
     "settings": {
-      "title": "模型设置",
+      "title": "设置",
       "device": "设备",
-      "language": "语言",
       "qwenBackend": "Qwen3 运行方式",
       "streaming": "识别模式",
       "streamingOn": "流式识别",
       "streamingOff": "离线识别",
       "apply": "应用设置",
       "auto": "自动",
-      "autoDetect": "自动检测",
+      "autoDetect": "自动识别",
       "hints": {
-        "languageSelection": "选择转录语言，或使用自动检测",
+        "languageSelection": "如果自动识别总认错语言，可以在这里固定一种。",
         "qwenBackend": "推荐使用 transformers",
         "streaming": "流式识别：实时显示结果；离线识别：录音完成后显示"
-      }
-    }
-  },
-  "integrations": {
-    "title": "整合",
-    "description": "基于插件的搜索和自动化工作流。",
-    "myIntegrations": "我的整合",
-    "addIntegration": "添加整合",
-    "emptyState": "尚未添加任何整合。点击「添加整合」开始。",
-    "availablePlugins": "可用插件",
-    "comingSoon": "即将推出",
-    "quickAction": {
-      "title": "快速操作",
-      "lastText": "上次识别的文本",
-      "noText": "暂无文本",
-      "hint": "按 Enter 使用默认操作"
-    },
-    "outputMode": {
-      "clipboard": "复制到剪贴板",
-      "direct": "直接输入",
-      "both": "两者都用（剪贴板 + 直接输入）"
-    },
-    "actions": {
-      "enable": "启用",
-      "disable": "禁用",
-      "setDefault": "设为默认",
-      "configure": "配置",
-      "remove": "移除",
-      "enabled": "已启用"
-    },
-    "categories": {
-      "search": "搜索引擎",
-      "ai": "AI 助手",
-      "translation": "翻译服务",
-      "custom": "自定义"
-    },
-    "dialog": {
-      "addTitle": "添加整合",
-      "configureTitle": "配置",
-      "selectPlugin": "选择插件",
-      "instanceName": "实例名称",
-      "icon": "图标",
-      "outputMode": "输出方式",
-      "outputModeDescSupported": "选择如何将文本发送到此服务。直接输入使用 URL 参数或 API。",
-      "outputModeDescUnsupported": "此服务不支持直接输入。文本将复制到剪贴板，需要手动粘贴。",
-      "cancel": "取消",
-      "add": "添加",
-      "prevPage": "上一页",
-      "nextPage": "下一页",
-      "save": "保存",
-      "confirmRemoveTitle": "移除整合？",
-      "confirmRemove": "确定要移除此整合吗？",
-      "manualPasteRequired": "⚠️ 需要手动粘贴"
-    },
-    "plugins": {
-      "clawbot": {
-        "config": {
-          "gatewayHint": "可从 OpenClaw 界面「Control → Overview → Gateway Access」获取主机、端口、令牌等信息；或使用 OpenClaw CLI：`openclaw gateway status` 查看网关状态，`openclaw gateway discover` 发现网关及 wsUrl，配置与令牌见 `~/.openclaw/openclaw.json`。",
-          "host": {
-            "label": "主机",
-            "description": "OpenClaw 服务主机地址（默认：localhost）"
-          },
-          "port": {
-            "label": "端口",
-            "description": "OpenClaw 服务端口（默认：18789）"
-          },
-          "apiKey": {
-            "label": "令牌",
-            "description": "您的 OpenClaw 访问令牌"
-          },
-          "session": {
-            "label": "会话 ID",
-            "description": "OpenClaw 会话 ID（默认：agent:main:main）。WebSocket 下用于指定 sessionKey 以控制消息路由，保持默认则自动路由。"
-          },
-          "useHttp": {
-            "label": "使用 HTTP API",
-            "description": "使用 HTTP API 而非 WebSocket（需在 OpenClaw 配置中手动开启）。默认使用 WebSocket（始终可用）。"
-          },
-          "openInterface": {
-            "label": "发送后打开网页界面",
-            "description": "发送消息后自动打开 OpenClaw 网页界面"
-          },
-          "timeout": {
-            "label": "连接超时（毫秒）",
-            "description": "连接超时时间，单位毫秒（默认：15000，仅对 WebSocket 有效）"
-          }
+      },
+      "provider": {
+        "label": "运行设备",
+        "help": "自动会选本机已安装的最快版本。",
+        "help_single": "这台电脑只能运行此模型的 {{name}} 版本。"
+      },
+      "language": {
+        "label": "语言",
+        "help": "如果自动识别总认错语言，可以在这里固定一种。"
+      },
+      "punctuation": {
+        "label": "标点",
+        "help": "为文字加上标点。",
+        "help_native": "模型自带标点。关闭后输出不带标点的纯文本。",
+        "help_companion": "由随此模型安装的小型标点模型添加。关闭后跳过这一步。"
+      },
+      "itn": {
+        "label": "数字格式化",
+        "help": "把念出来的数字写成阿拉伯数字，例如“三点五”写成 3.5。"
+      },
+      "hotwords": {
+        "label": "热词",
+        "help": "希望它认准的人名和术语，用逗号分隔。",
+        "placeholder": "EchoType, Kubernetes, 张伟"
+      },
+      "task": {
+        "label": "任务",
+        "help": "翻译会把任何语言的语音转成英文文字。",
+        "options": {
+          "transcribe": "转写",
+          "translate": "翻译成英文"
+        }
+      },
+      "num_threads": {
+        "label": "CPU 线程数",
+        "help": "0 表示由 EchoType 决定。"
+      },
+      "punct_style": {
+        "label": "标点风格",
+        "help": "自动：中文句子用中文标点（，。），英文句子用英文标点（, .）。",
+        "options": {
+          "auto": "自动（随语言）",
+          "zh": "中文标点",
+          "en": "英文标点"
         }
       }
     },
-    "items": {
-      "clawbot": {
-        "name": "OpenClaw / Clawbot",
-        "description": "AI 驱动的搜索和自动化工作流"
-      },
-      "search": {
-        "name": "搜索",
-        "description": "快速网页搜索集成"
-      },
-      "workflow": {
-        "name": "工作流",
-        "description": "自定义自动化工作流"
+    "empty": {
+      "title": "暂无可用模型",
+      "description": "模型目录还没加载出来。如果一直这样，请重启 EchoType。"
+    },
+    "helpers": {
+      "title": "辅助模型",
+      "description": "需要它们的语音模型会自动一并安装。"
+    },
+    "tiers": {
+      "instant": "极速",
+      "balanced": "均衡",
+      "accurate": "精准"
+    },
+    "punctuationMode": {
+      "native": "自带标点",
+      "companion": "外挂标点"
+    },
+    "install": {
+      "not_installed": "未安装",
+      "downloading": "正在下载…",
+      "downloadingPct": "正在下载 · {{pct}}%",
+      "verifying": "正在校验…",
+      "extracting": "正在解压…",
+      "installed": "已安装",
+      "error": "下载失败"
+    },
+    "actions": {
+      "download": "下载",
+      "retry": "重试",
+      "use": "使用此模型",
+      "remove": "删除"
+    },
+    "remove": {
+      "title": "删除 {{name}}？",
+      "message": "将释放 {{size}} 磁盘空间，之后可随时重新下载。",
+      "messageActive": "这是当前使用的模型。删除后需另选模型才能继续听写。将释放 {{size}}。"
+    },
+    "providers": {
+      "cpu": "CPU",
+      "cuda": "NVIDIA 显卡（CUDA）",
+      "coreml": "Apple 神经网络引擎（Core ML）",
+      "directml": "显卡（DirectML）",
+      "metal": "Apple 显卡（Metal）",
+      "vulkan": "显卡（Vulkan）"
+    },
+    "panel": {
+      "title": "设置",
+      "auto": "自动",
+      "autoDetect": "自动识别",
+      "appliesNow": "改动从下一次听写生效。更改运行设备会重新加载模型。"
+    },
+    "variants": {
+      "downloadGpu": "下载 GPU 版本（{{size}}）",
+      "downloadCpu": "下载 CPU 版本（{{size}}）",
+      "noneUsable": "这台电脑上暂时没有能运行此模型的版本。",
+      "noneUsableWithPack": "需要 GPU。在「管理模型」里安装 GPU 运行库后即可使用。"
+    },
+    "license": {
+      "open": "查看许可证",
+      "checkCommercial": "商用前请先确认许可证。"
+    },
+    "packs": {
+      "removeTitle": "删除 {{name}} 引擎？",
+      "removeMessage": "设为在此显卡上运行的模型会改回 CPU。将释放 {{size}}。"
+    },
+    "targets": {
+      "cpu": "CPU",
+      "nvidia": "NVIDIA 显卡",
+      "apple": "Apple 芯片",
+      "vulkan": "Vulkan 显卡"
+    },
+    "providerShort": {
+      "cpu": "CPU",
+      "cuda": "CUDA",
+      "metal": "Metal",
+      "coreml": "Core ML",
+      "vulkan": "Vulkan",
+      "directml": "DirectML"
+    }
+  },
+  "integrations": {
+    "title": "集成",
+    "description": "在快捷操作里，把说出的话交给 AI、聊天、笔记等工具。",
+    "myIntegrations": "我的动作",
+    "myIntegrationsDescription": "拖动可调整顺序。在快捷操作里按回车，会运行默认动作。",
+    "addIntegration": "添加动作",
+    "emptyState": "还没有动作。添加后即可在快捷操作里使用。",
+    "default": "默认",
+    "needsSetup": "待设置",
+    "tabs": {
+      "actions": "动作",
+      "dictionary": "词典"
+    },
+    "groups": {
+      "ai": "问 AI",
+      "cleanup": "用 AI 改写",
+      "chat": "Webhook 与对话",
+      "send": "发送到",
+      "agent": "编程助手",
+      "open": "在浏览器中打开"
+    },
+    "quickAction": {
+      "title": "快捷操作",
+      "lastText": "上一次听写",
+      "noText": "暂无文本",
+      "hint": "按 Enter 使用默认操作",
+      "hintNamed": "按回车发送到 {{name}}",
+      "noIntegrations": "没有开启的动作。请到「集成」页开启。",
+      "waiting": "处理中…",
+      "runningNamed": "正在运行「{{name}}」…",
+      "stop": "停止",
+      "replace": "替换原文",
+      "regenerate": "重新生成",
+      "confirmTitle": "要运行「{{name}}」吗？",
+      "confirmMessage": "这会在你的电脑上运行一个程序，并把文字交给它。",
+      "confirmRun": "运行",
+      "notes": {
+        "sent": "已发送 ✓",
+        "opened": "已打开",
+        "copied_and_opened": "已复制并打开"
       }
+    },
+    "actions": {
+      "enable": "开启",
+      "disable": "关闭",
+      "setDefault": "设为默认",
+      "configure": "设置",
+      "remove": "删除",
+      "enabled": "开启",
+      "reorder": "拖动排序"
+    },
+    "dialog": {
+      "addTitle": "添加动作",
+      "instanceName": "名称",
+      "icon": "图标",
+      "add": "添加",
+      "back": "返回",
+      "confirmRemoveTitle": "删除这个动作？",
+      "configureNamed": "设置「{{name}}」",
+      "confirmRemoveNamed": "「{{name}}」会从快捷操作中移除。其他动作共用的密钥会保留。"
+    },
+    "form": {
+      "provider": "服务商",
+      "model": "模型",
+      "modelPlaceholder": "模型名称",
+      "modelHint": "点「获取模型」查看你的账号可用的模型，也可以直接输入名称。",
+      "modelsLoaded": "共 {{count}} 个可用模型",
+      "noModels": "服务商没有返回模型，请直接输入模型名称。",
+      "loadModels": "获取模型",
+      "loading": "正在获取…",
+      "test": "测试连接",
+      "testing": "正在测试…",
+      "testOk": "连接成功",
+      "getKey": "获取 API 密钥",
+      "sharedKey": "使用同一服务商的所有动作共用此密钥。",
+      "saved": "已保存",
+      "replace": "更换",
+      "remove": "移除",
+      "willRemove": "保存后将被移除",
+      "undo": "撤销",
+      "directoryPlaceholder": "D:\\项目\\路径",
+      "storageWeak": "你的系统没有安全的密钥环，密钥只能靠文件权限保护。",
+      "storageNone": "此系统不支持安全存储，无法保存密钥。本地服务仍可使用。"
+    },
+    "privacy": {
+      "agent": "在这台电脑上运行一个程序。文字会交给该程序，它可能会连接自己的服务。",
+      "open": "在浏览器中打开 {{hosts}}，文字会放进网址里。",
+      "theAddress": "你填写的网址",
+      "sendTo": "文字会发送到 {{hosts}}。",
+      "userAddress": "文字会发送到你填写的地址。"
+    },
+    "dictionary": {
+      "title": "个人词典",
+      "description": "按你的写法拼写的人名和术语。开启词典的 AI 动作会收到这份列表，比如把“echo type”写成“EchoType”。",
+      "add": "添加词条",
+      "empty": "还没有词条",
+      "emptyHint": "添加你常说的人名、产品名和行话。",
+      "term": "词条",
+      "hint": "备注",
+      "termPlaceholder": "EchoType",
+      "hintPlaceholder": "选填：读音是什么样"
+    },
+    "errors": {
+      "AUTH_FAILED": "服务拒绝了你的密钥。请检查后重试。",
+      "RATE_LIMITED": "请求太频繁，请稍等一会儿再试。",
+      "NETWORK": "无法连接到服务。请检查网络或服务器地址。",
+      "TIMEOUT": "服务响应超时。",
+      "HOST_BLOCKED": "这个动作不允许访问该地址。",
+      "NOT_CONFIGURED": "请先完成这个动作的设置。",
+      "NOT_INSTALLED": "没有找到这个程序，请确认已安装并加入 PATH。",
+      "CLI_FAILED": "程序运行出错并退出了。",
+      "PROVIDER_ERROR": "服务返回了错误。",
+      "CONFIRM_REQUIRED": "请确认后再运行这个动作。",
+      "INTERNAL": "出了点问题。"
     }
   },
   "settings": {
     "title": "设置",
-    "description": "全局应用设置。",
+    "description": "听写、麦克风与应用偏好。",
     "startup": {
       "title": "启动",
       "autoStart": "开机自启动",
-      "autoLoadModel": "启动时自动加载模型"
+      "autoLoadModel": "启动时自动加载模型",
+      "autoStartDescription": "登录系统时在后台启动 EchoType。"
     },
     "language": {
-      "title": "语言",
+      "title": "界面语言",
       "systemDefault": "跟随系统",
       "en": "English",
-      "zh": "中文"
+      "zh": "中文",
+      "description": "EchoType 菜单与提示所用的语言。"
     },
     "hotkey": {
-      "title": "快捷键",
+      "title": "热键",
       "current": "当前快捷键",
-      "configure": "配置快捷键",
+      "configure": "更改热键",
       "pressKeys": "按下任意键...",
-      "clickToRecord": "点击录制新快捷键",
-      "quickSelect": "快速选择",
+      "clickToRecord": "点击录制新热键",
+      "quickSelect": "推荐按键",
       "quickSelectDescMac": "建议使用右侧修饰键或功能键，避免与系统快捷键冲突",
       "quickSelectDescWin": "建议使用右侧修饰键或特殊锁定键，避免与系统快捷键冲突",
       "quickKeyDescMac": {
@@ -293,7 +491,7 @@
         "PrtSc": "打印屏幕键",
         "CapsLock": "大写锁定键"
       },
-      "description": "设置全局快捷键来切换录音。默认使用单键（右侧修饰键），也支持组合键配置。",
+      "description": "选一个用来听写的按键。右侧的单个修饰键最合适，很少和其他快捷键冲突。",
       "note": "重要提示",
       "noteItem1": "默认使用单键（右Ctrl/右Cmd），避免冲突",
       "noteItem2": "右侧按键（右Ctrl、右Alt、右Win/Cmd）最稳定",
@@ -303,26 +501,51 @@
       "cancel": "取消",
       "errors": {
         "alreadyInUse": "此快捷键已被使用",
-        "invalid": "无效的快捷键组合",
+        "invalid": "无效的热键组合",
         "systemShortcut": "这是系统快捷键"
-      }
+      },
+      "rowDescription": "在电脑任何地方按下它即可听写。",
+      "change": "更改",
+      "modalTitle": "更改热键",
+      "stopRecording": "停止录制"
     },
     "recordingMode": {
-      "title": "录音模式",
-      "pushToTalk": "对讲机模式",
-      "toggleMode": "开关模式",
+      "title": "录音方式",
+      "pushToTalk": "按住说话",
+      "toggleMode": "单击切换",
       "pushToTalkDesc": "按住快捷键录音，松开停止（像对讲机一样）",
-      "toggleModeDesc": "按一次快捷键开始录音，再按一次停止"
+      "toggleModeDesc": "按一次快捷键开始录音，再按一次停止",
+      "holdExplain": "说话时按住 {{key}}，松开即出字。轻按一下则打开快捷操作。",
+      "toggleExplain": "按一下 {{key}} 开始，再按一下结束。按住半秒打开快捷操作。"
     },
     "audio": {
-      "title": "音频输入设备",
-      "microphone": "麦克风"
+      "title": "输入设备",
+      "microphone": "麦克风",
+      "description": "EchoType 录音所用的麦克风。",
+      "systemDefault": "系统默认",
+      "systemDefaultNamed": "系统默认（{{name}}）",
+      "refresh": "刷新设备列表",
+      "test": "测试麦克风",
+      "testDescription": "打开后说几句话，看看音量。",
+      "testOn": "正常说话，音量条到三分之二左右即可。",
+      "level": "输入音量",
+      "keepWarm": "保持麦克风就绪",
+      "keepWarmOn": "听写即按即录，第一个字不会被吞掉。EchoType 运行期间，系统会显示麦克风正在使用。",
+      "keepWarmOff": "只在听写时打开麦克风。第一个字的开头可能会被截掉。"
     },
     "output": {
       "title": "输出方式",
-      "directInput": "直接输入",
-      "clipboard": "复制到剪贴板",
-      "atLeastOne": "⚠️ 至少需要启用一种输出方式"
+      "directInput": "粘贴到当前应用",
+      "clipboard": "保留在剪贴板",
+      "atLeastOne": "至少保留一种输出方式，文字才有去处。",
+      "directInputDescription": "把文字输入到光标所在的位置。",
+      "clipboardDescription": "文字留在剪贴板里，方便再次粘贴。",
+      "paste": "粘贴",
+      "copy": "复制",
+      "both": "两者都要",
+      "pasteDescription": "把文字输入到光标所在的位置。",
+      "copyDescription": "把文字放到剪贴板，想粘贴到哪里都行。",
+      "bothDescription": "把文字输入到光标处，同时在剪贴板里留一份。"
     },
     "textProcessing": {
       "title": "文本处理",
@@ -336,6 +559,62 @@
     },
     "log": {
       "title": "模型日志"
+    },
+    "modelSettingsMoved": "模型的运行设备、语言、标点和数字格式化按模型设置，在「模型」页。",
+    "sections": {
+      "general": "通用",
+      "dictation": "听写",
+      "microphone": "麦克风",
+      "privacy": "隐私",
+      "about": "关于",
+      "appearance": "外观"
+    },
+    "privacy": {
+      "saveRecordings": "保存录音",
+      "saveRecordingsDescription": "把每次听写的音频保存在本机，便于排查问题。默认关闭。"
+    },
+    "about": {
+      "version": "版本",
+      "channel": "{{channel}} 版",
+      "channels": {
+        "github": "GitHub",
+        "steam": "Steam",
+        "msstore": "Microsoft Store"
+      },
+      "licenses": "许可证",
+      "licensesDescription": "EchoType 使用的语音模型与开源组件。",
+      "viewLicenses": "查看许可证",
+      "licensesTitle": "许可证",
+      "modelLicenses": "语音模型",
+      "modelLicensesHint": "每个模型有各自的许可证，商用前请先确认。",
+      "componentLicenses": "开源组件",
+      "commercial": {
+        "yes": "可商用",
+        "no": "仅限非商用",
+        "unclear": "商用前请确认"
+      },
+      "source": "源代码",
+      "sourceDescription": "EchoType 是开源软件。",
+      "reportIssue": "反馈问题"
+    },
+    "appearance": {
+      "theme": "主题",
+      "themeDescription": "跟随系统，或固定为浅色、深色。",
+      "modes": {
+        "system": "跟随系统",
+        "light": "浅色",
+        "dark": "深色"
+      },
+      "accent": "主题色",
+      "accentDescription": "{{name}}。用于按钮、高亮、侧栏和光球。",
+      "accents": {
+        "violet": "紫罗兰",
+        "indigo": "靛蓝",
+        "ocean": "海蓝",
+        "teal": "青绿",
+        "rose": "玫红",
+        "sunset": "日落橙"
+      }
     }
   },
   "errors": {
@@ -373,36 +652,38 @@
     },
     "unknown": {
       "title": "模型错误",
-      "message": "未知错误"
+      "message": "出了点问题。"
     }
   },
   "onboarding": {
     "title": "欢迎使用 EchoType",
-    "subtitle": "语音输入需要麦克风与快捷键权限，请按步骤完成设置。",
-    "stepPermissions": "权限设置",
-    "stepMicrophone": "选择麦克风",
-    "stepModels": "模型安装",
+    "subtitle": "三步设置，之后在任何地方都能听写。",
+    "stepPermissions": "权限",
+    "stepMicrophone": "麦克风",
+    "stepModels": "语音模型",
     "permissions": {
       "microphone": "麦克风权限",
       "microphoneDesc": "用于录制语音并转写为文字。",
       "openMicrophone": "打开麦克风设置",
-      "accessibility": "快捷键 / 辅助功能权限",
-      "accessibilityDescWin": "Windows 上通常无需单独授权；若快捷键无效，请检查应用是否在后台运行。",
-      "accessibilityDescMac": "用于全局快捷键（如开始/停止录音），需在「辅助功能」中允许本应用。",
+      "accessibility": "热键 / 辅助功能权限",
+      "accessibilityDescWin": "Windows 上的全局热键不需要单独授权。",
+      "accessibilityDescMac": "用于全局热键（开始、停止听写），需在「辅助功能」中允许 EchoType。",
       "openAccessibility": "打开辅助功能设置",
       "checking": "检测中…",
       "granted": "已授权",
       "denied": "未授权",
-      "recheck": "重新检测"
+      "recheck": "重新检测",
+      "unknown": "未检查"
     },
     "microphone": {
-      "title": "选择麦克风",
-      "description": "选择要用于语音输入的麦克风设备，说话时可以看到电平条。",
-      "finish": "完成"
+      "title": "麦克风",
+      "description": "说几句话，音量条应随你的声音跳动。",
+      "finish": "开始使用",
+      "none": "没有找到麦克风。接上后重新打开这一步。"
     },
     "models": {
       "title": "下载语音模型",
-      "description": "检测到您的电脑尚未安装必要的 AI 模型，需要下载它们才能开始使用。",
+      "description": "选一个语音模型。它完全在本机运行，你的声音不会离开这台电脑。之后可以在「模型」页添加更多。",
       "paraformer": "Paraformer (基础模型)",
       "paraformerDesc": "主语音识别模型，支持中文与英文转写。",
       "qwen": "Qwen3 (高级流式模型)",
@@ -411,20 +692,106 @@
       "extracting": "正在解压...",
       "installed": "已安装",
       "error": "下载失败",
-      "download": "下载"
+      "download": "下载",
+      "recommended": "推荐",
+      "finishHint": "下载一个语音模型后才能继续。"
     },
     "next": "下一步",
     "back": "上一步"
   },
   "common": {
-    "defaultMicrophone": "默认麦克风",
-    "empty": "（空）"
+    "defaultMicrophone": "系统默认",
+    "empty": "（空）",
+    "cancel": "取消",
+    "close": "关闭",
+    "copy": "复制",
+    "copied": "已复制",
+    "save": "保存"
   },
   "debug": {
     "modelStatus": "模型状态",
     "modelLog": {
       "title": "模型日志",
       "empty": "暂无模型日志，后端运行后会在此显示最新一条日志。"
+    },
+    "title": "诊断",
+    "description": "引擎状态与排查工具。",
+    "engineTitle": "语音引擎",
+    "engineState": "状态",
+    "provider": "运行设备",
+    "engineVersion": "引擎版本",
+    "loadProgress": "加载进度",
+    "activeModel": "当前模型",
+    "modelsInstalled": "已安装模型",
+    "dictationPhase": "听写",
+    "platform": "平台",
+    "openLogs": "打开日志文件夹",
+    "restartEngine": "重启引擎",
+    "keysTitle": "按键监听",
+    "keysDescription": "显示本窗口内的按键，区分左右修饰键。",
+    "startListening": "开始监听",
+    "stopListening": "停止",
+    "clear": "清空",
+    "pressAnyKey": "请按任意键…",
+    "keysIdle": "开始监听后可查看按键代码。",
+    "snapshotTitle": "应用状态",
+    "snapshotDescription": "核心层推送的最新快照。反馈问题时请附上。",
+    "showSnapshot": "查看快照",
+    "snapshotCopied": "快照已复制",
+    "enginePacks": "引擎包",
+    "runMode": "运行方式",
+    "fallback": "已回退到 CPU"
+  },
+  "manager": {
+    "open": "管理模型",
+    "title": "管理模型",
+    "storage": "已用 {{used}} · 剩余 {{free}}",
+    "runtimes": "GPU 运行库",
+    "runtimesDescription": "模型的 GPU 版本需要它。装一次，所有模型共用。",
+    "runtimeName": "{{target}}运行库",
+    "runtimeNote": "所有在这块显卡上运行的模型共用。",
+    "speechModels": "语音模型",
+    "installedSize": "占用 {{size}}",
+    "inUse": "使用中",
+    "alsoDownloadsRuntime": "会一并下载 {{name}}（{{size}}）。",
+    "notOnThisComputer": "这台电脑不可用",
+    "removeVariantTitle": "删除 {{name}} · {{version}}？",
+    "removeVariantMessage": "将释放 {{size}}，之后可随时重新下载。",
+    "removeVariantInUse": "这是正在使用的版本。删除后要等其他版本或模型就绪才能继续听写。将释放 {{size}}。",
+    "installingRuntime": "正在安装{{name}} · {{pct}}%",
+    "needsRuntime": "还需要{{name}}（{{size}}）才能运行。",
+    "installingRuntimeStage": "正在安装{{name}}…"
+  },
+  "statusBar": {
+    "noModel": "未加载模型",
+    "chooseModel": "选择模型",
+    "fallback": "{{target}}不可用，正在用 {{provider}} 运行"
+  },
+  "issues": {
+    "dictation": {
+      "fallback": "这次听写没有成功",
+      "fallbackShort": "上次听写失败",
+      "DEVICE_UNAVAILABLE": {
+        "title": "麦克风不可用",
+        "body": "EchoType 打不开麦克风。请确认麦克风已连接、没有被其他应用占用，然后再试一次。"
+      },
+      "DECODE_FAILED": {
+        "title": "没能转成文字",
+        "body": "把语音转成文字时出了问题，请再试一次。"
+      },
+      "actions": {
+        "chooseMicrophone": "选择麦克风",
+        "openModels": "前往模型页"
+      }
+    },
+    "hotkey": {
+      "fallback": "热键无法使用",
+      "fallbackShort": "需要处理",
+      "HOTKEY_WAYLAND_LIMITED": {
+        "title": "Wayland 下热键受限",
+        "short": "Wayland 下受限",
+        "body": "在 Wayland 下，只有 X11 应用在前台时，EchoType 才能收到热键。想在任何应用里听写，请在登录时选择 X11 会话（如“GNOME on Xorg”）。你也可以随时在首页开始听写。"
+      }
     }
   }
 }

@@ -1,0 +1,1355 @@
+{
+  "schema": 2,
+  "updated": "2026-11-13",
+  "default_model_id": "sensevoice-small",
+  "sources": [
+    {
+      "id": "github",
+      "type": "http",
+      "url_template": "https://github.com/ljyou001/echotype/releases/download/{release}/{asset}"
+    },
+    {
+      "id": "steam",
+      "type": "local",
+      "path_template": "{steam_app_dir}/models/{asset}"
+    }
+  ],
+  "channels": {
+    "github": {
+      "sources": [
+        "github"
+      ],
+      "remote_catalog": null,
+      "allow_commercial": [
+        "yes",
+        "unclear"
+      ]
+    },
+    "steam": {
+      "sources": [
+        "steam",
+        "github"
+      ],
+      "remote_catalog": null,
+      "allow_commercial": [
+        "yes"
+      ]
+    },
+    "msstore": {
+      "sources": [
+        "github"
+      ],
+      "remote_catalog": null,
+      "allow_commercial": [
+        "yes"
+      ]
+    },
+    "_note": "allow_commercial is provisional; the user decides per-store policy later."
+  },
+  "models": [
+    {
+      "id": "sensevoice-small",
+      "name": "SenseVoice Small",
+      "description": "Instant dictation for Chinese, English, Japanese, Korean and Cantonese, with built-in punctuation and number formatting.",
+      "kind": "asr",
+      "tier": "instant",
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "yue"
+      ],
+      "punctuation": {
+        "mode": "native"
+      },
+      "features": {
+        "itn": "native",
+        "lid": true,
+        "partials": true
+      },
+      "requires": [],
+      "settings": [
+        {
+          "key": "language",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en",
+            "ja",
+            "ko",
+            "yue"
+          ]
+        },
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "punct_style",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "key": "itn",
+          "type": "toggle",
+          "default": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "target": "cpu",
+          "runtime": "sherpa-onnx",
+          "arch": "sense_voice",
+          "providers": [
+            "cpu"
+          ],
+          "requires_pack": null,
+          "files": {
+            "model": "model.int8.onnx",
+            "tokens": "tokens.txt"
+          },
+          "asset": {
+            "name": "sensevoice-small--cpu-int8.zip",
+            "release": "models-v3",
+            "sha256": "e9511a923f034b0aecd5fd0632792cb4798fbd5b44b409f44cd7b2c256077b87",
+            "size_bytes": 160309459,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 600,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": 78,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
+          }
+        },
+        {
+          "id": "cuda-fp32",
+          "target": "nvidia",
+          "runtime": "sherpa-onnx",
+          "arch": "sense_voice",
+          "providers": [
+            "cuda"
+          ],
+          "requires_pack": "cuda",
+          "files": {
+            "model": "model.onnx",
+            "tokens": "tokens.txt"
+          },
+          "asset": {
+            "name": "sensevoice-small--cuda-fp32.zip",
+            "release": "models-v3",
+            "sha256": "e4966454d5db4d1743f4479a29838ad25c7e713dac97dd49ddc0ddefc58d47af",
+            "size_bytes": 867665995,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 1400,
+            "vram_mb": 1300
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": 42,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cuda, 4 threads"
+          },
+          "_note": "fp32 graph (model.onnx, 938 MB) from the upstream archive; int8 is slower on the CUDA EP (design/ENGINE_NOTES.md §2). Needs the cuda engine pack. Engine session added it; models session packages the zip (model.onnx + tokens.txt at the root)."
+        }
+      ],
+      "status": "stable",
+      "_note": "Must be the 2024-07-17 release (the 2025-09-09 one has no punctuation). Add a GPU variant only if measured faster than CPU.",
+      "license": {
+        "id": "FunASR-Model-License",
+        "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
+        "commercial": "unclear"
+      },
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
+    },
+    {
+      "id": "paraformer-zh-small",
+      "name": "Paraformer Small",
+      "description": "The smallest download. Fast Chinese and English dictation for low-end machines.",
+      "kind": "asr",
+      "tier": "instant",
+      "languages": [
+        "zh",
+        "en"
+      ],
+      "punctuation": {
+        "mode": "companion",
+        "companion_id": "punct-ct-transformer-zh-en"
+      },
+      "features": {
+        "itn": "rule",
+        "lid": false,
+        "partials": true
+      },
+      "requires": [
+        "punct-ct-transformer-zh-en"
+      ],
+      "settings": [
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "punct_style",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "key": "itn",
+          "type": "toggle",
+          "default": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "target": "cpu",
+          "runtime": "sherpa-onnx",
+          "arch": "paraformer",
+          "providers": [
+            "cpu"
+          ],
+          "requires_pack": null,
+          "files": {
+            "model": "model.int8.onnx",
+            "tokens": "tokens.txt"
+          },
+          "asset": {
+            "name": "paraformer-zh-small--cpu-int8.zip",
+            "release": "models-v3",
+            "sha256": "c2fca5669ed6bef33015e2f45fc74d341ff8e4592d9fb29cd899e88a8855a140",
+            "size_bytes": 74228751,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-small-2024-03-09.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 300,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": 38,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
+          }
+        }
+      ],
+      "status": "stable",
+      "license": {
+        "id": "FunASR-Model-License",
+        "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
+        "commercial": "unclear"
+      },
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
+    },
+    {
+      "id": "paraformer-zh",
+      "name": "Paraformer",
+      "description": "Balanced Chinese and English dictation. Replaces the v2 Paraformer Offline model.",
+      "kind": "asr",
+      "tier": "balanced",
+      "languages": [
+        "zh",
+        "en"
+      ],
+      "punctuation": {
+        "mode": "companion",
+        "companion_id": "punct-ct-transformer-zh-en"
+      },
+      "features": {
+        "itn": "rule",
+        "lid": false,
+        "partials": true
+      },
+      "requires": [
+        "punct-ct-transformer-zh-en"
+      ],
+      "settings": [
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "punct_style",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "key": "itn",
+          "type": "toggle",
+          "default": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "target": "cpu",
+          "runtime": "sherpa-onnx",
+          "arch": "paraformer",
+          "providers": [
+            "cpu"
+          ],
+          "requires_pack": null,
+          "files": {
+            "model": "model.int8.onnx",
+            "tokens": "tokens.txt"
+          },
+          "asset": {
+            "name": "paraformer-zh--cpu-int8.zip",
+            "release": "models-v3",
+            "sha256": "ec38d19bffb31b676f37fffd4b5e67e160e45f8a340245ba81174722b2c222a7",
+            "size_bytes": 208510872,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 700,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": 63,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
+          }
+        }
+      ],
+      "status": "stable",
+      "license": {
+        "id": "FunASR-Model-License",
+        "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
+        "commercial": "unclear"
+      },
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
+    },
+    {
+      "id": "qwen3-asr-0.6b",
+      "name": "Qwen3 ASR 0.6B",
+      "description": "Highest accuracy. 30 languages and 22 Chinese dialects, with built-in punctuation. Needs more memory.",
+      "kind": "asr",
+      "tier": "accurate",
+      "languages": [
+        "zh",
+        "en",
+        "yue",
+        "ar",
+        "de",
+        "fr",
+        "es",
+        "pt",
+        "id",
+        "it",
+        "ko",
+        "ru",
+        "th",
+        "vi",
+        "ja",
+        "tr",
+        "hi",
+        "ms",
+        "nl",
+        "sv",
+        "da",
+        "fi",
+        "pl",
+        "cs",
+        "fil",
+        "fa",
+        "el",
+        "hu",
+        "mk",
+        "ro"
+      ],
+      "punctuation": {
+        "mode": "native"
+      },
+      "features": {
+        "itn": "native",
+        "lid": true,
+        "partials": false
+      },
+      "requires": [],
+      "settings": [
+        {
+          "key": "language",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en",
+            "yue",
+            "ar",
+            "de",
+            "fr",
+            "es",
+            "pt",
+            "id",
+            "it",
+            "ko",
+            "ru",
+            "th",
+            "vi",
+            "ja",
+            "tr",
+            "hi",
+            "ms",
+            "nl",
+            "sv",
+            "da",
+            "fi",
+            "pl",
+            "cs",
+            "fil",
+            "fa",
+            "el",
+            "hu",
+            "mk",
+            "ro"
+          ]
+        },
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "punct_style",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "key": "itn",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "hotwords",
+          "type": "text",
+          "default": ""
+        }
+      ],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "target": "cpu",
+          "runtime": "sherpa-onnx",
+          "arch": "qwen3_asr",
+          "providers": [
+            "cpu"
+          ],
+          "requires_pack": null,
+          "files": {
+            "conv_frontend": "conv_frontend.onnx",
+            "encoder": "encoder.int8.onnx",
+            "decoder": "decoder.int8.onnx",
+            "tokenizer": "tokenizer"
+          },
+          "asset": {
+            "name": "qwen3-asr-0.6b--cpu-int8.zip",
+            "release": "models-v3",
+            "sha256": "587ae33b1413ca6ed6233fe88ce103c6b717e06026992e89259e6821b0ab72f0",
+            "size_bytes": 844774688,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 2000,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": 602,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
+          }
+        },
+        {
+          "id": "cuda-gguf-q8",
+          "target": "nvidia",
+          "runtime": "llama.cpp",
+          "arch": "mtmd_asr",
+          "providers": [
+            "cuda"
+          ],
+          "requires_pack": "cuda",
+          "files": {
+            "model": "Qwen3-ASR-0.6B-Q8_0.gguf",
+            "mmproj": "mmproj-Qwen3-ASR-0.6B-Q8_0.gguf"
+          },
+          "asset": {
+            "name": "qwen3-asr-0.6b--gguf-q8.zip",
+            "release": "models-v3",
+            "sha256": "af9fbece19d60bcdb19464aa76f4ae012dc82bec6d25967336c3e1c65d4344a4",
+            "size_bytes": 969451962,
+            "upstream_url": "https://huggingface.co/ggml-org/Qwen3-ASR-0.6B-GGUF"
+          },
+          "requirements": {
+            "ram_mb": 1500,
+            "vram_mb": 2100
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": 62,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cuda, 4 threads"
+          }
+        },
+        {
+          "id": "apple-metal-gguf-q8",
+          "target": "apple",
+          "runtime": "llama.cpp",
+          "arch": "mtmd_asr",
+          "providers": [
+            "metal"
+          ],
+          "requires_pack": null,
+          "files": {
+            "model": "Qwen3-ASR-0.6B-Q8_0.gguf",
+            "mmproj": "mmproj-Qwen3-ASR-0.6B-Q8_0.gguf"
+          },
+          "asset": {
+            "name": "qwen3-asr-0.6b--gguf-q8.zip",
+            "release": "models-v3",
+            "sha256": "af9fbece19d60bcdb19464aa76f4ae012dc82bec6d25967336c3e1c65d4344a4",
+            "size_bytes": 969451962,
+            "upstream_url": "https://huggingface.co/ggml-org/Qwen3-ASR-0.6B-GGUF"
+          },
+          "requirements": {
+            "ram_mb": 1500,
+            "vram_mb": 2100
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        },
+        {
+          "id": "vulkan-gguf-q8",
+          "target": "vulkan",
+          "runtime": "llama.cpp",
+          "arch": "mtmd_asr",
+          "providers": [
+            "vulkan"
+          ],
+          "requires_pack": "vulkan",
+          "files": {
+            "model": "Qwen3-ASR-0.6B-Q8_0.gguf",
+            "mmproj": "mmproj-Qwen3-ASR-0.6B-Q8_0.gguf"
+          },
+          "asset": {
+            "name": "qwen3-asr-0.6b--gguf-q8.zip",
+            "release": "models-v3",
+            "sha256": "af9fbece19d60bcdb19464aa76f4ae012dc82bec6d25967336c3e1c65d4344a4",
+            "size_bytes": 969451962,
+            "upstream_url": "https://huggingface.co/ggml-org/Qwen3-ASR-0.6B-GGUF"
+          },
+          "requirements": {
+            "ram_mb": 1500,
+            "vram_mb": 2100
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        }
+      ],
+      "status": "beta",
+      "_note": "Engine: verify file names; benchmark sherpa-onnx int8 vs llama.cpp on CPU too and keep the faster CPU path. Keep the GGUF variant only if it beats cpu-int8 on GPU.",
+      "license": {
+        "id": "Apache-2.0",
+        "url": "https://huggingface.co/Qwen/Qwen3-ASR-0.6B",
+        "commercial": "yes"
+      },
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
+    },
+    {
+      "id": "parakeet-tdt-0.6b-v3",
+      "name": "Parakeet TDT 0.6B v3",
+      "description": "Fast, accurate English and 24 other European languages. No Chinese.",
+      "kind": "asr",
+      "tier": "balanced",
+      "languages": [
+        "en",
+        "de",
+        "fr",
+        "es",
+        "it",
+        "pt",
+        "nl",
+        "pl",
+        "ru",
+        "uk",
+        "cs",
+        "sk",
+        "sl",
+        "hr",
+        "bg",
+        "ro",
+        "hu",
+        "el",
+        "sv",
+        "da",
+        "fi",
+        "et",
+        "lv",
+        "lt",
+        "mt"
+      ],
+      "punctuation": {
+        "mode": "native"
+      },
+      "features": {
+        "itn": "none",
+        "lid": false,
+        "partials": true
+      },
+      "requires": [],
+      "settings": [
+        {
+          "key": "language",
+          "type": "select",
+          "default": "en",
+          "options": [
+            "en",
+            "de",
+            "fr",
+            "es",
+            "it",
+            "pt",
+            "nl",
+            "pl",
+            "ru",
+            "uk",
+            "cs",
+            "sk",
+            "sl",
+            "hr",
+            "bg",
+            "ro",
+            "hu",
+            "el",
+            "sv",
+            "da",
+            "fi",
+            "et",
+            "lv",
+            "lt",
+            "mt"
+          ]
+        },
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "target": "cpu",
+          "runtime": "sherpa-onnx",
+          "arch": "nemo_transducer",
+          "providers": [
+            "cpu"
+          ],
+          "requires_pack": null,
+          "files": {
+            "encoder": "encoder.int8.onnx",
+            "decoder": "decoder.int8.onnx",
+            "joiner": "joiner.int8.onnx",
+            "tokens": "tokens.txt"
+          },
+          "asset": {
+            "name": "parakeet-tdt-0.6b-v3--cpu-int8.zip",
+            "release": "models-v3",
+            "sha256": "61dbcee1631dd16fa8fe1b21477ec1ad99dc967fdb4d772e6297c893f76c1a65",
+            "size_bytes": 478160566,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 1500,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": 194,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
+          }
+        }
+      ],
+      "status": "beta",
+      "_note": "Engine session: fill url and file names from the sherpa-onnx NeMo Parakeet docs.",
+      "license": {
+        "id": "CC-BY-4.0",
+        "url": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3",
+        "commercial": "yes"
+      },
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
+    },
+    {
+      "id": "qwen3-asr-1.7b",
+      "name": "Qwen3 ASR 1.7B",
+      "description": "Best accuracy for 30 languages and Chinese dialects. Needs a GPU.",
+      "kind": "asr",
+      "tier": "accurate",
+      "languages": [
+        "zh",
+        "en",
+        "yue",
+        "ar",
+        "de",
+        "fr",
+        "es",
+        "pt",
+        "id",
+        "it",
+        "ko",
+        "ru",
+        "th",
+        "vi",
+        "ja",
+        "tr",
+        "hi",
+        "ms",
+        "nl",
+        "sv",
+        "da",
+        "fi",
+        "pl",
+        "cs",
+        "fil",
+        "fa",
+        "el",
+        "hu",
+        "mk",
+        "ro"
+      ],
+      "punctuation": {
+        "mode": "native"
+      },
+      "features": {
+        "itn": "native",
+        "lid": true,
+        "partials": false
+      },
+      "requires": [],
+      "settings": [
+        {
+          "key": "language",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en",
+            "yue",
+            "ar",
+            "de",
+            "fr",
+            "es",
+            "pt",
+            "id",
+            "it",
+            "ko",
+            "ru",
+            "th",
+            "vi",
+            "ja",
+            "tr",
+            "hi",
+            "ms",
+            "nl",
+            "sv",
+            "da",
+            "fi",
+            "pl",
+            "cs",
+            "fil",
+            "fa",
+            "el",
+            "hu",
+            "mk",
+            "ro"
+          ]
+        },
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "punct_style",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "key": "itn",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "hotwords",
+          "type": "text",
+          "default": ""
+        }
+      ],
+      "variants": [
+        {
+          "id": "cuda-gguf-q8",
+          "target": "nvidia",
+          "runtime": "llama.cpp",
+          "arch": "mtmd_asr",
+          "providers": [
+            "cuda"
+          ],
+          "requires_pack": "cuda",
+          "files": {
+            "model": "Qwen3-ASR-1.7B-Q6_K.gguf",
+            "mmproj": "mmproj-Qwen3-ASR-1.7B-Q8_0.gguf"
+          },
+          "asset": {
+            "name": "qwen3-asr-1.7b--gguf-q8.zip",
+            "release": "models-v3",
+            "sha256": "7b844055c170fdd77243e5f0dba6796334e0df48d0f42ee90390ea691dd65518",
+            "size_bytes": 1995165542,
+            "upstream_url": "https://huggingface.co/mradermacher/Qwen3-ASR-1.7B-GGUF"
+          },
+          "requirements": {
+            "ram_mb": 3000,
+            "vram_mb": 3100
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": 102,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cuda, 4 threads"
+          }
+        },
+        {
+          "id": "apple-metal-gguf-q8",
+          "target": "apple",
+          "runtime": "llama.cpp",
+          "arch": "mtmd_asr",
+          "providers": [
+            "metal"
+          ],
+          "requires_pack": null,
+          "files": {
+            "model": "Qwen3-ASR-1.7B-Q6_K.gguf",
+            "mmproj": "mmproj-Qwen3-ASR-1.7B-Q8_0.gguf"
+          },
+          "asset": {
+            "name": "qwen3-asr-1.7b--gguf-q8.zip",
+            "release": "models-v3",
+            "sha256": "7b844055c170fdd77243e5f0dba6796334e0df48d0f42ee90390ea691dd65518",
+            "size_bytes": 1995165542,
+            "upstream_url": "https://huggingface.co/mradermacher/Qwen3-ASR-1.7B-GGUF"
+          },
+          "requirements": {
+            "ram_mb": 3000,
+            "vram_mb": 3100
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        },
+        {
+          "id": "vulkan-gguf-q8",
+          "target": "vulkan",
+          "runtime": "llama.cpp",
+          "arch": "mtmd_asr",
+          "providers": [
+            "vulkan"
+          ],
+          "requires_pack": "vulkan",
+          "files": {
+            "model": "Qwen3-ASR-1.7B-Q6_K.gguf",
+            "mmproj": "mmproj-Qwen3-ASR-1.7B-Q8_0.gguf"
+          },
+          "asset": {
+            "name": "qwen3-asr-1.7b--gguf-q8.zip",
+            "release": "models-v3",
+            "sha256": "7b844055c170fdd77243e5f0dba6796334e0df48d0f42ee90390ea691dd65518",
+            "size_bytes": 1995165542,
+            "upstream_url": "https://huggingface.co/mradermacher/Qwen3-ASR-1.7B-GGUF"
+          },
+          "requirements": {
+            "ram_mb": 3000,
+            "vram_mb": 3100
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        }
+      ],
+      "license": {
+        "id": "Apache-2.0",
+        "url": "https://huggingface.co/Qwen/Qwen3-ASR-1.7B",
+        "commercial": "yes"
+      },
+      "status": "beta",
+      "_note": "GPU only. Hide the model on machines with no GPU provider.",
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
+    },
+    {
+      "id": "fire-red-asr2-aed",
+      "name": "FireRedASR 2 AED",
+      "description": "Top Mandarin accuracy, including dialects and mixed Chinese-English speech.",
+      "kind": "asr",
+      "tier": "accurate",
+      "languages": [
+        "zh",
+        "en"
+      ],
+      "punctuation": {
+        "mode": "companion",
+        "companion_id": "punct-ct-transformer-zh-en"
+      },
+      "features": {
+        "itn": "rule",
+        "lid": false,
+        "partials": false
+      },
+      "requires": [
+        "punct-ct-transformer-zh-en"
+      ],
+      "settings": [
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "punct_style",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "key": "itn",
+          "type": "toggle",
+          "default": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "target": "cpu",
+          "runtime": "sherpa-onnx",
+          "arch": "fire_red_asr",
+          "providers": [
+            "cpu"
+          ],
+          "requires_pack": null,
+          "files": {
+            "encoder": "encoder.int8.onnx",
+            "decoder": "decoder.int8.onnx",
+            "tokens": "tokens.txt"
+          },
+          "asset": {
+            "name": "fire-red-asr2-aed--cpu-int8.zip",
+            "release": "models-v3",
+            "sha256": "c84982428c19bb648f56a967244d9971f0d7c7b74a252e693020293e16f3c285",
+            "size_bytes": 836351055,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-fire-red-asr2-zh_en-int8-2026-02-26.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 1500,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": 882,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
+          }
+        }
+      ],
+      "license": {
+        "id": "Apache-2.0",
+        "url": "https://github.com/FireRedTeam/FireRedASR",
+        "commercial": "yes"
+      },
+      "status": "beta",
+      "_note": "Engine: fill upstream_url and files from the sherpa-onnx FireRedASR docs (v2 AED package).",
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
+    },
+    {
+      "id": "whisper-large-v3-turbo",
+      "name": "Whisper Large v3 Turbo",
+      "description": "99 languages. Slower than the others; use it for languages they don't cover.",
+      "kind": "asr",
+      "tier": "accurate",
+      "languages": [
+        "en",
+        "zh",
+        "de",
+        "es",
+        "ru",
+        "ko",
+        "fr",
+        "ja",
+        "pt",
+        "tr",
+        "pl",
+        "ca",
+        "nl",
+        "ar",
+        "sv",
+        "it",
+        "id",
+        "hi",
+        "fi",
+        "vi",
+        "he",
+        "uk",
+        "el",
+        "ms",
+        "cs",
+        "ro",
+        "da",
+        "hu",
+        "ta",
+        "no",
+        "th",
+        "ur"
+      ],
+      "punctuation": {
+        "mode": "native"
+      },
+      "features": {
+        "itn": "none",
+        "lid": true,
+        "partials": false
+      },
+      "requires": [],
+      "settings": [
+        {
+          "key": "language",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "en",
+            "zh",
+            "de",
+            "es",
+            "ru",
+            "ko",
+            "fr",
+            "ja",
+            "pt",
+            "tr",
+            "pl",
+            "ca",
+            "nl",
+            "ar",
+            "sv",
+            "it",
+            "id",
+            "hi",
+            "fi",
+            "vi",
+            "he",
+            "uk",
+            "el",
+            "ms",
+            "cs",
+            "ro",
+            "da",
+            "hu",
+            "ta",
+            "no",
+            "th",
+            "ur"
+          ]
+        },
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "punct_style",
+          "type": "select",
+          "default": "auto",
+          "options": [
+            "auto",
+            "zh",
+            "en"
+          ]
+        },
+        {
+          "key": "task",
+          "type": "select",
+          "default": "transcribe",
+          "options": [
+            "transcribe",
+            "translate"
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "target": "cpu",
+          "runtime": "sherpa-onnx",
+          "arch": "whisper",
+          "providers": [
+            "cpu"
+          ],
+          "requires_pack": null,
+          "files": {
+            "encoder": "turbo-encoder.int8.onnx",
+            "decoder": "turbo-decoder.int8.onnx",
+            "tokens": "turbo-tokens.txt"
+          },
+          "asset": {
+            "name": "whisper-large-v3-turbo--cpu-int8.zip",
+            "release": "models-v3",
+            "sha256": "f700cd99a35f840480dd56d0984d39ef345263fba667fed6f371809f31cdfa23",
+            "size_bytes": 611314614,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-turbo.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 2000,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": 1222,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
+          }
+        }
+      ],
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/openai/whisper",
+        "commercial": "yes"
+      },
+      "status": "beta",
+      "_note": "languages lists the top 32; engine may extend. Add a cuda variant only if the sherpa CUDA pack measurably wins.",
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
+    },
+    {
+      "id": "moonshine-v2-base-en",
+      "name": "Moonshine v2 Base",
+      "description": "Tiny and very fast English dictation.",
+      "kind": "asr",
+      "tier": "instant",
+      "languages": [
+        "en"
+      ],
+      "punctuation": {
+        "mode": "native"
+      },
+      "features": {
+        "itn": "none",
+        "lid": false,
+        "partials": true
+      },
+      "requires": [],
+      "settings": [
+        {
+          "key": "punctuation",
+          "type": "toggle",
+          "default": true
+        }
+      ],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "target": "cpu",
+          "runtime": "sherpa-onnx",
+          "arch": "moonshine",
+          "providers": [
+            "cpu"
+          ],
+          "requires_pack": null,
+          "files": {
+            "encoder": "encoder_model.ort",
+            "decoder": "decoder_model_merged.ort",
+            "tokens": "tokens.txt"
+          },
+          "asset": {
+            "name": "moonshine-v2-base-en--cpu-int8.zip",
+            "release": "models-v3",
+            "sha256": "6bda207e321ea6ab0ec6dc339ecffe88c91364a2ff1faf212830d69a57fb1bd4",
+            "size_bytes": 107104570,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-moonshine-base-en-quantized-2026-02-27.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 400,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": 88,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
+          }
+        }
+      ],
+      "license": {
+        "id": "MIT",
+        "url": "https://github.com/moonshine-ai/moonshine/blob/main/LICENSE",
+        "commercial": "yes"
+      },
+      "status": "beta",
+      "_note": "English only: Moonshine's non-English models are non-commercial. Engine: fill files/upstream_url.",
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
+    },
+    {
+      "id": "punct-ct-transformer-zh-en",
+      "name": "Punctuation (Chinese/English)",
+      "description": "Adds punctuation for models without built-in punctuation. Installed automatically.",
+      "kind": "punctuation",
+      "tier": "instant",
+      "languages": [
+        "zh",
+        "en"
+      ],
+      "punctuation": {
+        "mode": "none"
+      },
+      "features": {
+        "itn": "none",
+        "lid": false,
+        "partials": false
+      },
+      "requires": [],
+      "settings": [],
+      "variants": [
+        {
+          "id": "cpu-int8",
+          "target": "cpu",
+          "runtime": "sherpa-onnx",
+          "arch": "ct_transformer",
+          "providers": [
+            "cpu"
+          ],
+          "requires_pack": null,
+          "files": {
+            "model": "model.int8.onnx"
+          },
+          "asset": {
+            "name": "punct-ct-transformer-zh-en--cpu-int8.zip",
+            "release": "models-v3",
+            "sha256": "800578f1f105a176cd5c242971b9c569fadc4c7e1b2e1e896324763ef4741fe8",
+            "size_bytes": 61216391,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/punctuation-models/sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12-int8.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 150,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": null,
+            "host": null
+          }
+        }
+      ],
+      "status": "hidden",
+      "license": {
+        "id": "FunASR-Model-License",
+        "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
+        "commercial": "unclear"
+      },
+      "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
+    }
+  ],
+  "engine_packs": [
+    {
+      "id": "cuda",
+      "target": "nvidia",
+      "providers": [
+        "cuda"
+      ],
+      "protocol": 3,
+      "platforms": {
+        "win32-x64": {
+          "asset": {
+            "name": "engine-pack-cuda-win32-x64.zip",
+            "release": "engine-packs-v3",
+            "sha256": null,
+            "size_bytes": 0
+          }
+        },
+        "linux-x64": {
+          "asset": {
+            "name": "engine-pack-cuda-linux-x64.zip",
+            "release": "engine-packs-v3",
+            "sha256": null,
+            "size_bytes": 0
+          }
+        }
+      },
+      "_note": "Complete engine build + GPU libs (MODEL_MANIFEST §5). cuda: sherpa-onnx CUDA shared libs + ONNX Runtime GPU + NVIDIA runtime DLLs + CUDA llama-server."
+    },
+    {
+      "id": "vulkan",
+      "target": "vulkan",
+      "providers": [
+        "vulkan"
+      ],
+      "protocol": 3,
+      "platforms": {
+        "win32-x64": {
+          "asset": {
+            "name": "engine-pack-vulkan-win32-x64.zip",
+            "release": "engine-packs-v3",
+            "sha256": null,
+            "size_bytes": 0
+          }
+        },
+        "win32-arm64": {
+          "asset": {
+            "name": "engine-pack-vulkan-win32-arm64.zip",
+            "release": "engine-packs-v3",
+            "sha256": null,
+            "size_bytes": 0
+          }
+        },
+        "linux-x64": {
+          "asset": {
+            "name": "engine-pack-vulkan-linux-x64.zip",
+            "release": "engine-packs-v3",
+            "sha256": null,
+            "size_bytes": 0
+          }
+        },
+        "linux-arm64": {
+          "asset": {
+            "name": "engine-pack-vulkan-linux-arm64.zip",
+            "release": "engine-packs-v3",
+            "sha256": null,
+            "size_bytes": 0
+          }
+        }
+      },
+      "_note": "Optional, low priority: llama.cpp Vulkan for AMD/Intel GPUs (Qwen3 GGUF variants)."
+    }
+  ]
+}

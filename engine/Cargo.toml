@@ -1,0 +1,56 @@
+[package]
+name = "echotype-engine"
+version = "3.0.0"
+edition = "2021"
+rust-version = "1.85"
+publish = false
+license = "AGPL-3.0-only"
+description = "EchoType engine: local push-to-talk speech recognition (ENGINE_PROTOCOL v3)"
+
+[lib]
+name = "echotype_engine"
+path = "src/lib.rs"
+
+[[bin]]
+name = "echotype-engine"
+path = "src/main.rs"
+
+[[bin]]
+name = "echotype-bench"
+path = "src/bin/echotype-bench.rs"
+
+[features]
+default = ["static"]
+# CPU 基础引擎：sherpa-onnx 静态库（含 CPU 版 ONNX Runtime）
+static = ["sherpa-onnx/static"]
+# GPU 引擎包：链接 sherpa-onnx 共享库（SHERPA_ONNX_LIB_DIR 指向 CUDA 版归档）
+shared = ["sherpa-onnx/shared"]
+
+[dependencies]
+sherpa-onnx = { version = "=2.0.1", default-features = false }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-std", "io-util", "sync", "time", "process"] }
+tokio-tungstenite = "0.30"
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = { version = "0.4", features = ["std"] }
+hound = "3.5"
+fancy-regex = "0.20"
+tungstenite = "0.28" # echotype-bench 与协议测试的同步客户端
+libc = "0.2"
+libloading = "0.8"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+cpal = { version = "=0.18.2", features = ["pulseaudio"] }
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+cpal = "=0.18.2"
+
+[dev-dependencies]
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 4
+strip = true
+panic = "abort"

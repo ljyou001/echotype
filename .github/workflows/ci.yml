@@ -1,0 +1,108 @@
+# ============================================================================
+# [INPUT]: 依赖 frontend 的 tsconfig.json、vite、npm script typecheck:core / test:core；依赖 engine/ 的 Cargo 工程
+# [OUTPUT]: push main 与 PR 的快速检查：UI 层、Core 层、Engine 层各一个任务
+# [POS]: 合并前的守门检查，不出安装包（安装包见 build.yml）。命令与各层 CLAUDE.md 的"测试"一节一致。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+# ============================================================================
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # ---- UI 层：frontend/src ------------------------------------------------
+  renderer:
+    name: Renderer · typecheck + vite build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: frontend
+        run: npx tsc -p tsconfig.json --noEmit
+
+      - name: Vite build
+        working-directory: frontend
+        run: npx vite build
+
+  # ---- Core 层：frontend/electron ----------------------------------------
+  core:
+    name: Core · typecheck + vitest
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: frontend
+        run: npm run typecheck:core
+
+      - name: Vitest
+        working-directory: frontend
+        run: npm run test:core
+
+  # ---- Engine 层：engine/ -------------------------------------------------
+  engine:
+    name: Engine · cargo test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-2025]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: engine
+          key: ci-${{ matrix.os }}
+
+      - name: Install Linux build packages
+        if: runner.os == 'Linux'
+        run: |
+          # cpal（pulseaudio feature）需要 ALSA 与 PulseAudio 头文件
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libasound2-dev libpulse-dev
+
+      - name: cargo test
+        working-directory: engine
+        run: cargo test --release --locked
