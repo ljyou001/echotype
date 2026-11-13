@@ -1,5 +1,5 @@
 //! [INPUT]: 依赖 asr::host::ModelHost（decode/finish_text/worker）、asr::vad::Detector（唯一的 VAD）、
-//!          dictation::segments（UnitBuilder、SegmentTrack::span）、text::close_dangling、audio::mic::Sink、
+//!          dictation::segments（UnitBuilder、SegmentTrack::span、unit_audio）、text::close_dangling、audio::mic::Sink、
 //!          audio::wav::write_wav_16k、events::Emitter
 //! [OUTPUT]: 导出 SharedVad、DictationSession（实现 audio::mic::Sink）
 //! [POS]: 一次听写的全部状态与 ENGINE_PROTOCOL §8 的延迟流程。状态机 recording → stopping → done；recording/stopping → cancelled（不发 final）。
@@ -19,7 +19,7 @@ use std::time::{Duration, Instant};
 
 use serde_json::json;
 
-use super::segments::{AudioBuffer, SegmentTrack, Unit, UnitBuilder, PAD_PRE, SAMPLE_RATE, UNIT_CLOSE_WAIT};
+use super::segments::{unit_audio, AudioBuffer, SegmentTrack, Unit, UnitBuilder, SAMPLE_RATE, UNIT_CLOSE_WAIT};
 use crate::asr::host::{Decoded, ModelHost};
 use crate::asr::vad::Detector;
 use crate::audio::mic::Sink;
@@ -44,7 +44,7 @@ enum Phase {
     Cancelled,
 }
 
-/// 推测：开放单元「若此刻结束」的补边切片 [start, end)；version = 该单元闭合后在 track 里的序号
+/// 推测：开放单元「若此刻结束」的实录区间 [start, end)（解码时另加数字静音尾巴）；version = 该单元闭合后在 track 里的序号
 #[derive(Clone, Debug)]
 struct Spec {
     start: usize,
@@ -165,7 +165,7 @@ impl DictationSession {
         }
         let open = self.st.lock().unwrap().units.take();
         if let Some(u) = open {
-            self.close_unit(u, available, true);
+            self.close_unit(u, true);
         }
         let fallback = {
             let st = self.st.lock().unwrap();
@@ -173,7 +173,7 @@ impl DictationSession {
         };
         if fallback {
             log::info!(target: "echotype::session", "session {}: VAD found no speech; decoding the whole buffer once", self.id);
-            self.close_unit(Unit { start: PAD_PRE, end: available }, available, true);
+            self.close_unit(Unit { start: 0, end: available }, true);
         }
         self.maybe_finalize();
     }
@@ -199,7 +199,7 @@ impl DictationSession {
     fn on_segment(&self, start: usize, end: usize, available: usize) {
         let closed = self.st.lock().unwrap().units.push(start, end);
         if let Some(u) = closed {
-            self.close_unit(u, available, false);
+            self.close_unit(u, false);
         }
         self.speculate_open(available);
     }
@@ -215,7 +215,7 @@ impl DictationSession {
                 return;
             }
             let Some(u) = st.units.open() else { return };
-            let Some((start, end)) = st.track.span(u.start, u.end, available) else { return };
+            let Some((start, end)) = st.track.span(st.buf.all(), u.start, u.end) else { return };
             if end - start < SPEC_MIN_AUDIO {
                 return;
             }
@@ -241,10 +241,11 @@ impl DictationSession {
         }
     }
 
-    fn close_unit(&self, u: Unit, available: usize, flushed: bool) {
+    fn close_unit(&self, u: Unit, flushed: bool) {
         let (idx, plan, recording) = {
-            let mut st = self.st.lock().unwrap();
-            let Some(idx) = st.track.add(u.start, u.end, available) else { return };
+            let mut guard = self.st.lock().unwrap();
+            let st = &mut *guard;
+            let Some(idx) = st.track.add(st.buf.all(), u.start, u.end) else { return };
             let plan = self.plan(&st, idx);
             match &plan {
                 Plan::Reuse(spec) => {
@@ -300,7 +301,7 @@ impl DictationSession {
                 return;
             }
             let seg = &st.track.segments[idx];
-            (st.buf.slice(seg.start, seg.end), st.t_stop)
+            (unit_audio(st.buf.all(), seg.start, seg.end), st.t_stop)
         };
         let t0 = Instant::now();
         let d = self.decode(&audio);
@@ -333,7 +334,7 @@ impl DictationSession {
                 return; // 已 stop，或该段已闭合并另行安排解码：推测作废
             }
             st.spec_running = Some(spec.clone());
-            st.buf.slice(spec.start, spec.end)
+            unit_audio(st.buf.all(), spec.start, spec.end)
         };
         let t0 = Instant::now();
         let d = self.decode(&audio);
@@ -478,7 +479,7 @@ impl Sink for DictationSession {
                 }
             };
             if let Some(u) = closed {
-                self.close_unit(u, available, false);
+                self.close_unit(u, false);
             }
         }
     }
