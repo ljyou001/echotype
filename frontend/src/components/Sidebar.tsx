@@ -15,7 +15,6 @@ import logoUrl from "@assets/icon-white.png";
 import { useAppStore, type PageKey } from "../store/appStore";
 import { describeRunMode } from "../utils/runMode";
 import { STATUS_TONE, isEngineLoading, statusOf } from "../utils/status";
-import { displayName } from "../utils/models";
 
 const NAV_ITEMS: Array<{ key: PageKey; labelKey: string; icon: ReactNode }> = [
   { key: "home", labelKey: "nav.home", icon: <FiHome /> },
@@ -89,10 +88,10 @@ function RunMode({ loading }: { loading: boolean }) {
   let tooltip: string;
   let fallback = false;
   if (active) {
-    ({ name, mode, tooltip, fallback } = describeRunMode(t, active, models.find((m) => m.id === active.id)));
+    ({ name, mode, tooltip, fallback } = describeRunMode(t, active));
   } else {
     const pending = loading ? models.find((m) => m.id === activeId) : undefined;
-    name = pending ? displayName(pending) : t("statusBar.noModel");
+    name = pending ? pending.name : t("statusBar.noModel");
     mode = pending ? t("status.loading") : t("statusBar.chooseModel");
     tooltip = name;
   }

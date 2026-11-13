@@ -18,7 +18,7 @@ import { ConfirmDialog, Drawer } from "../../components/Modal";
 import { useVariantInstaller } from "../../hooks/useVariantInstaller";
 import { useAppStore } from "../../store/appStore";
 import { formatBytes } from "../../utils/format";
-import { TARGET_ORDER, TIER_ORDER, displayName, isBusy, isVariantAvailable, variantBuild } from "../../utils/models";
+import { TARGET_ORDER, TIER_ORDER, isBusy, isVariantAvailable, variantBuild } from "../../utils/models";
 import { targetLabel } from "../../utils/runMode";
 import "./ModelManager.css";
 
@@ -168,7 +168,7 @@ function ModelBlock({ model, packs, onRemove }: { model: ModelView; packs: Engin
   return (
     <div className="card mm-model">
       <div className="mm-model__head">
-        <span className="mm-model__name">{displayName(model)}</span>
+        <span className="mm-model__name">{model.name}</span>
         {model.kind === "asr" && <Badge>{t(`models.tiers.${model.tier}`)}</Badge>}
         {model.isActive && (
           <Badge tone="success" dot>
@@ -206,7 +206,7 @@ function VariantRow({
   const { status, pct, error } = variant.install;
   const size = formatBytes(variant.sizeBytes, i18n.language);
   const pack = pendingPack(variant);
-  const name = displayName(model);
+  const name = model.name;
   const versionName = `${targetLabel(t, variant.target)} · ${variantBuild(variant)}`;
 
   return (

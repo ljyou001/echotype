@@ -1,9 +1,10 @@
 /**
  * [INPUT]: 依赖 zustand 的 create；依赖 bridge() 访问 Core；依赖 ipc-contract 的快照与模型类型；
- *          依赖 i18n/config 的 resolveAppLanguage 同步界面语言
+ *          依赖 i18n/config 的 resolveAppLanguage 同步界面语言；依赖 utils/theme 的 applyTheme 同步皮肤
  * [OUTPUT]: 导出 useAppStore、connectStore()、PageKey、Toast，以及选择器 selectSettings / selectActiveModel
  * [POS]: UI 层唯一的状态容器。镜像 Core 推送的 AppSnapshot、ModelView[] 与 EnginePackView[]，外加纯本地 UI 状态（当前页、提示条）。
  *        模型专属设置只经 updateModelSettings → bridge.models.updateSettings，从不经全局 updateSettings。
+ *        快照里的 ui.language 与 ui.theme 变化时，同步 i18n 与 <html> 上的皮肤。
  *        业务状态只读：所有动作都调用 bridge，等 Core 推回新快照，本地不自造业务真相。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -18,6 +19,7 @@ import type {
 } from "../../electron/ipc-contract";
 import { bridge } from "../bridge";
 import i18n, { resolveAppLanguage } from "../i18n/config";
+import { applyTheme } from "../utils/theme";
 
 export type PageKey = "home" | "history" | "models" | "integrations" | "settings" | "debug";
 
@@ -118,9 +120,13 @@ export async function connectStore(): Promise<void> {
   });
 
   useAppStore.subscribe((state, prev) => {
-    const lang = state.snapshot?.settings.ui.language;
-    if (lang && lang !== prev.snapshot?.settings.ui.language) {
-      void i18n.changeLanguage(resolveAppLanguage(lang));
+    const ui = state.snapshot?.settings.ui;
+    const prevUi = prev.snapshot?.settings.ui;
+    if (ui && ui.language !== prevUi?.language) {
+      void i18n.changeLanguage(resolveAppLanguage(ui.language));
+    }
+    if (ui && (ui.theme.mode !== prevUi?.theme.mode || ui.theme.accent !== prevUi?.theme.accent)) {
+      applyTheme(ui.theme);
     }
   });
 

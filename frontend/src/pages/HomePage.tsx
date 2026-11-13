@@ -19,7 +19,6 @@ import { useAudioInputs } from "../hooks/useAudioInputs";
 import { useHotkeyLabel } from "../hooks/useHotkeyLabel";
 import { selectActiveModel, useAppStore, type PageKey } from "../store/appStore";
 import { KEY_TOKEN, formatRelativeTime, formatSeconds } from "../utils/format";
-import { displayName } from "../utils/models";
 import { describeRunMode } from "../utils/runMode";
 import { ORB_STATE, statusOf, type StatusKind } from "../utils/status";
 import "./HomePage.css";
@@ -193,12 +192,12 @@ function SummaryGrid() {
   const { current: mic } = useAudioInputs(settings.audio.inputDeviceId);
 
   const running = useAppStore((s) => s.snapshot!.activeModel);
-  const runMode = running ? describeRunMode(t, running, activeModel) : null;
+  const runMode = running ? describeRunMode(t, running) : null;
 
   const cards: Array<{ label: string; value: string; detail?: string; warn?: boolean; page: PageKey }> = [
     {
       label: t("home.cards.model"),
-      value: activeModel ? displayName(activeModel) : t("home.cards.noModel"),
+      value: activeModel?.name ?? t("home.cards.noModel"),
       detail: runMode?.mode,
       warn: runMode?.fallback,
       page: "models",

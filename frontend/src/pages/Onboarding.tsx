@@ -3,7 +3,7 @@
  *          updateSettings、run；依赖 hooks 的 useAudioInputs、useMicTest；依赖 components 的 LevelMeter、ProgressBar、Badge
  * [OUTPUT]: 导出 Onboarding 组件
  * [POS]: 首次运行引导，三步：权限 → 麦克风 → 下载模型。settings.ui.onboardingCompleted 为 false 时替代主界面。
- *        模型列表来自 Core（不硬编码 id），名称去掉语言括号、语言用标签；版本缺引擎包时一并下载并注明；
+ *        模型列表来自 Core（不硬编码 id），语言用标签展示；版本缺引擎包时一并下载并注明；
  *        装好的第一个语音模型自动启用；完成时写回 onboardingCompleted。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -21,7 +21,7 @@ import { useMicTest } from "../hooks/useMicTest";
 import { useVariantInstaller } from "../hooks/useVariantInstaller";
 import { useAppStore } from "../store/appStore";
 import { formatBytes } from "../utils/format";
-import { TIER_ORDER, displayName, isBusy, isReady, modelSizeBytes, selectedVariant } from "../utils/models";
+import { TIER_ORDER, isBusy, isReady, modelSizeBytes, selectedVariant } from "../utils/models";
 import { targetLabel } from "../utils/runMode";
 import "./Onboarding.css";
 
@@ -261,7 +261,7 @@ function ModelStep() {
           <div key={m.id} className="onboarding__row onboarding__row--model">
             <div className="onboarding__row-text">
               <div className="onboarding__row-title">
-                {displayName(m)}
+                {m.name}
                 {m.id === recommended?.id && <Badge tone="brand">{t("onboarding.models.recommended")}</Badge>}
                 <Badge>{t(`models.tiers.${m.tier}`)}</Badge>
               </div>

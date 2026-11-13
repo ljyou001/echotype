@@ -4,7 +4,7 @@
  *          依赖 utils/models、utils/runMode 与 utils/format
  * [OUTPUT]: 导出 ModelCard 组件
  * [POS]: Models 页的单个模型卡片，只为"选模型、调设置"服务：下载选中版本（缺引擎包时一并下载并注明）→ 进度/取消 → 启用。
- *        名称去掉重复语言的括号后缀，语言改为一行标签；展示档位、体积、实测延迟与许可证。
+ *        语言显示为一行标签；展示档位、体积、实测延迟与许可证。
  *        按版本删除、引擎包、磁盘占用都在模型管理器里，不在卡片上。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -18,7 +18,7 @@ import { LanguageTags } from "../../components/LanguageTags";
 import { useVariantInstaller } from "../../hooks/useVariantInstaller";
 import { useAppStore } from "../../store/appStore";
 import { formatBytes } from "../../utils/format";
-import { displayName, isBusy, isReady, modelSizeBytes, selectedVariant } from "../../utils/models";
+import { isBusy, isReady, modelSizeBytes, selectedVariant } from "../../utils/models";
 import { targetLabel } from "../../utils/runMode";
 import { ModelSettingsPanel } from "./ModelSettingsPanel";
 
@@ -58,7 +58,7 @@ export function ModelCard({ model }: { model: ModelView }) {
       <div className="model-card__top">
         <div className="model-card__main">
           <div className="model-card__title-row">
-            <h3 className="model-card__name">{displayName(model)}</h3>
+            <h3 className="model-card__name">{model.name}</h3>
             {isAsr && <Badge tone={TIER_TONE[model.tier]}>{t(`models.tiers.${model.tier}`)}</Badge>}
             {model.isActive && (
               <Badge tone="success" dot>
