@@ -95,7 +95,7 @@ function initialSettings(scenario: MockScenario): Settings {
     output: { directInput: true, clipboard: false },
     audio: { inputDeviceId: null, keepMicWarm: true },
     models: { activeId: fresh ? null : defaultModelId, perModel: {} },
-    ui: { language: "system", onboardingCompleted: !fresh, launchAtStartup: false },
+    ui: { language: "system", onboardingCompleted: !fresh, launchAtStartup: false, theme: { mode: "system", accent: "violet" } },
     privacy: { saveRecordings: false },
   };
 }

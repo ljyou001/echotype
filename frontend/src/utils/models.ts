@@ -1,8 +1,8 @@
 /**
- * [INPUT]: 依赖 ipc-contract 的 ModelView、VariantView、EnginePackView、InstallStatus、HardwareTarget 类型；依赖 Intl.DisplayNames
+ * [INPUT]: 依赖 ipc-contract 的 ModelView、VariantView、EnginePackView、InstallStatus、HardwareTarget 类型
  * [OUTPUT]: 导出 TIER_ORDER、TARGET_ORDER、selectedVariant()、blockingPack()、isReady()、hasAnyInstalled()、isBusy()、modelSizeBytes()、
- *          isGpuVariant()、variantBuild()、providerOptions()、isVariantAvailable()、displayName()、stripLanguageSuffix()
- * [POS]: ModelView 的纯函数视图层。模型页、模型管理器、引导页、状态栏都经它回答"装好了没、多大、哪个版本、叫什么"，
+ *          isGpuVariant()、variantBuild()、providerOptions()、isVariantAvailable()
+ * [POS]: ModelView 的纯函数视图层。模型页、模型管理器、引导页、状态栏都经它回答"装好了没、多大、哪个版本"，
  *        不各自在 variants 里翻找。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -60,30 +60,3 @@ export function isVariantAvailable(m: ModelView, v: VariantView, packs: EnginePa
   const options = providerOptions(m);
   return v.providers.some((p) => options.includes(p));
 }
-
-// ============================================================
-// 名称：去掉只是在重复语言的括号后缀，语言改用标签展示
-// ============================================================
-const englishNames = (() => {
-  try {
-    return new Intl.DisplayNames(["en"], { type: "language" });
-  } catch {
-    return null;
-  }
-})();
-
-/** "Paraformer Small (Chinese)" + [zh, en] → "Paraformer Small"；括号里不全是该模型的语言时原样保留 */
-export function stripLanguageSuffix(name: string, languages: string[]): string {
-  const match = /^(.*\S)\s*\(([^)]+)\)$/.exec(name);
-  if (!match || !englishNames) return name;
-  const known = new Set(languages.map((c) => englishNames.of(c)?.toLowerCase()));
-  const parts = match[2]
-    .split(/\s*(?:\/|,|&|\band\b)\s*/i)
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  return parts.length > 0 && parts.every((p) => known.has(p)) ? match[1] : name;
-}
-
-/** 只处理语音模型：它们旁边有语言标签。辅助模型（如标点）没有标签，括号里的语言就是名字的一部分 */
-export const displayName = (m: Pick<ModelView, "name" | "languages" | "kind">) =>
-  m.kind === "asr" ? stripLanguageSuffix(m.name, m.languages) : m.name;

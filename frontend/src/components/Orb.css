@@ -1,0 +1,211 @@
+/*
+ * [INPUT]: 依赖 styles/tokens.css 的 --orb-a / --orb-b / --orb-shine / --orb-shadow / --accent-2-ring 等令牌
+ * [OUTPUT]: 光球样式：.orb 与各状态 .orb--loading / ready / recording / finalizing / idle / error
+ * [POS]: components/Orb.tsx 的专属样式。颜色全部来自主题令牌，换主题色、深色模式自动跟随。
+ *        动效分三层互不冲突：halo 用 transform 呼吸、core 用 scale 跟随 --level、body 用 transform 呼吸、swirl 旋转。
+ *        系统要求减少动态效果时只保留静态球体。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+.orb {
+  --level: 0;
+  --spin: 11s;
+  --breathe: 4.8s;
+  position: relative;
+  flex-shrink: 0;
+  width: var(--orb-size);
+  height: var(--orb-size);
+}
+
+/* ---------- 光晕：说话越响越亮越大 ---------- */
+.orb__halo {
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--orb-a) 42%, transparent) 0%,
+    color-mix(in srgb, var(--orb-b) 18%, transparent) 48%,
+    transparent 70%
+  );
+  filter: blur(12px);
+  opacity: calc(0.6 + var(--level) * 0.4);
+  scale: calc(0.96 + var(--level) * 0.22);
+  animation: orb-halo var(--breathe) ease-in-out infinite;
+}
+
+/* ---------- 核心：随音量缩放 ---------- */
+.orb__core {
+  position: absolute;
+  inset: 0;
+  scale: calc(1 + var(--level) * 0.1);
+}
+
+/* ---------- 球体：渐变底 + 内阴影 + 呼吸 ---------- */
+.orb__body {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 115%,
+    var(--orb-b) 0%,
+    var(--orb-a) 58%,
+    color-mix(in srgb, var(--orb-a) 72%, var(--orb-depth)) 100%
+  );
+  box-shadow:
+    inset 0 -10px 22px var(--orb-inner-shade),
+    inset 0 8px 18px var(--orb-inner-light),
+    var(--orb-shadow);
+  animation: orb-breathe var(--breathe) ease-in-out infinite;
+}
+
+/* ---------- 流光：两层反向旋转的柔光 ---------- */
+.orb__swirl {
+  position: absolute;
+  inset: -35%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--orb-b) 80%, var(--orb-sheen)) 60deg,
+    transparent 130deg,
+    transparent 200deg,
+    color-mix(in srgb, var(--orb-a) 35%, var(--orb-sheen)) 270deg,
+    transparent 330deg
+  );
+  filter: blur(12px);
+  mix-blend-mode: screen;
+  opacity: 0.62;
+  animation: orb-spin var(--spin) linear infinite;
+}
+
+.orb__swirl--counter {
+  background: conic-gradient(
+    from 120deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--orb-b) 65%, var(--orb-sheen)) 50deg,
+    transparent 110deg,
+    transparent 360deg
+  );
+  opacity: 0.42;
+  animation-duration: calc(var(--spin) * 1.6);
+  animation-direction: reverse;
+}
+
+/* ---------- 高光 ---------- */
+.orb__shine {
+  position: absolute;
+  top: 9%;
+  left: 17%;
+  width: 46%;
+  height: 32%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 40%, var(--orb-shine), transparent 70%);
+  filter: blur(1.5px);
+  transform: rotate(-18deg);
+}
+
+/* ---------- 录音中的涟漪 ---------- */
+.orb__ripple {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--accent-2-ring);
+  border-radius: 50%;
+  animation: orb-ripple 1.8s ease-out infinite;
+}
+
+.orb__ripple--late {
+  animation-delay: 0.6s;
+}
+
+.orb__mark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--orb-size) * 0.38);
+  font-weight: 750;
+  color: var(--text-on-brand);
+  text-shadow: var(--orb-mark-shadow);
+}
+
+/* ============================================================
+ * 状态
+ * ============================================================ */
+.orb--loading {
+  --spin: 2.6s;
+  --breathe: 1.6s;
+}
+
+.orb--recording {
+  --orb-a: var(--accent-2);
+  --orb-b: var(--brand);
+  --spin: 3.2s;
+  --breathe: 2.4s;
+}
+
+.orb--finalizing {
+  --spin: 1.1s;
+  --breathe: 1.2s;
+}
+
+.orb--idle {
+  --orb-a: var(--orb-idle-a);
+  --orb-b: var(--orb-idle-b);
+  --spin: 18s;
+  --breathe: 6s;
+}
+
+.orb--error {
+  --orb-a: var(--orb-warm-a);
+  --orb-b: var(--orb-warm-b);
+  --spin: 24s;
+  --breathe: 6s;
+}
+
+@keyframes orb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orb-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.035);
+  }
+}
+
+@keyframes orb-halo {
+  0%,
+  100% {
+    transform: scale(0.97);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+@keyframes orb-ripple {
+  from {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb__halo,
+  .orb__body,
+  .orb__swirl,
+  .orb__ripple {
+    animation: none;
+  }
+}

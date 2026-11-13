@@ -1,0 +1,138 @@
+/*
+ * [INPUT]: 依赖 ./tokens.css 定义的变量名
+ * [OUTPUT]: 主题色预设（[data-accent]：violet 默认、indigo、ocean、teal、rose、sunset）与深色模式（:root[data-theme="dark"]）
+ * [POS]: 皮肤层。store/themeStore 在 <html> 上写 data-accent 与 data-theme，本文件据此替换令牌。
+ *        主题色选择器不限定 :root，因此设置页的色块 <span data-accent="teal"> 也能就地取到同一组颜色——色值只写这一处。
+ *        深色模式下按钮底色另用一档更亮的品牌色（白字对比度 ≥ 4.5），文字用的 --brand-text 再提亮一档。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/* ============================================================
+ * 主题色预设（浅色）
+ * ============================================================ */
+[data-accent="violet"] {
+  --brand: #5a2799;
+  --brand-strong: #461e7d;
+  --accent-2: #c844a9;
+}
+
+[data-accent="indigo"] {
+  --brand: #4f46e5;
+  --brand-strong: #4338ca;
+  --accent-2: #a855f7;
+}
+
+[data-accent="ocean"] {
+  --brand: #0369a1;
+  --brand-strong: #075985;
+  --accent-2: #22d3ee;
+}
+
+[data-accent="teal"] {
+  --brand: #0f766e;
+  --brand-strong: #115e59;
+  --accent-2: #84cc16;
+}
+
+[data-accent="rose"] {
+  --brand: #be185d;
+  --brand-strong: #9d174d;
+  --accent-2: #fb923c;
+}
+
+[data-accent="sunset"] {
+  --brand: #c2410c;
+  --brand-strong: #9a3412;
+  --accent-2: #facc15;
+}
+
+/* ============================================================
+ * 深色模式：表面、文字、控件、阴影
+ * ============================================================ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --brand-text: color-mix(in srgb, var(--brand) 52%, #ffffff);
+  --brand-soft: color-mix(in srgb, var(--brand) 18%, transparent);
+  --brand-ring: color-mix(in srgb, var(--brand) 40%, transparent);
+  --glow-1: color-mix(in srgb, var(--brand) 30%, transparent);
+  --glow-2: color-mix(in srgb, var(--accent-2) 16%, transparent);
+
+  --success: #34c38a;
+  --success-soft: rgba(52, 195, 138, 0.16);
+  --warning: #f0a35a;
+  --warning-soft: rgba(240, 163, 90, 0.16);
+  --danger: #ff6b6b;
+  --danger-soft: rgba(255, 107, 107, 0.14);
+  --info-soft: rgba(110, 168, 255, 0.16);
+  --info-text: #82b4ff;
+
+  --bg: #111017;
+  --surface: #1a1921;
+  --surface-sunken: #23212c;
+  --surface-hover: #211f29;
+  --text: #ecebf3;
+  --text-muted: #a5a2b6;
+  --text-subtle: #76738a;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --border-hover: rgba(255, 255, 255, 0.24);
+  --overlay: rgba(0, 0, 0, 0.6);
+
+  --switch-off: rgba(255, 255, 255, 0.2);
+  --segmented-active: #36333f;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.14);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.24);
+  --toast-bg: #2c2a36;
+  --toast-text: #f3f2f8;
+
+  --sidebar-bg: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--brand) 40%, #100f16) 0%,
+    color-mix(in srgb, var(--brand) 20%, #0b0a10) 100%
+  );
+
+  --meter-track: #2b2935;
+  --orb-shine: rgba(255, 255, 255, 0.75);
+  --orb-shadow: 0 14px 40px color-mix(in srgb, var(--brand) 45%, transparent);
+
+  --success-ring: rgba(52, 195, 138, 0.5);
+  --success-halo: rgba(52, 195, 138, 0.18);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 20px 52px rgba(0, 0, 0, 0.55);
+}
+
+/* ============================================================
+ * 深色模式下的按钮底色：比浅色更亮一档，保证白字可读
+ * ============================================================ */
+:root[data-theme="dark"][data-accent="violet"] {
+  --brand: #7c4dd1;
+  --brand-strong: #6a3dbd;
+}
+
+:root[data-theme="dark"][data-accent="indigo"] {
+  --brand: #5b54e8;
+  --brand-strong: #4c45d6;
+}
+
+:root[data-theme="dark"][data-accent="ocean"] {
+  --brand: #0b7fc0;
+  --brand-strong: #0a6ea7;
+}
+
+:root[data-theme="dark"][data-accent="teal"] {
+  --brand: #0d8a80;
+  --brand-strong: #0b766e;
+}
+
+:root[data-theme="dark"][data-accent="rose"] {
+  --brand: #d63a78;
+  --brand-strong: #be2f68;
+}
+
+:root[data-theme="dark"][data-accent="sunset"] {
+  --brand: #cf5a1e;
+  --brand-strong: #b44c17;
+}

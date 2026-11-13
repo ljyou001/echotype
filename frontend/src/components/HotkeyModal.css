@@ -45,7 +45,7 @@
 .hotkey-recorder__value {
   font-size: var(--text-xl);
   font-weight: 650;
-  color: var(--brand);
+  color: var(--brand-text);
 }
 
 .hotkey-quick {

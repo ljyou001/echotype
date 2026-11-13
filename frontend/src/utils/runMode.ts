@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 ipc-contract 的 AppSnapshot["activeModel"] 与 ModelView 类型；依赖 i18next 的 TFunction；依赖 ./models 的 stripLanguageSuffix
+ * [INPUT]: 依赖 ipc-contract 的 AppSnapshot["activeModel"] 与 HardwareTarget 类型；依赖 i18next 的 TFunction
  * [OUTPUT]: 导出 describeRunMode()：{ name, mode, fallback, tooltip }；targetLabel()、providerLabel()
  * [POS]: "当前模型怎么跑"的唯一文案出口。状态栏、首页摘要卡、诊断页共用，
  *        紧凑一行如 "CPU · sherpa-onnx"、"NVIDIA GPU · CUDA"；tooltip 给出完整的"硬件 · 加速方式 · 运行时"。
@@ -7,8 +7,7 @@
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import type { TFunction } from "i18next";
-import type { AppSnapshot, HardwareTarget, ModelView } from "../../electron/ipc-contract";
-import { stripLanguageSuffix } from "./models";
+import type { AppSnapshot, HardwareTarget } from "../../electron/ipc-contract";
 
 type ActiveModel = NonNullable<AppSnapshot["activeModel"]>;
 
@@ -24,8 +23,8 @@ export interface RunModeText {
   tooltip: string;
 }
 
-export function describeRunMode(t: TFunction, active: ActiveModel, model?: Pick<ModelView, "languages">): RunModeText {
-  const name = model ? stripLanguageSuffix(active.name, model.languages) : active.name;
+export function describeRunMode(t: TFunction, active: ActiveModel): RunModeText {
+  const name = active.name;
   const target = targetLabel(t, active.target);
   const provider = providerLabel(t, active.providerUsed);
 

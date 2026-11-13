@@ -1,6 +1,6 @@
 /*
  * [INPUT]: 依赖 styles/tokens.css 的变量；行式布局来自 components/components.css 的 .section/.setting-row
- * [OUTPUT]: 设置页专属样式：.hotkey-control、.device-picker、.settings__footnote，以及关于区与许可证弹窗（.about__*、.licenses__*）
+ * [OUTPUT]: 设置页专属样式：.hotkey-control、.device-picker、.settings__footnote，外观区主题色色块（.accent-*），以及关于区与许可证弹窗（.about__*、.licenses__*）
  * [POS]: pages/SettingsPage.tsx 的专属样式。分节与行由共享组件提供，这里只补页面特有的控件组合。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -33,6 +33,43 @@
   padding: 0 var(--space-1);
   font-size: var(--text-sm);
   color: var(--text-subtle);
+}
+
+/* ============================================================
+ * 外观：主题色色块（颜色由 styles/themes.css 的 [data-accent] 就地提供）
+ * ============================================================ */
+.accent-picker {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.accent-swatch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand) 45%, var(--accent-2) 100%);
+  box-shadow: inset 0 0 0 1px var(--swatch-edge);
+  color: var(--text-on-brand);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    transform var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+
+.accent-swatch:hover {
+  transform: scale(1.08);
+}
+
+.accent-swatch--selected {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--brand-text); /* 继承自根：当前主题色，深色模式下更亮 */
 }
 
 /* ============================================================
@@ -104,7 +141,7 @@
   padding: 0;
   border: none;
   background: none;
-  color: var(--brand);
+  color: var(--brand-text);
   font-size: var(--text-sm);
   cursor: pointer;
 }

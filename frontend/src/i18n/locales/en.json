@@ -565,7 +565,8 @@
       "dictation": "Dictation",
       "microphone": "Microphone",
       "privacy": "Privacy",
-      "about": "About"
+      "about": "About",
+      "appearance": "Appearance"
     },
     "privacy": {
       "saveRecordings": "Save recordings",
@@ -594,6 +595,25 @@
       "source": "Source code",
       "sourceDescription": "EchoType is open source.",
       "reportIssue": "Report an issue"
+    },
+    "appearance": {
+      "theme": "Theme",
+      "themeDescription": "Follow your system, or keep EchoType light or dark.",
+      "modes": {
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "accent": "Accent color",
+      "accentDescription": "{{name}}. Used for buttons, highlights, the sidebar and the orb.",
+      "accents": {
+        "violet": "Violet",
+        "indigo": "Indigo",
+        "ocean": "Ocean",
+        "teal": "Teal",
+        "rose": "Rose",
+        "sunset": "Sunset"
+      }
     }
   },
   "errors": {

@@ -11,8 +11,8 @@
   height: 100vh;
   padding: var(--space-6);
   background:
-    radial-gradient(circle at 15% 10%, var(--glow-lavender), transparent 45%),
-    radial-gradient(circle at 85% 90%, var(--glow-blue), transparent 45%),
+    radial-gradient(circle at 15% 10%, var(--glow-1), transparent 45%),
+    radial-gradient(circle at 85% 90%, var(--glow-2), transparent 45%),
     var(--bg);
 }
 
