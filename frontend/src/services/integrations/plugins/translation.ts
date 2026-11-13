@@ -1,14 +1,11 @@
-// Translation Service Plugins
-
+/**
+ * [INPUT]: 依赖 ../types 的插件接口；依赖 ../host 的 openExternal、copyText
+ * [OUTPUT]: 导出 GoogleTranslatePlugin、DeepLPlugin、YoudaoTranslatePlugin
+ * [POS]: 翻译服务插件。direct 模式把文本与语言对拼进 URL，clipboard 模式只复制并打开页面。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
 import { IntegrationPlugin, ConfigField, OutputMode } from '../types';
-
-// Helper function to handle clipboard copy
-async function copyToClipboard(text: string): Promise<void> {
-  if (text && navigator.clipboard) {
-    await navigator.clipboard.writeText(text);
-    console.log('[Plugin] Text copied to clipboard');
-  }
-}
+import { host } from '../host';
 
 // Google Translate Plugin - Opens Google Translate web interface
 export class GoogleTranslatePlugin implements IntegrationPlugin {
@@ -24,7 +21,7 @@ export class GoogleTranslatePlugin implements IntegrationPlugin {
     const shouldDirect = outputMode === 'direct' || outputMode === 'both';
 
     if (shouldCopy) {
-      await copyToClipboard(text);
+      await host.copyText(text);
     }
 
     const sourceLang = config?.sourceLang || 'auto';
@@ -34,7 +31,7 @@ export class GoogleTranslatePlugin implements IntegrationPlugin {
       ? `https://translate.google.com/?sl=${sourceLang}&tl=${targetLang}&text=${encodeURIComponent(text)}&op=translate`
       : `https://translate.google.com/?sl=${sourceLang}&tl=${targetLang}`;
     
-    window.echotype?.openExternal?.(url);
+    void host.openExternal(url);
   }
 
   validateConfig(_config: Record<string, any>): boolean {
@@ -99,11 +96,11 @@ export class DeepLPlugin implements IntegrationPlugin {
 
   async execute(text: string, _config?: Record<string, any>, _outputMode: OutputMode = 'clipboard'): Promise<void> {
     // DeepL doesn't support direct input, always copy to clipboard
-    await copyToClipboard(text);
+    await host.copyText(text);
     
     // Open DeepL web interface
     const url = `https://www.deepl.com/translator`;
-    window.echotype?.openExternal?.(url);
+    void host.openExternal(url);
   }
 
   validateConfig(_config: Record<string, any>): boolean {
@@ -133,14 +130,14 @@ export class YoudaoTranslatePlugin implements IntegrationPlugin {
     const shouldDirect = outputMode === 'direct' || outputMode === 'both';
 
     if (shouldCopy) {
-      await copyToClipboard(text);
+      await host.copyText(text);
     }
 
     const url = shouldDirect
       ? `https://fanyi.youdao.com/#/TextTranslate?text=${encodeURIComponent(text)}`
       : `https://fanyi.youdao.com/`;
     
-    window.echotype?.openExternal?.(url);
+    void host.openExternal(url);
   }
 
   validateConfig(_config: Record<string, any>): boolean {
