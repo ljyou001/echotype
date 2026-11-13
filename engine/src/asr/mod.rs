@@ -11,4 +11,4 @@ pub mod recognizers;
 pub mod vad;
 
 pub use host::{load_model, Decoded, LoadParams, ModelHost, ModelSettings};
-pub use vad::{Detector, SpeechDetector, VadParams, MAIN_VAD, PAUSE_VAD};
+pub use vad::{Detector, SpeechDetector, VadParams, SEGMENT_VAD};

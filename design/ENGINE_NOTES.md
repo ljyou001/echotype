@@ -61,25 +61,27 @@ SenseVoice decode cost on CPU int8 vs threads (10 s): 1 → 692 ms, 2 → 491, 4
 - CT-Transformer zh-en punctuation emits only full-width marks, also after English (user bug → `punct_style`).
 - RTF on CPU, 4 threads: Paraformer small 0.009, Paraformer large 0.02, SenseVoice 0.026, Parakeet 0.07, Fun-ASR Nano 0.16, Qwen3-ASR 0.2.
 
-## 4. Latency design (met the KPI in the prototype)
+## 4. Latency design
 
 1. Mic pump: device rate → 16 kHz polyphase FIR (Kaiser sinc, length 32×max(up,down), < -90 dB alias), 300 ms pre-roll ring,
    20 Hz levels; attach/detach commands travel in the same queue as audio blocks (no lost or duplicated samples at start/stop).
-2. **Main VAD** (min_silence 0.25 s, min_speech 0.15 s, max_speech 8 s): every closed segment is decoded at once
-   (mandatory job, single-flight worker per model).
-3. **Pause VAD** (min_silence 0.10 s): on each pause, decode the main VAD's open segment speculatively (one replaceable slot;
-   only for `features.partials:true` models, i.e. the cheap ones).
-4. **At stop**: flush; if no speech followed the last speculation → reuse it (release_to_final ≈ 0); otherwise decode only the
-   remainder after the last pause (cut at the pause midpoint) and merge: drop the middle full stop, lowercase an English
-   continuation. A running speculation that covers the segment is awaited, not repeated; queued speculations are dropped.
-   The native engine applies the same rule when the main VAD closes a segment: if the worker lags (slow model) and the
-   running speculation stops at an earlier pause, it decodes only the remainder instead of the whole segment again
-   (before the fix Parakeet's release-300-ms-after-speech latency was worse than releasing at once: 340 vs 241 ms).
-5. Joining segments: gap < 0.6 s → "。"→"，" (Japanese "、"), ". And" → ", and" for common continuation words only.
+2. **One VAD** (Silero; min_silence 0.10 s, min_speech 0.15 s, max_speech 8 s) reports every pause as the end of a speech
+   segment. **Decode units are sentences**: segments separated by less than 0.6 s of silence join one unit; a unit never spans
+   more than 8 s. `dictation::segments::UnitBuilder` holds this rule; dictation and `transcribe.file` share it.
+3. **Speculation**: at each pause the engine decodes the open unit as it would be if it ended now (one replaceable slot,
+   every model; `partial` events still only for `features.partials:true` models). The slice is `[first start − 0.2 s, last end + 0.1 s]`, the same formula the closed
+   unit uses (`SegmentTrack::span`), so a speculation is reused only when the slices are equal sample for sample.
+4. **Closing a unit**: after 0.85 s of silence (0.6 s plus the VAD's onset delay, so no earlier speech can still appear), or
+   at stop. If the latest speculation has the same slice → reuse it (release_to_final ≈ 0), await it if it is running;
+   otherwise decode the whole unit once. Queued speculations are dropped at stop. **No remainder decode**: decoding only the
+   audio after the last pause and stitching it to the speculation changed words (§9).
+5. Joining units: units are sentences and join as they are; only units split by the 8 s cap (gap < 0.6 s) are softened
+   ("。"→"，", Japanese "、"; ". And" → ", and").
 6. Fallback: no VAD speech at all but peak > -45 dBFS and ≥ 0.3 s → decode the whole buffer once.
-7. Warm-up decode of 1 s silence after load. Partials: at most every 300 ms, built from decoded segments + latest speculation.
+7. Warm-up decode of 1 s silence after load. Partials: at most every 300 ms, built from decoded units + latest speculation.
 
 Prototype result, SenseVoice int8 CPU, 10 s utterance: release 300 ms after speech → 0–1 ms; release at speech end → ~80 ms P50.
+Native results, before and after the sentence units: `design/BENCHMARKS.md` and §9.
 
 ## 5. Text pipeline facts
 
@@ -123,8 +125,8 @@ Measured 2026-11-13 on the same machine with `engine/` (sherpa-onnx crate 2.0.1,
   language, or the model's only language; auto-detected languages (SenseVoice, Whisper) are not reported yet. Fix later by reading
   `SherpaOnnxGetOfflineStreamResultAsJson` through `sherpa-onnx-sys`.
 - **No open-segment start in the VAD API.** `VoiceActivityDetector` exposes `detected()` but not the start of the running
-  segment. The engine estimates the onset when `detected()` flips to true: current sample − (min_speech + 2 windows). Only the
-  speculative decode uses it; the 0.2 s pre-pad absorbs the error.
+  segment. The first native design estimated it for the speculation start; its 10–20 ms error made every closed segment
+  miss its speculation. Sentence units (§9) take the start from the first closed segment, so no estimate is needed.
 - **cpal on WASAPI reports an `Xrun` right after some streams open.** Only `DeviceNotAvailable`, `StreamInvalidated` and
   `DeviceChanged` mean the stream is gone. Treating every error as lost made the engine report the mic as lost right after Core opened it (found with the real Core).
 - **Windows CUDA link.** sherpa's CUDA archive ships `onnxruntime.dll` without `onnxruntime.lib`, but `sherpa-onnx-sys` (shared)
@@ -164,3 +166,34 @@ Measured 2026-11-13 on the same machine with `engine/` (sherpa-onnx crate 2.0.1,
   capitalised continuation word after such a comma ("boy, And" → "boy, and"), and a final never ends on `, ，、；`
   (`close_dangling` turns it into a full stop). `punct_style: auto` decides each mark by the nearest letter before it, so
   CT-Transformer's "下午五点，The boy，and … gold。" becomes "下午五点，The boy, and … gold."; Hangul takes half-width marks.
+
+## 9. Accuracy must not depend on segmentation (2026-11-13)
+
+Found by Core's `smoke:real` (one clip played through `--fake-mic`, key released 0.3 s after it):
+- SenseVoice en.wav: "The tribal chieftain called for the boy**,** and presented him with 50 pieces of code." The main VAD
+  (min_silence 0.25 s) split the sentence at the 0.48 s pause after "boy"; the join softened "boy." + "And" into "boy, and";
+  the second half was decoded without its first half.
+- SenseVoice zh.wav released at speech end: "开**饭**时间…" — only the audio after the last pause was decoded and stitched on.
+- Qwen3-ASR zh.wav wrote Traditional or Simplified characters depending on where the release fell.
+
+Fix: sentence units (§4), one VAD, no remainder decode, and `transcribe.file` uses the same units. `tests/models.rs` plays each
+clip in real time (release 0.3 s after it) through `DictationSession` with `record_to`, runs `transcribe` on that recording, and
+asserts identical text and one decode unit, for all 8 CPU variants.
+- `record_to` wrote `×32767` and truncated while `read_wav` divides by 32768: every recorded sample was off by one, so
+  `transcribe.file` of a recording did not hear what the session heard (and flipped SenseVoice's "开放/开饭"). Fixed: `×32768`,
+  rounded; int16 audio now round-trips exactly.
+- Remaining differences against the *source clip* or a whole-clip decode (with 0.7–1.1 s of leading silence) are the models'
+  own sensitivity to the audio around the speech: Qwen3-ASR switches between Traditional/Simplified and "九点"/"9點", Whisper
+  between "九点"/"9点" and "fifty"/"50", Paraformer's English changes wholesale, SenseVoice flips "开放/开饭". These do not
+  depend on segmentation.
+- Cost: at release the engine decodes the whole open sentence, not its last fragment. Fast models barely notice (SenseVoice
+  en.wav released 0.3 s after speech: 0 ms before and after). Qwen3-ASR 0.6B on CPU did: speculation was gated by
+  `features.partials`, so it decoded the whole sentence at release (en.wav alone, release 0.3 s after: 38 → 969 ms). Since a
+  speculation is reused only for an identical slice it cannot change the text, so every model now speculates; with it Qwen3
+  CPU is at 255 ms (en.wav; 38 ms before, when only "and presented him …" was left to decode) and 394 ms (10 s utterance,
+  516 before). Releasing at the very end of speech now costs a whole-sentence decode: SenseVoice 3 s 46 → 98 ms, Parakeet
+  10 s 102 → 194 ms; FireRedASR and Whisper on CPU need 1.4–2.7 s for the last sentence of the 30 s utterance.
+- Sentences closer than 0.6 s share a unit. The benchmark composites join a Chinese and an English clip with ≈ 0.36 s of
+  VAD-measured silence, so they are decoded together; Whisper (one language per decode) then drops the Chinese sentence.
+  No pause threshold separates that case from en.wav's own 0.48 s pause inside one sentence.
+- Numbers: `design/BENCHMARKS.md` ("Sentence units: before and after").

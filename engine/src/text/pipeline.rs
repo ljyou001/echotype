@@ -4,7 +4,8 @@
 //! [POS]: 识别文本的后处理管线，落实 MODEL_MANIFEST §3：
 //!        标点（native 保留或剥离 / companion 调外挂模型 / none）→ 标点样式（punct_style）→ ITN（rule 时走规则）→ 空格规整。
 //!        asr::host 组装它；dictation::session 与 transcribe.file 都经由 ModelHost::finish_text 调用。
-//!        拼接三件套：join_segments（段间拼接）、soften（短停顿的句号软化）、merge_continuation（同一句被切开时的续接）。
+//!        拼接：join_segments（单元间拼接）、soften（超长断开的同一句软化句号）。merge_continuation（同一句被切开时的续接）
+//!        自句级单元起引擎不再调用（不拼余段），保留它只为与 Python 参考实现对照（tests/fixtures/text.json）。
 //!        行为与 Python 原型逐条一致，由 tests/fixtures/text.json 锁定。
 //! [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 
@@ -142,14 +143,16 @@ pub fn soften(left: &str, right: &str) -> (String, String) {
         let mark = if left.chars().any(is_kana) { "、" } else { "，" };
         return (format!("{}{}", &left[..left.len() - '。'.len_utf8()], mark), right.to_string());
     }
+    // 英文后的句号：半角 "." 或模型在中文为主的单元里给英文打的全角 "。"（SenseVoice："…for the boy。"）
     let mut lc = left.chars().rev();
-    if lc.next() == Some('.') {
+    if let Some(stop @ ('.' | '。' | '．')) = lc.next() {
         let before = lc.next();
+        let head = &left[..left.len() - stop.len_utf8()];
         if before.is_some_and(|c| c.is_ascii_alphanumeric()) && right.starts_with(|c: char| c.is_ascii_lowercase()) {
-            return (format!("{},", &left[..left.len() - 1]), right.to_string()); // 小写开头必是续写（Whisper 常见）
+            return (format!("{head},"), right.to_string()); // 小写开头必是续写（Whisper 常见）
         }
         if before.is_some_and(|c| c.is_ascii_alphanumeric()) && starts_with_continuation(right) {
-            return (format!("{},", &left[..left.len() - 1]), lower_first(right));
+            return (format!("{head},"), lower_first(right));
         }
     }
     // 模型在停顿处自己打了逗号（Moonshine 常见）："boy," + "And presented" → "boy," + "and presented"
@@ -278,6 +281,12 @@ impl TextPipeline {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn full_width_stop_after_english_softens_like_a_period() {
+        assert_eq!(soften("下午5点，called for the boy。", "And presented him."), ("下午5点，called for the boy,".to_string(), "and presented him.".to_string()));
+        assert_eq!(soften("我想。", "去公园。"), ("我想，".to_string(), "去公园。".to_string()));
+    }
 
     #[test]
     fn comma_before_a_capitalised_continuation() {

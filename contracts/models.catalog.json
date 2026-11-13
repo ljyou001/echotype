@@ -130,7 +130,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 80,
+            "release_to_final_ms_p50_10s": 78,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         },
@@ -159,7 +159,7 @@
             "vram_mb": 1300
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 38,
+            "release_to_final_ms_p50_10s": 42,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cuda, 4 threads"
           },
           "_note": "fp32 graph (model.onnx, 938 MB) from the upstream archive; int8 is slower on the CUDA EP (design/ENGINE_NOTES.md §2). Needs the cuda engine pack. Engine session added it; models session packages the zip (model.onnx + tokens.txt at the root)."
@@ -327,7 +327,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 64,
+            "release_to_final_ms_p50_10s": 63,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -480,7 +480,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 618,
+            "release_to_final_ms_p50_10s": 602,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         },
@@ -509,7 +509,7 @@
             "vram_mb": 2100
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 73,
+            "release_to_final_ms_p50_10s": 62,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cuda, 4 threads"
           }
         },
@@ -690,7 +690,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 100,
+            "release_to_final_ms_p50_10s": 194,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -842,7 +842,7 @@
             "vram_mb": 3100
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 84,
+            "release_to_final_ms_p50_10s": 102,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cuda, 4 threads"
           }
         },
@@ -985,7 +985,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 984,
+            "release_to_final_ms_p50_10s": 882,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -1141,7 +1141,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 1252,
+            "release_to_final_ms_p50_10s": 1222,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -1207,7 +1207,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 69,
+            "release_to_final_ms_p50_10s": 88,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }

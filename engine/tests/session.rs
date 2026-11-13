@@ -1,6 +1,6 @@
 //! [INPUT]: 依赖 echotype_engine 的 dictation::DictationSession、asr::host::ModelHost::testkit、testkit（音调与能量 VAD）、events::Emitter
-//! [OUTPUT]: cargo test 用例：ENGINE_PROTOCOL §8 延迟流程 —— 边说边解、尾段解码、推测复用、余段续接、cancel 不发 final、
-//!           final 只发一次、final 不排在推测后面、闭段落后于推测时只解余段、无语音时空 final、final 字段形状
+//! [OUTPUT]: cargo test 用例：ENGINE_PROTOCOL §8 延迟流程 —— 边说边解、尾段解码、推测复用、松键与闭段都整段解码
+//!           （从不拼余段）、cancel 不发 final、final 只发一次、final 不排在推测后面、无语音时空 final、final 字段形状
 //! [POS]: 直接驱动 DictationSession（不经声卡与 WS）。「词 = 音调」，逐词核对 final，证明三条路径不丢词、不重词。
 //! [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 
@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 
 use echotype_engine::asr::host::ModelHost;
 use echotype_engine::audio::Sink;
-use echotype_engine::dictation::{Detectors, DictationSession};
+use echotype_engine::dictation::DictationSession;
 use echotype_engine::events::Emitter;
 use echotype_engine::testkit::{words, EnergyDetector};
 use serde_json::Value;
@@ -26,10 +26,10 @@ struct Rig {
 fn rig(speculate: bool, delay_ms: u64) -> Rig {
     let host = ModelHost::testkit(true, delay_ms);
     let (emit, rx) = Emitter::collector();
-    let detectors = Arc::new(Mutex::new(Detectors { main: Box::new(EnergyDetector::new(0.25)), pause: Box::new(EnergyDetector::new(0.10)) }));
+    let vad: Arc<Mutex<Box<dyn echotype_engine::asr::Detector>>> = Arc::new(Mutex::new(Box::new(EnergyDetector::new(0.10))));
     let done = Arc::new(Mutex::new(Vec::new()));
     let d2 = done.clone();
-    let session = DictationSession::new("s1".into(), 1, host.clone(), detectors, emit, None, None, speculate, Box::new(move |id: &str| d2.lock().unwrap().push(id.to_string())));
+    let session = DictationSession::new("s1".into(), 1, host.clone(), vad, emit, None, None, speculate, Box::new(move |id: &str| d2.lock().unwrap().push(id.to_string())));
     session.on_attach();
     Rig { host, session, rx, events: Vec::new(), done }
 }
@@ -73,7 +73,8 @@ fn expect() -> Vec<String> {
 #[test]
 fn segments_are_decoded_while_recording() {
     let mut r = rig(false, 0);
-    r.feed(&words(&FREQS, 0.4, 0.4, 0.3)); // 0.4 s 停顿 > 0.25 s：每个词各成一段
+    r.feed(&words(&FREQS, 0.4, 0.8, 0.3)); // 0.8 s 停顿 ≥ 0.6 s：每个词各成一个单元，下一个词到来时上一个闭合并解码
+    r.feed(&vec![0.0; 3200]); // 0.2 s 静音：最后一个词的段报出，第三个单元随之闭合
     r.wait("partial", Duration::from_secs(5), |v| tokens(v["text"].as_str().unwrap()).len() == 3);
     r.session.finish(Instant::now());
     let f = r.wait("final", Duration::from_secs(5), |_| true);
@@ -118,8 +119,8 @@ fn cancel_while_stopping_suppresses_final() {
 #[test]
 fn speculation_is_reused_when_the_segment_closes() {
     let mut r = rig(true, 0);
-    r.feed(&words(&FREQS, 0.4, 0.15, 0.3)); // 0.15 s 停顿：停顿 VAD 触发推测，主 VAD 不闭合
-    r.feed(&vec![0.0; 9600]); // 0.6 s 静音：主 VAD 闭合同一段
+    r.feed(&words(&FREQS, 0.4, 0.15, 0.3)); // 0.15 s 停顿：每个停顿都推测，单元不断开
+    r.feed(&vec![0.0; 14400]); // 0.9 s 静音 ≥ 0.85 s：单元闭合，切片与最后一次推测相同
     r.wait("partial", Duration::from_secs(5), |v| tokens(v["text"].as_str().unwrap()) == expect());
     std::thread::sleep(Duration::from_millis(50));
     r.session.finish(Instant::now());
@@ -132,15 +133,19 @@ fn speculation_is_reused_when_the_segment_closes() {
 }
 
 #[test]
-fn release_mid_speech_decodes_only_the_remainder() {
+fn release_mid_speech_decodes_the_whole_open_unit() {
     let mut r = rig(true, 0);
     r.feed(&words(&FREQS, 0.4, 0.15, 0.3)); // 最后一个词说完立刻松键
-    r.wait("partial", Duration::from_secs(5), |v| tokens(v["text"].as_str().unwrap()).len() == 3);
+    r.wait("partial", Duration::from_secs(5), |v| tokens(v["text"].as_str().unwrap()).len() == 3); // 推测停在第三个词
+    let before = r.host.decoded_audio_ms();
     r.session.finish(Instant::now());
     let f = r.wait("final", Duration::from_secs(5), |_| true);
     let text = f["text"].as_str().unwrap().to_string();
     assert_eq!(tokens(&text), expect(), "no word lost or duplicated: {text}");
-    assert_eq!(text.matches('.').count(), 1, "the remainder merge drops the middle full stop: {text}");
+    assert_eq!(text.matches('.').count(), 1, "one decode, one sentence: {text}");
+    // 整段（≈ 2.2 s）重解，而不是只解最后一个词（≈ 0.5 s）再拼到推测后面
+    let decoded = r.host.decoded_audio_ms() - before;
+    assert!(decoded >= 2000, "decoded only {decoded} ms at release: the open unit was not decoded whole");
 }
 
 #[test]
@@ -151,26 +156,27 @@ fn final_does_not_wait_for_queued_speculation() {
     r.session.finish(Instant::now());
     let f = r.wait("final", Duration::from_secs(5), |_| true);
     assert_eq!(tokens(f["text"].as_str().unwrap()), freqs.iter().map(|f| format!("w{f}")).collect::<Vec<_>>());
-    // 至多等一个正在运行的推测（150 ms）再解余段（150 ms）；排队的推测被丢弃
+    // 至多等一个正在运行的推测（150 ms）再整段解码（150 ms）；排队的推测被丢弃
     assert!(f["timings"]["release_to_final_ms"].as_u64().unwrap() < 600);
 }
 
 #[test]
-fn closed_segment_behind_a_running_speculation_decodes_only_the_remainder() {
+fn closed_unit_not_covered_by_the_running_speculation_is_decoded_whole() {
     let mut r = rig(true, 300);
     r.feed(&words(&[300, 500, 700, 900, 1100], 0.2, 0.15, 0.3));
     r.wait("partial", Duration::from_secs(5), |v| tokens(v["text"].as_str().unwrap()).len() == 4); // 工作线程空闲
     let before = r.host.decoded_audio_ms();
     r.feed(&vec![0.0; 2400]); // 0.15 s 停顿：推测（五个词）开始运行 300 ms
+    std::thread::sleep(Duration::from_millis(50)); // 等解码线程真正开始这次推测，否则闭段在它启动前就已发生
     r.feed(&words(&[1300], 0.2, 0.0, 0.0));
-    r.feed(&vec![0.0; 9600]); // 主 VAD 在推测运行中闭合整段：推测没覆盖最后一个词
+    r.feed(&vec![0.0; 14400]); // 0.9 s 静音：推测还在跑时单元闭合，它的切片不含最后一个词
     r.session.finish(Instant::now());
     let f = r.wait("final", Duration::from_secs(5), |_| true);
     let want: Vec<String> = [300, 500, 700, 900, 1100, 1300].iter().map(|f| format!("w{f}")).collect();
     assert_eq!(tokens(f["text"].as_str().unwrap()), want);
-    // 推测（≈ 1.9 s）+ 余段（≈ 0.5 s）；整段重解会再多 ≈ 2.3 s
+    // 推测（≈ 1.9 s）+ 整段（≈ 2.3 s）；拼余段只会再解 ≈ 0.5 s，准确率就随切分变了
     let decoded = r.host.decoded_audio_ms() - before;
-    assert!(decoded < 3200, "decoded {decoded} ms of audio after the checkpoint: the closed segment was decoded again");
+    assert!(decoded >= 3800, "decoded {decoded} ms of audio after the checkpoint: the closed unit was not decoded whole");
 }
 
 #[test]
