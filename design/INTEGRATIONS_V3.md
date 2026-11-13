@@ -1,6 +1,6 @@
 # EchoType v3 Integrations 调研与方案
 
-> 状态：提案（只调研与设计，未改代码）· 日期：2026-11-13 · 作者：integrations 会话
+> 状态：P0 与排名前 9 项已实现（Core：frontend/electron/services/integrations/；清单：contracts/integrations.catalog.json；规范：contracts/INTEGRATIONS_MANIFEST.md）。实现与本文的差异见文末 §11。原为提案· 日期：2026-11-13 · 作者：integrations 会话
 > 前置阅读：`design/ARCHITECTURE_V3.md`、`CLAUDE.md`、`frontend/electron/ipc-contract.ts`
 > 契约变更（§7）只写在本文，由 orchestrator 会话落到 `ipc-contract.ts`。
 
@@ -605,3 +605,14 @@ interface IntegrationInstanceView {
 - DeepL：[认证](https://developers.deepl.com/docs/getting-started/auth)
 - Claude Code：[Headless](https://code.claude.com/docs/en/headless)
 - Electron：[safeStorage](https://www.electronjs.org/docs/latest/api/safe-storage)（未抓取，待核对）
+
+## 11. 实现与方案的差异（2026-11-13）
+
+- **范围**：实现了 P0 全部，以及排名 1–9：改写引擎与内置模式、OpenAI 兼容 provider 集合、本机模型、Anthropic、个人词典（仅注入提示词，未下发 ASR 热词）、飞书/Slack/Discord webhook、Obsidian、Todoist、Claude Code / Codex CLI。另加**通用 webhook**（任意地址、可自定义请求头与请求体模板；返回文字时作为"对话"回复显示）。
+- **未做**：自动润色与按应用规则（#10）、Command mode（#11）、Notion/Linear、MCP、DeepL API（仍用网页版）。
+- **密钥范围**：provider 的 `apiKey` 按 provider 共享（一次填写，多个动作复用），其余密钥（webhook 地址、令牌）按实例。
+- **清单位置**：与 `models.catalog.json` 同目录，规范见 `contracts/INTEGRATIONS_MANIFEST.md`。
+- **存储位置**：Core 的目录是 `frontend/electron/services/integrations/`（沿用 core-v3 的 services 布局），而非 §8 草拟的 `electron/integrations/`。
+- **契约**：删除 `integrations.httpRequest` / `getConfig` / `saveConfig`；新增 `integrations.*` 与 `dictionary.*`（见 `ipc-contract.ts`）。`Settings.polish` 未引入，未升 schemaVersion。
+- **OpenClaw**：WebSocket 协议不再支持，迁移为"自定义（OpenAI 兼容）"的 HTTP 端点（`/v1/chat/completions`，模型 `agent`）；需要在 OpenClaw 里开启 HTTP API。
+- **待核实**：Codex CLI 的 `exec -` 读 stdin、Todoist `tasks/quick` 路径、Obsidian `append` 参数、Claude `?q=` 预填，均来自第三方或记忆，首次真机验证后再去掉此条。

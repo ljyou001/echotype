@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 electron 的 ipcMain、shell；依赖 ipc-contract 的 IPC channel 表；依赖 core/create-core 的 Core；
- *          依赖 services/ 的 validateAccelerator、httpRequest；依赖 ./system、./main-window、./quick-action-window
+ *          依赖 services/ 的 validateAccelerator；依赖 ./system、./main-window、./quick-action-window
  * [OUTPUT]: 导出 registerIpc、toIpcError
  * [POS]: EchotypeBridge 在主进程一侧的完整实现：每个 IPC channel 恰好一个处理器，只转调 Core 与窗口，不含业务逻辑。
  *        只接受本应用窗口（trusted webContents）的调用；错误统一成 "[CODE] message"，渲染端可据此分支。
