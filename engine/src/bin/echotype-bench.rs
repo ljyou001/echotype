@@ -192,8 +192,13 @@ fn pct(v: &[f64], q: f64) -> f64 {
 fn bench_one(engine: &Path, model: &Map<String, Value>, variant: &Map<String, Value>, dir: &Path, companion: Option<Value>, threads: u32, wavs: &[PathBuf], plan: &[Plan], speculate: bool) -> Result<Value, String> {
     let token = format!("bench-{}", std::process::id());
     let mut cmd = Command::new(engine);
-    cmd.args(["--port", "0", "--log-level", "info"]).env("ECHOTYPE_ENGINE_TOKEN", &token).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null());
-    cmd.arg("--log-dir").arg(std::env::temp_dir().join("echotype-bench-logs"));
+    let level = std::env::var("ECHOTYPE_BENCH_LOG_LEVEL").unwrap_or_else(|_| "info".into()); // debug：逐段解码时序
+    // 引擎日志进 engine.log；原生库（sherpa「Fallback to cpu」、ORT、llama-server）只写 stderr，追加到 stderr.log
+    let log_dir = std::env::temp_dir().join("echotype-bench-logs");
+    let _ = std::fs::create_dir_all(&log_dir);
+    let stderr = std::fs::OpenOptions::new().create(true).append(true).open(log_dir.join("stderr.log")).map(Stdio::from).unwrap_or_else(|_| Stdio::null());
+    cmd.args(["--port", "0", "--log-level", &level]).env("ECHOTYPE_ENGINE_TOKEN", &token).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(stderr);
+    cmd.arg("--log-dir").arg(&log_dir);
     for w in wavs {
         cmd.arg("--fake-mic").arg(w);
     }
@@ -307,7 +312,8 @@ const USAGE: &str = "usage:
   echotype-bench run --engine <exe> --models-dir <dir> --catalog <models.catalog.json> --clips <zh.wav,en.wav>
                      [--clips-en <en.wav,...>] [--models <model[/variant]>,...] [--threads 4] [--lengths 3,10,30]
                      [--tails 0,300] [--reps 6] [--no-speculate 1] --json <out.json>
-  echotype-bench report --json <a.json>[,<b.json>...] --out <BENCHMARKS.md>";
+  echotype-bench report --json <a.json>[,<b.json>...] --out <BENCHMARKS.md>
+env: ECHOTYPE_BENCH_LOG_LEVEL=debug  engine log level (<temp>/echotype-bench-logs/{engine,stderr}.log)";
 
 fn cmd_run(o: &Opts) {
     let engine = PathBuf::from(o.req("engine"));
@@ -411,12 +417,35 @@ fn cmd_report(o: &Opts) {
         "Audio enters through `--fake-mic` at real-time pace and takes the production path (pump → VAD → decode).".into(),
         "`tail` = silence between the end of speech and the key release: 0 ms is the worst case, 300 ms is typical.".into(),
         "Cells are P50 / P95 over the repetitions; `client` is the stop→final round trip seen by the WebSocket client.".into(),
+        "RSS is the engine process only: llama.cpp variants hold their model in a `llama-server` child process (not counted).".into(),
         String::new(),
     ];
     for path in o.list("json", "") {
         let doc: Value = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
         let m = &doc["machine"];
         lines.push(format!("### {} · {} logical cores · {} · {}", m["cpu"].as_str().unwrap_or("?"), m["logical_cores"], m["gpu"].as_str().filter(|g| !g.is_empty()).unwrap_or("no NVIDIA GPU"), m["os"].as_str().unwrap_or("")));
+        lines.push(String::new());
+        // 摘要：每个 run 一行，只看 10 s 语音（catalog 的 bench 字段取 tail 0 的 P50）
+        lines.push("Summary, 10 s utterance (P50 ms):".into());
+        lines.push(String::new());
+        lines.push("| model / variant | provider | threads | tail 0 | tail 300 | load ms | RSS MB |".into());
+        lines.push("|---|---|---:|---:|---:|---:|---:|".into());
+        for (key, run) in doc["runs"].as_object().unwrap() {
+            let parts: Vec<&str> = key.split('|').collect();
+            let p50 = |tail: u64| {
+                run["rows"].as_array().unwrap().iter().find(|r| r["length"] == 10 && r["tail_ms"] == tail).map_or("–".to_string(), |r| {
+                    let e: Vec<f64> = r["engine_ms"].as_array().unwrap().iter().filter_map(Value::as_f64).collect();
+                    format!("{:.0}", pct(&e, 0.5))
+                })
+            };
+            lines.push(format!(
+                "| {}/{}{} | {} | {} | {} | {} | {} | {} |",
+                parts[0], parts[1], if parts.len() > 4 { " (no spec)" } else { "" }, parts[2], run["threads"], p50(0), p50(300),
+                run["load"]["load_ms"], run["rss_peak_mb"].as_u64().map(|v| v.to_string()).unwrap_or("–".into())
+            ));
+        }
+        lines.push(String::new());
+        lines.push("All rows:".into());
         lines.push(String::new());
         lines.push("| model / variant | provider | threads | load ms | RSS MB | audio | tail | P50 | P95 | client P50 | segs | n |".into());
         lines.push("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|".into());
