@@ -3,14 +3,15 @@
  * [OUTPUT]: 导出 prepareSmokeHome（临时用户目录 + 假模型 + 关闭输出的设置）、runSmoke（端到端检查，返回退出码）
  * [POS]: `npm run smoke:core` 的执行体：真实 Electron 主进程 + 真实 preload + 真实 IPC + mock 引擎。
  *        在一个隐藏窗口里通过 window.echotype（v2）走一遍：快照与 activeModel、模型列表与设置、引擎包、存储、许可证、渠道、
- *        设备、热键校验、听写、历史、推送、错误码、perModel 只经 models.updateSettings、集成（目录、密钥不回传、无通用 http 代理）。
+ *        设备、热键校验、听写、历史、推送、错误码、perModel 只经 models.updateSettings、ui.theme 到 nativeTheme、
+ *        集成（目录、密钥不回传、无通用 http 代理）。
  *        设置里关闭直接输入与剪贴板，smoke 绝不往用户当前聚焦的应用里粘贴；不安装全局键盘钩子。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { BrowserWindow, type WebContents } from "electron";
+import { BrowserWindow, nativeTheme, type WebContents } from "electron";
 import type { Core } from "../core/create-core.js";
 import type { Logger } from "../core/logger.js";
 
@@ -116,6 +117,15 @@ export async function runSmoke({ core, preload, preloadArgs, trust, logger }: Sm
     })()`);
     await until(() => core.snapshot().engine.state === "ready", 10_000, "reload after model setting");
     check("models.updateSettings validates, stores and reloads", view.values.punctuation === false, view);
+
+    const themeBefore = nativeTheme.themeSource;
+    await js(`window.echotype.updateSettings({ ui: { theme: { mode: "dark", accent: "teal" } } })`);
+    const darkInRenderer = await js<boolean>(`matchMedia("(prefers-color-scheme: dark)").matches`);
+    check("ui.theme → nativeTheme.themeSource → renderer prefers-color-scheme", themeBefore === "system" && nativeTheme.themeSource === "dark" && darkInRenderer, {
+      themeBefore,
+      themeSource: nativeTheme.themeSource,
+      darkInRenderer,
+    });
 
     const integ = await js<Record<string, unknown>>(`(async () => {
       const i = window.echotype.integrations;

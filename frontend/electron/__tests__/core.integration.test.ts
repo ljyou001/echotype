@@ -69,6 +69,7 @@ function bootCore(opts: BootOptions = {}) {
   const pastes: string[] = [];
   const snapshots: AppSnapshot[] = [];
   const quickActions: string[] = [];
+  const themes: string[] = [];
   const machine: MachineProfile = { platform: "win32", arch: "x64", gpuVendors: [], ...opts.machine };
   const core = new Core(
     {
@@ -104,6 +105,7 @@ function bootCore(opts: BootOptions = {}) {
       publishModels: () => {},
       publishPacks: () => {},
       publishLevel: () => {},
+      applyTheme: (t) => themes.push(`${t.mode}/${t.accent}`),
     },
   );
   cores.push(core);
@@ -111,7 +113,7 @@ function bootCore(opts: BootOptions = {}) {
   const loads = () => requests.mock.calls.filter(([m]) => m === "model.load");
   const rctrl = (down: boolean) => keys.emit("key", { keycode: RCTRL, down, ctrl: down, alt: false, shift: false, meta: false });
   const latest = () => snapshots.at(-1);
-  return { core, paths, pastes, snapshots, quickActions, loads, rctrl, latest };
+  return { core, paths, pastes, snapshots, quickActions, themes, loads, rctrl, latest };
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -293,6 +295,17 @@ describe("Core against the mock engine", () => {
       server.closeAllConnections();
       server.close();
     }
+  });
+
+  it("applies ui.theme on start and on every theme change only", async () => {
+    const { core, themes } = bootCore();
+    core.start();
+    expect(themes).toEqual(["system/violet"]);
+    core.updateSettings({ recording: { tapThresholdMs: 300 } });
+    core.updateSettings({ ui: { theme: { mode: "dark" } } });
+    core.updateSettings({ ui: { theme: { accent: "teal" } } });
+    expect(themes).toEqual(["system/violet", "dark/violet", "dark/teal"]);
+    expect(core.snapshot().settings.ui.theme).toEqual({ mode: "dark", accent: "teal" });
   });
 
   it("lists licenses and storage", async () => {

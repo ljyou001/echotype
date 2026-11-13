@@ -3,7 +3,7 @@
  * [OUTPUT]: 导出 Core（服务装配 + 跨服务操作）、CoreConfig、CoreAdapters、CoreError
  * [POS]: Core 层的组合根，不 import electron。main.ts 注入 Electron 适配器后得到一个可运行的 Core；
  *        smoke 与测试注入假适配器得到同一个 Core。服务之间的连线（谁在何时通知谁）只写在这里：
- *        热键 → 听写 · 听写空闲 → 补做被推迟的模型加载 · 设置变化 → 热键/麦克风/模型/开机启动 ·
+ *        热键 → 听写 · 听写空闲 → 补做被推迟的模型加载 · 设置变化 → 热键/麦克风/模型/开机启动/外观主题 ·
  *        引擎包装卸或失效 → 换引擎二进制 · 装需要引擎包的 variant → 先装引擎包 ·
  *        状态变化 → ≤ 30 Hz 推送 AppSnapshot · 安装进度 → ≤ 10 Hz 推送列表。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -72,6 +72,8 @@ export interface CoreAdapters {
   publishPacks: (packs: EnginePackView[]) => void;
   publishLevel: (level: { rmsDbfs: number; peakDbfs: number }) => void;
   applyLaunchAtStartup?: (enabled: boolean) => void;
+  /** 启动时与 ui.theme 每次变化时调用：shell 同步 nativeTheme 与窗口底色 */
+  applyTheme?: (theme: Settings["ui"]["theme"]) => void;
   secretCrypto?: SecretCrypto; // Electron safeStorage；缺省 = 不可用，密钥写入会报错
   openUri?: (uri: string) => Promise<void>; // shell.openExternal（Core 已按清单校验协议）
   publishIntegrationEvent?: (event: IntegrationRunEvent) => void;
@@ -239,6 +241,7 @@ export class Core {
 
   start(): void {
     this.settings.load();
+    this.adapters.applyTheme?.(this.settings.get().ui.theme);
     this.packs.scan();
     this.registry.scan();
     this.history.load();
@@ -413,6 +416,7 @@ export class Core {
     if (next.hotkey.accelerator !== prev.hotkey.accelerator) this.hotkey.setAccelerator(next.hotkey.accelerator);
     if (JSON.stringify(next.audio) !== JSON.stringify(prev.audio)) void this.audio.apply();
     if (next.ui.launchAtStartup !== prev.ui.launchAtStartup) this.adapters.applyLaunchAtStartup?.(next.ui.launchAtStartup);
+    if (JSON.stringify(next.ui.theme) !== JSON.stringify(prev.ui.theme)) this.adapters.applyTheme?.(next.ui.theme);
     void this.runtime.sync(); // 幂等：只有当前模型的生效取值变化时才会重载
     if (JSON.stringify(next.models) !== JSON.stringify(prev.models)) this.pushes.models.request();
     this.pushes.snapshot.request();
