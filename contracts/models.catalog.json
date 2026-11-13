@@ -150,8 +150,8 @@
           "asset": {
             "name": "sensevoice-small--cuda-fp32.zip",
             "release": "models-v3",
-            "sha256": null,
-            "size_bytes": 0,
+            "sha256": "e4966454d5db4d1743f4479a29838ad25c7e713dac97dd49ddc0ddefc58d47af",
+            "size_bytes": 867665995,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2"
           },
           "requirements": {
