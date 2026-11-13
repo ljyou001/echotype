@@ -46,7 +46,7 @@ Linux 在 22.04 上构建，用户只需 glibc ≥ 2.35。Windows 的 crt-static
 
 ## 3. 产物
 
-安装包（`${productName}-${version}[-<channel>]-${os}-${arch}.${ext}`，版本取自 tag）：
+安装包（`${productName}-${version}[-<channel>]-${os}-${arch}.${ext}`，版本取自 tag；手动触发没有 tag，取 frontend/package.json 的 version）：
 
 | target-id | github 渠道的文件 |
 |---|---|
@@ -106,7 +106,7 @@ engine-packs-v3 被所有已发布版本共用，旧版本的 catalog 钉住旧 
 ## 7. 验证
 
 本地已验证（Windows x64，2026-11-13）：
-- actionlint 1.7.12：build.yml、ci.yml 0 个错误（本机未装 shellcheck，`run:` 脚本未经 shellcheck）。
+- actionlint 1.7.12：build.yml、ci.yml、cla.yml 0 个错误（本机未装 shellcheck，`run:` 脚本未经 shellcheck）。
 - `build-engine.sh win-x64` → `engine/dist/win-x64/echotype-engine.exe`（22.9 MB）；主机三元组与 catalog 校验的失败路径。
 - `electron-builder --win --x64 --dir`（Electron 45.3.1、electron-builder 26.18.1）：资源布局如 §4，许可清单 230 项，engine 覆盖的版本生效。
 - `check-engine.mjs`：Core 打包态选路拉起解包引擎，hello 返回 `engine_version=3.0.0 providers=cpu`，`devices.list` 返回 WASAPI 麦克风，引擎退出码 0。
@@ -115,14 +115,19 @@ engine-packs-v3 被所有已发布版本共用，旧版本的 catalog 钉住旧 
 - 渠道产物名、非法渠道与 msstore 缺身份的报错、beforePack 许可清单、可复现 zip、release-assets 的三种发布分支（替换 gh 的副本）。
 - 未在本地运行：make-pack cuda（engine 会话已构建，1667 MiB）、make-pack vulkan / metal、bench.sh。
 
-只能在 GitHub runner 上验证：
-- macOS 签名：ad-hoc 签名 + hardenedRuntime + entitlements 后 .app 能否启动；签名后的引擎与 llama-server/dylib 能否通过 check-engine；引擎子进程能否通过 TCC 弹出麦克风授权（需要真机手动确认，CI 只能证明能启动）。ad-hoc 签名每次构建 cdhash 都变，升级后系统会重新询问授权。
-- Linux：cpal（ALSA + PulseAudio）在 22.04 上的链接与运行；AppImage/deb 的实际文件名；arm64 上 electron-builder 26 自带的 fpm 与 AppImage 工具链。
-- arm64：windows-11-arm 与 ubuntu-22.04-arm 上 sherpa-onnx 静态库的下载与链接、Node 原生模块预编译、NSIS 在 ARM 上的仿真运行。
-- macOS 两行的 make-pack metal（llama.cpp b12360 的 macos-arm64 / macos-x64 预编译）。
+GitHub runner 已验证（Build run 43528065540，main cd0c58b，手动触发，2026-11-13）：12 行全部成功。
+- 6 个安装包行的 check-engine 全部 `HELLO OK engine_version=3.0.0`：win-x64、win-arm64、linux-x64、linux-arm64 为 `providers=cpu`；mac-arm64、mac-x64 经 ad-hoc 签名 + hardenedRuntime 后为 `providers=cpu,metal`，签名后的引擎与 Metal llama-server 均能启动。
+- Linux：cpal（ALSA + PulseAudio）在 ubuntu-22.04 与 ubuntu-22.04-arm 上链接并运行。产物名为 `-linux-x86_64.AppImage`、`-linux-amd64.deb`、`-linux-arm64.AppImage`、`-linux-arm64.deb`。
+- arm64：windows-11-arm 与 ubuntu-22.04-arm 的 sherpa-onnx 静态链接、Node 原生模块、NSIS 均通过。
+- make-pack metal：mac 两行把 Metal llama-server 暂存进 `engine/dist/mac-*/`。
+- GPU 引擎包（artifact 大小）：cuda win-x64 1666 MiB、cuda linux-x64 1689 MiB（距 2 GiB 上限约 360 MiB）；vulkan linux-x64 52、linux-arm64 44、win-x64 39、win-arm64 31 MiB。
+- 安装包 artifact：285–345 MiB。
+
+尚未验证：
+- 引擎子进程能否通过 TCC 弹出麦克风授权：需要真机手动确认，CI 只证明能启动。ad-hoc 签名每次构建 cdhash 都变，升级后系统会重新询问授权。
 - Apple 基准：bench-macos 的 Metal/CoreML 实测，结果作为 artifact。
-- GPU 引擎包：linux-x64 cuda 与 4 个 vulkan 包的构建与体积（linux cuda 的暂存约 3–4 GB，ubuntu runner 磁盘余量需看实跑）；packs 任务首次创建 engine-packs-v3 并上传（对仓库的真实写入）。
-- release 任务：草稿创建与重跑覆盖。
+- packs 任务首次创建 engine-packs-v3 并上传（对仓库的真实写入，需勾选 `publish_packs` 或推 tag）。
+- release 任务：草稿创建与重跑覆盖（需推 tag）。
 - msstore 渠道的 AppX 构建（需要上面三个仓库变量）。
 
 法则：一份配置 · 本地与 CI 同一脚本 · 原生构建不交叉编译 · 打包后必须握手 · 共用的发布资产只增不改
