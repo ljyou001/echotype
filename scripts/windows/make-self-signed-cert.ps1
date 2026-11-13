@@ -1,6 +1,9 @@
-
-# Script to create a self-signed certificate for local AppX testing
-# The Subject (CN) MUST match the Publisher ID in your package.json
+# ============================================================================
+# [INPUT]: 依赖仓库根 .env 的 WINDOWS_PUBLISHER_ID；依赖 PowerShell 的 New-SelfSignedCertificate
+# [OUTPUT]: 仓库根 EchoTypeTestCert.pfx（AppX 本地侧载测试证书）
+# [POS]: make-appx.ps1 的配套工具。证书 CN 必须等于 electron-builder.cjs 中 appx.publisher（即 WINDOWS_PUBLISHER_ID）。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+# ============================================================================
 
 # Load .env to get the Publisher ID
 $EnvFile = Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "..\..\.env"
