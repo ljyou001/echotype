@@ -42,6 +42,7 @@ cpal = { version = "=0.18.2", features = ["pulseaudio"] }
 cpal = "=0.18.2"
 
 [dev-dependencies]
+tungstenite = "0.28"
 
 [profile.release]
 opt-level = 3

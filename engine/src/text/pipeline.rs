@@ -131,7 +131,7 @@ const CONTINUATIONS: &[&str] = &[
 
 /// 句内停顿时软化句末标点，返回 (left, right)。
 /// 中日文：left 末尾「。」→「，」（含假名时「、」），right 以中日文字开头才生效。
-/// 英文：left 以「字母/数字 + .」结尾、right 首词是常见续接词时，「.」→「,」并把首词改小写。
+/// 英文：left 以「字母/数字 + .」结尾、right 以小写字母开头，或首词是常见续接词时，「.」→「,」（续接词改小写）。
 pub fn soften(left: &str, right: &str) -> (String, String) {
     let (left, right) = (left.trim(), right.trim());
     if left.is_empty() || right.is_empty() {
@@ -144,6 +144,9 @@ pub fn soften(left: &str, right: &str) -> (String, String) {
     let mut lc = left.chars().rev();
     if lc.next() == Some('.') {
         let before = lc.next();
+        if before.is_some_and(|c| c.is_ascii_alphanumeric()) && right.starts_with(|c: char| c.is_ascii_lowercase()) {
+            return (format!("{},", &left[..left.len() - 1]), right.to_string()); // 小写开头必是续写（Whisper 常见）
+        }
         if before.is_some_and(|c| c.is_ascii_alphanumeric()) {
             let first = right.split(' ').next().unwrap_or("");
             let key = first.to_lowercase();
@@ -154,6 +157,46 @@ pub fn soften(left: &str, right: &str) -> (String, String) {
         }
     }
     (left.to_string(), right.to_string())
+}
+
+/// 全大写的英文句子（≥ 4 个 ≥2 字母的词，且没有小写字母）改成句首大写，例如 FireRedASR 的输出。
+/// 少于 4 个词的全大写片段（NASA FBI OK）保持原样。
+pub fn sentence_case_shouting(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut start = 0;
+    let bytes: Vec<(usize, char)> = text.char_indices().collect();
+    let flush = |seg: &str, out: &mut String| {
+        let words = seg.split(|c: char| !c.is_ascii_alphabetic()).filter(|w| w.len() >= 2).count();
+        let has_lower = seg.chars().any(|c| c.is_ascii_lowercase());
+        let has_upper = seg.chars().any(|c| c.is_ascii_uppercase());
+        if words >= 4 && has_upper && !has_lower {
+            let lower = seg.to_lowercase();
+            let mut done = false;
+            for c in lower.chars() {
+                if !done && c.is_ascii_alphabetic() {
+                    out.extend(c.to_uppercase());
+                    done = true;
+                } else {
+                    out.push(c);
+                }
+            }
+            // 代词 I 保持大写
+            let fixed = out.split_off(out.len() - lower.len());
+            let fixed = fixed.split(' ').map(|w| if w == "i" || w.starts_with("i'") { format!("I{}", &w[1..]) } else { w.to_string() }).collect::<Vec<_>>().join(" ");
+            out.push_str(&fixed);
+        } else {
+            out.push_str(seg);
+        }
+    };
+    for (i, c) in bytes.iter() {
+        if matches!(c, '.' | '!' | '?' | '。' | '！' | '？') {
+            let end = i + c.len_utf8();
+            flush(&text[start..end], &mut out);
+            start = end;
+        }
+    }
+    flush(&text[start..], &mut out);
+    out
 }
 
 // ============================================================
@@ -202,6 +245,7 @@ impl TextPipeline {
                 text = apply_punct_style(&text, style);
             }
         }
+        text = sentence_case_shouting(&text);
         if o.itn_mode == "rule" && o.itn {
             text = chinese_to_num(&text);
         }
@@ -237,6 +281,13 @@ mod tests {
         assert_eq!(p.run("hello world").0, "hello world, how are you?");
         let off = pipe("companion", false, Some(PunctStyle::Auto), "none", false, Some(c));
         assert_eq!(off.run("hello world").0, "hello world");
+    }
+
+    #[test]
+    fn shouting_sentences_get_sentence_case() {
+        assert_eq!(sentence_case_shouting("THE TRIBAL CHIEFTAIN CALLED FOR THE BOY."), "The tribal chieftain called for the boy.");
+        assert_eq!(sentence_case_shouting("开放时间。NASA FBI OK. I THINK SO TOO, REALLY."), "开放时间。NASA FBI OK. I think so too, really.");
+        assert_eq!(sentence_case_shouting("Hello World. It Works."), "Hello World. It Works.");
     }
 
     #[test]

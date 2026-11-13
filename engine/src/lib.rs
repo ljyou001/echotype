@@ -12,4 +12,5 @@ pub mod logging;
 pub mod platform;
 pub mod protocol;
 pub mod server;
+pub mod testkit;
 pub mod text;

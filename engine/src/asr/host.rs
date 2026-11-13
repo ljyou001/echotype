@@ -68,6 +68,8 @@ pub struct Decoded {
 enum Backend {
     Sherpa { rec: OfflineRecognizer, arch: String, opts: SherpaOpts },
     Llama(LlamaSidecar),
+    /// 测试替身（ECHOTYPE_TESTKIT=1）：把正弦音段识别成 w<频率>，可选人为延迟
+    Tones { delay_ms: u64 },
 }
 
 pub struct ModelHost {
@@ -98,6 +100,10 @@ impl ModelHost {
                 stream.get_result().map(|r| r.text).unwrap_or_default()
             }
             Backend::Llama(s) => s.transcribe(samples, language.or(Some(self.settings.language.as_str())), &self.settings.hotwords)?,
+            Backend::Tones { delay_ms } => {
+                std::thread::sleep(std::time::Duration::from_millis(*delay_ms));
+                crate::testkit::transcribe_tones(samples)
+            }
         };
         Ok(Decoded { text: text.trim().to_string(), ms: t0.elapsed().as_millis() as u64 })
     }
@@ -122,6 +128,28 @@ impl ModelHost {
         if let Backend::Llama(s) = &self.backend {
             s.stop();
         }
+    }
+}
+
+impl ModelHost {
+    /// 测试用：不读任何文件的音调识别模型（partials 决定是否推测解码）
+    #[doc(hidden)]
+    pub fn testkit(partials: bool, delay_ms: u64) -> Arc<Self> {
+        Arc::new(Self {
+            model_id: "testkit".into(),
+            variant_id: "cpu".into(),
+            runtime: "testkit".into(),
+            provider_used: "cpu".into(),
+            partials,
+            languages: vec!["en".into()],
+            settings: ModelSettings::parse(&Map::new()).expect("defaults parse"),
+            backend: Backend::Tones { delay_ms },
+            pipeline: Mutex::new(TextPipeline::new(
+                TextOptions { punct_mode: "native".into(), punctuation: true, punct_style: None, itn_mode: "none".into(), itn: false },
+                None,
+            )),
+            worker: DecodeWorker::start("decode-testkit"),
+        })
     }
 }
 
@@ -155,8 +183,6 @@ pub fn load_model(p: LoadParams, progress: &dyn Fn(&str, u32), warn: &dyn Fn(&st
     let runtime = s(&p.variant, "runtime").to_string();
     let arch = s(&p.variant, "arch").to_string();
     let files = obj(&p.variant, "files");
-    let variant_providers: Vec<String> =
-        p.variant.get("providers").and_then(Value::as_array).map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect()).unwrap_or_default();
     let caps = capabilities();
     let mut settings = p.settings.clone();
     progress("runtime", 0);
@@ -192,6 +218,11 @@ pub fn load_model(p: LoadParams, progress: &dyn Fn(&str, u32), warn: &dyn Fn(&st
             };
             progress("model", 100);
             (Backend::Sherpa { rec, arch: arch.clone(), opts }, provider)
+        }
+        "testkit" if crate::testkit::enabled() => {
+            progress("model", 100);
+            let delay_ms = p.variant.get("delay_ms").and_then(Value::as_u64).unwrap_or(0);
+            (Backend::Tones { delay_ms }, "cpu".to_string())
         }
         "llama.cpp" => {
             let provider = settings.provider.clone();
@@ -257,7 +288,6 @@ pub fn load_model(p: LoadParams, progress: &dyn Fn(&str, u32), warn: &dyn Fn(&st
         pipeline: Mutex::new(pipeline),
     });
     let load_ms = t_start.elapsed().as_millis() as u64;
-    let _ = variant_providers;
 
     // ENGINE_PROTOCOL §8.6：加载后用 1 s 静音预热一次
     progress("warmup", 0);

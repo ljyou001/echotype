@@ -95,7 +95,11 @@ fn main() {
             Box::new(FakeBackend::new(&fake, speed).expect("validated above"))
         }
     });
-    let factory: DetectorFactory = Arc::new(|p: VadParams| SpeechDetector::new(p).map(|d| Box::new(d) as Box<dyn Detector>));
+    let factory: DetectorFactory = if echotype_engine::testkit::enabled() {
+        Arc::new(|p: VadParams| Ok(Box::new(echotype_engine::testkit::EnergyDetector::new(p.min_silence_s)) as Box<dyn Detector>))
+    } else {
+        Arc::new(|p: VadParams| SpeechDetector::new(p).map(|d| Box::new(d) as Box<dyn Detector>))
+    };
 
     let rt = tokio::runtime::Builder::new_multi_thread().worker_threads(2).thread_name("engine-io").enable_all().build().expect("tokio runtime");
     let cfg = ServerConfig { port: args.port, token, watch_stdin: true, speculate: args.speculate };
