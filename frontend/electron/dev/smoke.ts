@@ -3,7 +3,8 @@
  * [OUTPUT]: 导出 mockSmoke（SmokeFactory：临时用户目录 + 假模型 + 关闭输出的设置 + 端到端检查）
  * [POS]: `npm run smoke:core` 的执行体：真实 Electron 主进程 + 真实 preload + 真实 IPC + mock 引擎。
  *        在一个隐藏窗口里通过 window.echotype（v2）走一遍：快照与 activeModel、模型列表与设置、引擎包、存储、许可证、渠道、
- *        设备、热键校验、听写、历史、推送、错误码、perModel 只经 models.updateSettings、ui.theme 到 nativeTheme、
+ *        设备、热键校验、听写、历史、hotkey/dictation 错误槽、quickAction.open（会短暂显示 Quick Action 窗口）、
+ *        推送、错误码、perModel 只经 models.updateSettings、ui.theme 到 nativeTheme、
  *        集成（目录、密钥不回传、无通用 http 代理）。
  *        设置里关闭直接输入与剪贴板，smoke 绝不往用户当前聚焦的应用里粘贴；不安装全局键盘钩子。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -52,6 +53,8 @@ async function runSmoke(ctx: SmokeContext): Promise<number> {
         genericIpc: typeof window.electron !== "undefined",
         engine: s.engine.state,
         activeModel: s.activeModel,
+        hotkey: s.hotkey,
+        dictationError: s.dictation.error,
         models: models.length,
         activeSettings: active ? active.settings.map((d) => d.key) : [],
         activeVariant: active ? active.selectedVariantId : null,
@@ -66,6 +69,7 @@ async function runSmoke(ctx: SmokeContext): Promise<number> {
       };
     })()`);
     check("bridge v2 exposed, no generic ipcRenderer", probe.ipcVersion === 2 && probe.genericIpc === false, probe);
+    check("snapshot.hotkey and snapshot.dictation.error slots", JSON.stringify(probe.hotkey) === '{"error":null}' && probe.dictationError === null, probe);
     check("getSnapshot over IPC with activeModel", probe.engine === "ready" && (probe.activeModel as { runtime?: string })?.runtime === "sherpa-onnx", probe);
     check("models.list with variants and settings", (probe.models as number) > 0 && probe.activeVariant !== null && (probe.activeSettings as string[])[0] === "provider", probe);
     check("enginePacks, getStorage, getLicenses", probe.packs === true && probe.storage === true && (probe.licenses as number) > 0, probe);
@@ -79,6 +83,14 @@ async function runSmoke(ctx: SmokeContext): Promise<number> {
     await until(() => core.dictation.state().lastFinal !== null, 8_000, "final");
     const history = await js<unknown[]>(`window.echotype.history.list()`);
     check("dictation start/stop → final → history", history.length === 1, history);
+
+    const qa = await js<string>(`(async () => {
+      await window.echotype.quickAction.open("smoke: quick action");
+      const text = await window.echotype.quickAction.getText();
+      await window.echotype.quickAction.close();
+      return text;
+    })()`);
+    check("quickAction.open(text) → Quick Action window gets that text", qa === "smoke: quick action", qa);
 
     const phase = await js<string>(`new Promise((resolve) => {
       const off = window.echotype.onSnapshot((s) => { off(); resolve(s.dictation.phase); });

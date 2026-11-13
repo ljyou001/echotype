@@ -77,6 +77,7 @@ const bridge: EchotypeBridge = {
 
   quickAction: {
     getText: () => invoke(IPC.quickActionGetText),
+    open: (text) => invoke(IPC.quickActionOpen, text),
     close: () => invoke(IPC.quickActionClose),
     resize: (height) => invoke(IPC.quickActionResize, height),
     move: (delta) => ipcRenderer.send(IPC.quickActionMove, delta),

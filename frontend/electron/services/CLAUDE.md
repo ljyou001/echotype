@@ -21,8 +21,8 @@ engine-packs.ts: GPU 引擎包 ~/.echotype/engines/<pack>/（内含完整 echoty
 model-runtime.ts: 引擎里加载哪个模型的哪个 variant。期望状态（模型 + variant + 目录 + 生效取值 + 已解析 provider + 配套标点）序列化成 key，相同则不动作 → 启动只加载一次；需要的引擎包不在运行时先请装配层换引擎；听写中或 SESSION_BUSY 时推迟；记录实际 provider 供状态栏判断回退；held 记录引擎实际持有的模型，删除前卸载
 
 ## 听写
-dictation-service.ts: 状态机 idle → recording → finalizing → idle，也是手势的唯一裁决者。PTT：按下即 start，按住 < tapThresholdMs → cancel + Quick Action，否则 stop → final → 输出。toggle：按下切换，长按 500 ms → Quick Action。组合键打断 → 取消且不弹窗。finalize 超时 8 s；超时后迟到的 final 只进历史；引擎断开立即回到 idle
-hotkey-service.ts: 全局热键物理层。以"当前按下键集合"判定组合：按键重复不重触发，组合松开只触发一次 up，单独按修饰键不触发组合，按住期间混入其他键报 interrupt；按事件掩码校正卡住的修饰键
+dictation-service.ts: 状态机 idle → recording → finalizing → idle，也是手势的唯一裁决者。state().error = 当前会话的失败（start/stop 被拒、FINALIZE_TIMEOUT、引擎带 session_id 的错误、会话中断开），下一次开始时清空；取消不是失败。PTT：按下即 start，按住 < tapThresholdMs → cancel + Quick Action，否则 stop → final → 输出。toggle：按下切换，长按 500 ms → Quick Action。组合键打断 → 取消且不弹窗。finalize 超时 8 s；超时后迟到的 final 只进历史；引擎断开立即回到 idle
+hotkey-service.ts: 全局热键物理层。以"当前按下键集合"判定组合：按键重复不重触发，组合松开只触发一次 up，单独按修饰键不触发组合，按住期间混入其他键报 interrupt；按事件掩码校正卡住的修饰键。error() 是 snapshot.hotkey.error 的唯一来源：HOTKEY_HOOK_FAILED（每 5 s 重试，成功即清除）→ HOTKEY_INVALID（换合法热键即清除）→ shell 传入的平台限制（HOTKEY_WAYLAND_LIMITED）
 hotkey-keymap.ts: 热键字符串的唯一解释者：键名 → libuiohook 键码，左右修饰键与泛指修饰键，validateAccelerator 的用户可读错误
 output-service.ts: 结果离开应用的唯一出口。剪贴板 + robotjs 粘贴，800 ms 后还原全部格式；还原前确认剪贴板未被用户改写；粘贴、复制、还原全部串行；剪贴板端口为异步（Electron 45 的 W3C 风格 API）
 audio-service.ts: 麦克风配置。设备列表来自引擎（选中的 id 就是录音的 id）；所选设备失效回落系统默认；引擎重连时重放 mic.configure 与麦克风测试

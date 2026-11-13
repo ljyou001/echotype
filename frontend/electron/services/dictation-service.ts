@@ -1,20 +1,23 @@
 /**
  * [INPUT]: 依赖 engine/engine-supervisor 的 EngineGateway、engine/protocol；依赖 core/emitter、core/logger；
  *          依赖 ipc-contract 的 Settings、DictationPhase、FinalResult、HistoryEntry
- * [OUTPUT]: 导出 DictationService（hotkeyDown/Up/Interrupted · start/stop/cancel/toggle · state · onChange）、DictationDeps
+ * [OUTPUT]: 导出 DictationService（hotkeyDown/Up/Interrupted · start/stop/cancel/toggle · state · onChange）、DictationDeps、
+ *           DictationState、FINALIZE_TIMEOUT_MS、TOGGLE_LONG_PRESS_MS
  * [POS]: 听写状态机 idle → recording → finalizing → idle，也是"轻按/长按/按住"手势的唯一裁决者。
  *        hotkey-service 只报告物理按下/松开；这里决定 start/stop/cancel/Quick Action，一个手势只产生一个结果：
  *        push-to-talk：按下即 session.start；按住 < tapThresholdMs → cancel + Quick Action；否则 stop → final → 输出。
  *        toggle：按下切换开始/停止；按住 ≥ 500 ms → Quick Action（若此次按下开启了录音则先取消）。
  *        finalize 超时保证引擎死掉时状态不会卡住；超时后迟到的 final 只进历史，不再粘贴。
+ *        state().error 记录当前会话的失败（session.start/stop 被拒、finalize 超时、引擎带 session_id 的错误、会话中引擎断开），
+ *        下一次开始时清空。用户的取消（轻按、组合键、UI）不是失败。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { randomBytes } from "node:crypto";
-import type { DictationPhase, FinalResult, HistoryEntry, RecordingMode, Settings } from "../ipc-contract.js";
+import type { AppError, DictationPhase, FinalResult, HistoryEntry, RecordingMode, Settings } from "../ipc-contract.js";
 import { Emitter, type Unsubscribe } from "../core/emitter.js";
 import type { Logger } from "../core/logger.js";
 import type { EngineGateway } from "../engine/engine-supervisor.js";
-import type { EngineEvents } from "../engine/protocol.js";
+import { toAppError, type EngineEvents } from "../engine/protocol.js";
 
 export const FINALIZE_TIMEOUT_MS = 8_000;
 export const TOGGLE_LONG_PRESS_MS = 500;
@@ -23,6 +26,7 @@ export interface DictationState {
   phase: DictationPhase;
   partialText: string;
   lastFinal: FinalResult | null;
+  error: AppError | null;
 }
 
 export interface DictationDeps {
@@ -58,6 +62,7 @@ export class DictationService {
   private phase: DictationPhase = "idle";
   private partialText = "";
   private lastFinal: FinalResult | null = null;
+  private error: AppError | null = null;
   private session: Session | null = null;
   private press: Press | null = null;
   private readonly orphans = new Set<string>(); // finalize 超时的会话：迟到的 final 只进历史
@@ -74,18 +79,18 @@ export class DictationService {
       else if (e.event === "partial") this.onPartial(e.data);
       else if (e.event === "error" && e.data.session_id && e.data.session_id === this.session?.id) {
         this.log.error("session failed in engine", e.data);
-        this.endSession();
+        this.fail({ code: e.data.code, message: e.data.message });
       }
     });
     deps.engine.onDisconnected((error) => {
       if (!this.session) return;
       this.log.error("engine lost during a session", { sessionId: this.session.id, error });
-      this.endSession();
+      this.fail(error);
     });
   }
 
   state(): DictationState {
-    return { phase: this.phase, partialText: this.partialText, lastFinal: this.lastFinal };
+    return { phase: this.phase, partialText: this.partialText, lastFinal: this.lastFinal, error: this.error };
   }
 
   onChange(cb: (s: DictationState) => void): Unsubscribe {
@@ -179,12 +184,13 @@ export class DictationService {
         () => true,
         (err) => {
           this.log.warn("session.start failed", { id, err });
-          if (this.session?.id === id) this.endSession();
+          if (this.session?.id === id) this.fail(toAppError(err, "SESSION_START_FAILED"));
           return false;
         },
       );
     this.session = { id, started, releasedAt: null, finalizeTimer: null };
     this.partialText = "";
+    this.error = null;
     this.setPhase("recording");
     return id;
   }
@@ -201,7 +207,7 @@ export class DictationService {
         await this.deps.engine.request("session.stop", { session_id: session.id });
       } catch (err) {
         this.log.error("session.stop failed", { id: session.id, err });
-        if (this.session?.id === session.id) this.endSession();
+        if (this.session?.id === session.id) this.fail(toAppError(err, "SESSION_STOP_FAILED"));
       }
     });
   }
@@ -220,7 +226,7 @@ export class DictationService {
     if (this.session?.id !== id) return;
     this.log.error("final did not arrive in time; returning to idle", { id, timeoutMs: this.deps.finalizeTimeoutMs ?? FINALIZE_TIMEOUT_MS });
     this.orphans.add(id);
-    this.endSession();
+    this.fail({ code: "FINALIZE_TIMEOUT", message: "The transcript didn't arrive in time. If it finishes later, you'll find it in History." });
     void this.deps.engine.request("session.cancel", { session_id: id }).catch(() => undefined);
   }
 
@@ -263,6 +269,12 @@ export class DictationService {
     if (data.session_id !== this.session?.id || this.phase !== "recording") return;
     this.partialText = data.text;
     this.emitChange();
+  }
+
+  /** 当前会话失败：记下原因并回到 idle（一次 change 推送） */
+  private fail(error: AppError): void {
+    this.error = error;
+    this.endSession();
   }
 
   private endSession(): void {

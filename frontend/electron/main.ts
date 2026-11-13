@@ -63,8 +63,6 @@ async function main(): Promise<void> {
   Menu.setApplicationMenu(null);
   const machine = await detectMachine(logger);
   const channel = resolveChannel();
-  const hotkeyLimitation = detectHotkeyLimitation();
-  if (hotkeyLimitation) logger.warn(hotkeyLimitation.message, { code: hotkeyLimitation.code });
 
   // ============================================================
   // 窗口：只有本应用创建的 webContents 能调用 IPC
@@ -105,6 +103,7 @@ async function main(): Promise<void> {
       licensesFile: resolveLicensesPath(layout),
       appVersion: app.getVersion(),
       logger,
+      hotkeyLimitation: detectHotkeyLimitation(),
     },
     {
       clipboard: electronClipboard(),
