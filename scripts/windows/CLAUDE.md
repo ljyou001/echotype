@@ -4,7 +4,7 @@
 Microsoft Store 专用的本地打包工具。日常发布不经过这里：6 个平台的安装包由 `.github/workflows/build.yml` 构建，见 `../ci/CLAUDE.md`。
 
 成员清单
-make-appx.ps1: AppX 打包入口。校验 .env 的 Store 身份，生成 AppX 图标，以 `--win appx --<arch>` 调用 electron-builder.cjs；有测试证书时签名供本地侧载
+make-appx.ps1: AppX 打包入口。校验 .env 的 Store 身份，生成 AppX 图标，以 `ECHOTYPE_CHANNEL=msstore` 和 `--win appx --<arch>` 调用 electron-builder.cjs；有测试证书时签名供本地侧载。CI 的等价做法是手动触发 build.yml 并选 channel=msstore
 make-self-signed-cert.ps1: 生成本地侧载测试证书，CN 等于 WINDOWS_PUBLISHER_ID
 EchoTypeTestCert.pfx: 历史提交的测试证书副本。证书入库的处理由 orchestrator 与用户决定，本目录不改动它
 

@@ -1,8 +1,9 @@
 # ============================================================================
 # [INPUT]: 依赖仓库根 .env 的 WINDOWS_PUBLISHER_ID 等 AppX 身份；依赖 frontend/electron-builder.cjs 的 appx 段；
 #          依赖 engine/dist/win-<arch>/（scripts/ci/build-engine.sh 产出）；可选依赖 EchoTypeTestCert.pfx 与 signtool
-# [OUTPUT]: frontend/dist-package/EchoType-<version>-win-<arch>.appx（上传 Store 用未签名包；有测试证书时额外签名）
-# [POS]: Microsoft Store 专用的本地打包入口。appx 不在 CI 的默认目标里，只在这里显式构建。
+# [OUTPUT]: frontend/dist-package/EchoType-<version>-msstore-win-<arch>.appx（上传 Store 用未签名包；有测试证书时额外签名）
+# [POS]: Microsoft Store 的本地打包入口，等同 CI 以 channel=msstore 构建 Windows 行。
+#        以 ECHOTYPE_CHANNEL=msstore 构建：Core 按 msstore 渠道过滤模型（catalog channels.msstore）。
 # [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 # ============================================================================
 # 用法：powershell -ExecutionPolicy Bypass -File scripts\windows\make-appx.ps1 [-Arch x64|arm64]
@@ -40,10 +41,11 @@ try {
     npm run build
     if ($LASTEXITCODE -ne 0) { throw "npm run build failed." }
 
+    $env:ECHOTYPE_CHANNEL = "msstore"
     npx electron-builder --config electron-builder.cjs --win appx "--$Arch" --publish never
     if ($LASTEXITCODE -ne 0) { throw "electron-builder failed." }
 
-    $Appx = Get-ChildItem "dist-package\*-win-$Arch.appx" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    $Appx = Get-ChildItem "dist-package\*-msstore-win-$Arch.appx" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
     if (-not $Appx) { throw "No .appx found in dist-package." }
     Write-Host "AppX created: $($Appx.FullName)" -ForegroundColor Green
 
