@@ -189,7 +189,7 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
     state.activeModel = null;
     pushSnapshot();
     window.setTimeout(() => {
-      state.engine.engineVersion = "3.0.0-mock";
+      state.engine.engineVersion = "4.0.0-mock";
       if (scenario === "error") {
         state.engine.state = "error";
         state.engine.error = { code: "ENGINE_CRASHED", message: "The speech engine exited unexpectedly (code 3221225477)." };
