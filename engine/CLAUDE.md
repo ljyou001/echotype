@@ -7,8 +7,10 @@ Rust 2021（1.85+）+ sherpa-onnx 2.0.1（官方 crate，CPU 静态链接）+ cp
 ## 数据流
 ```
 声卡(cpal)/假麦克风 ─块→ mic-pump：重采样 16 kHz → 300 ms 预录环 → 20 Hz 电平 → 当前会话
-DictationSession：主 VAD 闭段 → 强制解码 ┐
-                 停顿 VAD → 推测解码 ────┴→ DecodeWorker（单飞）→ ModelHost.decode（sherpa / llama-server）→ 文本管线 → final
+DictationSession：VAD（每个 0.1 s 停顿一段）→ UnitBuilder（0.6 s 断句）→ 单元闭合：复用推测或整段解码 ┐
+                  每个停顿 → 推测解码开放单元 ──────────────────────────────────┴→ DecodeWorker（单飞）
+                  → ModelHost.decode（sherpa / llama-server）→ 文本管线 → final
+transcribe.file：同一 VAD + 同一 UnitBuilder（dictation::offline）→ 同一段录音的 final 与听写逐字相同
 server（WS、token、单客户端）⇄ engine actor（请求按序）；所有出站帧经 events::Emitter 的单一通道
 ```
 
@@ -32,7 +34,7 @@ src/dictation/: 会话与延迟流程、段与拼接、单飞解码线程（见 
 src/text/: ITN、空格、标点样式、管线（见 src/text/CLAUDE.md）
 src/bin/echotype-bench.rs: 协议驱动的延迟基准，输出 design/BENCHMARKS.md
 tests/: cargo 集成测试（见 tests/CLAUDE.md）
-scripts/: make-pack、bench、fixture 生成（见 scripts/CLAUDE.md）
+scripts/: make-pack、bench、测试样例下载、fixture 生成（见 scripts/CLAUDE.md）
 
 ## 法则
 - 引擎不持久化任何东西。模型、版本、目录、用户设置全部经 `model.load` 下发；dispatch 只看 `variant.runtime` + `variant.arch`，不认模型 id。
@@ -40,11 +42,13 @@ scripts/: make-pack、bench、fixture 生成（见 scripts/CLAUDE.md）
 - 一个模型一个解码线程；stop 时丢弃排队的推测作业，final 由最后完成的解码就地发出。
 - Windows 必须关闭 EcoQoS，否则解码慢 2.2 倍且忽快忽慢（design/ENGINE_NOTES.md §1）。
 - sherpa VAD 必须按 ≤ 512 样本小块喂。
+- 准确率不随切分变化：一个解码单元是一句话（0.6 s 静音断句），整段解码一次，从不拼余段；听写与 transcribe.file 共用切分。
 - 基础引擎只含 CPU（sherpa 静态库）；GPU 只来自引擎包或 macOS 基础包里的 llama-server。
 
 ## 构建、测试、运行
 - 构建：`cargo build --release`（首次下载 sherpa 静态库约 1 GB 解压）。CI：`scripts/ci/build-engine.sh <target-id>`。
-- 测试：`cargo test --release`。真实模型：`ECHOTYPE_TEST_MODELS_DIR=<models> ECHOTYPE_TEST_WAVS=<含 zh.wav en.wav> cargo test --release --test models`。
+- 测试：`cargo test --release`。真实模型：`scripts/fetch-test-wavs.sh` 后 `ECHOTYPE_TEST_MODELS_DIR=<models> cargo test --release --test models -- --nocapture`
+  （样例缺省在 `target/test-wavs/`，ECHOTYPE_TEST_WAVS 可覆盖）。
 - 运行：`ECHOTYPE_ENGINE_TOKEN=<随机串> echotype-engine --port 0 --models-dir <dir> --log-dir <dir>`；调试 `--fake-mic a.wav [--fake-mic b.wav]`、`--no-speculate`。
 - Core 开发态：`ECHOTYPE_ENGINE_PATH=<repo>/engine/target/release/echotype-engine.exe`。
 - GPU 引擎包：`scripts/make-pack.sh cuda win32-x64 <out-dir>`（Windows 用 Git Bash，需 VS Build Tools 的 lib.exe；Linux：`make-pack.sh cuda linux-x64 <out-dir>`）。

@@ -60,9 +60,6 @@ impl Detector for EnergyDetector {
     fn in_speech(&self) -> bool {
         self.start.is_some()
     }
-    fn open_start(&self) -> Option<usize> {
-        self.start
-    }
     fn accept(&mut self, samples: &[f32]) -> Vec<(usize, usize)> {
         self.pending.extend_from_slice(samples);
         let n = self.pending.len() / FRAME * FRAME;
