@@ -1,8 +1,0 @@
-# EchoType Engine (backend/) runtime dependencies. Exact pins: the PyInstaller bundle must be reproducible.
-# CPU build. For the CUDA build, replace sherpa-onnx with the "+cuda12.cudnn9" wheel (see backend/CLAUDE.md).
-sherpa-onnx==2.0.1
-numpy==2.2.6
-sounddevice==0.5.6
-websockets==16.1.1
-# Build and test only (not bundled):
-#   pyinstaller==6.16.0  pytest
