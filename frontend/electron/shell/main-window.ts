@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 electron 的 BrowserWindow、shell
- * [OUTPUT]: 导出 MainWindow（create / show / hide / toggle / apply / allowClose）、RendererSource、loadRenderer、hardenWebContents
+ * [OUTPUT]: 导出 MainWindow（create / show / hide / toggle / apply / applyBackground / allowClose）、RendererSource、loadRenderer、hardenWebContents
  * [POS]: 主窗口的生命周期，行为与 v2 一致：980×680，关闭即隐藏（托盘应用），退出时才真正关闭。
  *        loadRenderer 与 hardenWebContents 也供 Quick Action 窗口复用：开发态加载 Vite URL，打包态加载 dist/index.html；
  *        新窗口一律拒绝，外链交给系统浏览器。
@@ -27,6 +27,7 @@ export function hardenWebContents(contents: WebContents): void {
 
 export interface MainWindowOptions {
   preload: string;
+  background: () => string; // 当前明暗对应的窗口底色（shell/theme）
   preloadArgs: string[]; // 传给 preload 的 process.argv（发行渠道）
   renderer: RendererSource;
   icon: string;
@@ -46,7 +47,7 @@ export class MainWindow {
       height: 680,
       minWidth: 920,
       minHeight: 620,
-      backgroundColor: "#FEFEFE",
+      backgroundColor: this.opts.background(),
       show: false,
       icon: this.opts.icon,
       webPreferences: {
@@ -93,6 +94,11 @@ export class MainWindow {
     if (action === "show") this.show();
     else if (action === "hide") this.hide();
     else if (action === "toggle") this.toggle();
+  }
+
+  /** 主题切换时由 ThemeSync 调用 */
+  applyBackground(color: string): void {
+    if (this.win && !this.win.isDestroyed()) this.win.setBackgroundColor(color);
   }
 
   /** 退出流程开始后才允许真正关闭 */

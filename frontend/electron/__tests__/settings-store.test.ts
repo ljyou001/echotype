@@ -124,6 +124,27 @@ describe("SettingsStore", () => {
     expect(s.models.perModel["sensevoice-small"]).toEqual({ punctuation: false, language: "zh" });
   });
 
+  it("fills ui.theme with the default in an existing v2 file and validates changes", () => {
+    const dir = makeTempDir();
+    const file = path.join(dir, "settings.json");
+    fs.writeFileSync(file, JSON.stringify({ schemaVersion: 2, ui: { language: "zh", onboardingCompleted: true, launchAtStartup: false } }));
+    const store = storeIn(dir);
+    const s = store.load();
+    expect(s.schemaVersion).toBe(2);
+    expect(s.ui).toEqual({ language: "zh", onboardingCompleted: true, launchAtStartup: false, theme: { mode: "system", accent: "violet" } });
+
+    store.update({ ui: { theme: { mode: "dark" } } });
+    expect(store.get().ui.theme).toEqual({ mode: "dark", accent: "violet" });
+    expect(JSON.parse(fs.readFileSync(file, "utf-8")).ui.theme).toEqual({ mode: "dark", accent: "violet" });
+
+    expect(() => store.update({ ui: { theme: { mode: "sepia" as never } } })).toThrow(/ui\.theme\.mode/);
+    expect(() => store.update({ ui: { theme: { accent: "lime" as never } } })).toThrow(/ui\.theme\.accent/);
+    expect(store.get().ui.theme).toEqual({ mode: "dark", accent: "violet" });
+
+    fs.writeFileSync(file, JSON.stringify({ schemaVersion: 2, ui: { theme: { mode: "neon", accent: "rose" } } }));
+    expect(storeIn(dir).load().ui.theme).toEqual({ mode: "system", accent: "rose" }); // 读盘时非法值回落默认，合法值保留
+  });
+
   it("rejects an invalid patch as a whole", () => {
     const dir = makeTempDir();
     const store = storeIn(dir);

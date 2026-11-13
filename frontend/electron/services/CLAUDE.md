@@ -6,7 +6,7 @@
 
 ## 设置
 settings-store.ts: 唯一真相源 ~/.echotype/settings.json（schemaVersion 2）。启动读一次盘，之后只读内存（冻结对象）；update 整体校验、原子写、广播 change，并拒绝 models.perModel；setModelValues 是模型专属设置的唯一写入口；v1 自动迁移并备份为 .v1.bak，损坏文件备份为 .corrupt-<ts>
-settings-schema.ts: Settings v2 的默认值与合并规则。读盘、迁移、UI 补丁三条路径共用 mergeSettings；perModel 只在读盘与迁移时宽松接受（原始类型值）
+settings-schema.ts: Settings v2 的默认值与合并规则。读盘、迁移、UI 补丁三条路径共用 mergeSettings；perModel 只在读盘与迁移时宽松接受（原始类型值）；新增字段（ui.theme，默认 system/violet）不升 schemaVersion，旧文件缺项由默认值补齐
 settings-migration.ts: v1 {hotkey, app} → v2 补丁的纯函数。LEGACY_MODEL_IDS（paraformer-offline → paraformer-zh，Qwen3-ASR-0.6B → qwen3-asr-0.6b）、设备 → provider、语言名 → ISO 码；浏览器 deviceId 不迁移
 
 ## 模型与引擎包

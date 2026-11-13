@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 electron 的 BrowserWindow、screen；依赖 ./main-window 的 loadRenderer、hardenWebContents；依赖 core/logger
- * [OUTPUT]: 导出 QuickActionWindow（open / text / close / resize / move）
+ * [OUTPUT]: 导出 QuickActionWindow（open / text / close / resize / move / applyBackground）
  * [POS]: Quick Action 浮窗，几何与交互逐项移植自 v2：520 宽，按插件数估高（上限 500），贴近鼠标并避开屏幕边缘；
  *        失焦自动关闭，但创建后 1 s 宽限期内不关，显示回复后也不关；拖动时夹在屏幕内；回复变长时向上挪以免出屏。
  *        v2 用 "quick-action-has-reply" 消息关闭失焦自动关闭；契约里没有这个 channel，而 v2 渲染端恰好只在显示回复或错误时
@@ -22,6 +22,7 @@ const BLUR_GRACE_MS = 1_000;
 
 export interface QuickActionOptions {
   preload: string;
+  background: () => string; // 当前明暗对应的窗口底色（shell/theme）
   preloadArgs: string[];
   renderer: RendererSource;
   logger: Logger;
@@ -65,7 +66,7 @@ export class QuickActionWindow {
       y,
       frame: false,
       transparent: false,
-      backgroundColor: "#FEFEFE",
+      backgroundColor: this.opts.background(),
       alwaysOnTop: true,
       skipTaskbar: true,
       resizable: false,
@@ -99,6 +100,11 @@ export class QuickActionWindow {
       if (this.win === win) this.win = null;
     });
     this.log.info("opened", { chars: text.length, instanceCount, x, y, height });
+  }
+
+  /** 主题切换时由 ThemeSync 调用 */
+  applyBackground(color: string): void {
+    if (this.win && !this.win.isDestroyed()) this.win.setBackgroundColor(color);
   }
 
   text(): string {

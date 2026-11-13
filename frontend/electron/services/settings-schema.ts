@@ -6,9 +6,10 @@
  *        非法字段不进入结果，而是收集进 errors：读盘时记日志丢弃，UI 更新时整体拒绝。
  *        models.perModel 只经 bridge.models.updateSettings 写入：UI 补丁里出现它即拒绝；读盘与迁移时宽松接受
  *        （只要求值是原始类型），按模型 settings[] 的校验在 model-settings 中进行。
+ *        新增字段（如 ui.theme）不升 schemaVersion：旧的 v2 文件缺这一项时由默认值补齐。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
-import type { RecordingMode, SettingValue, Settings } from "../ipc-contract.js";
+import type { RecordingMode, SettingValue, Settings, ThemeAccent, ThemeMode } from "../ipc-contract.js";
 import { defaultAccelerator, validateAccelerator } from "./hotkey-keymap.js";
 
 export interface SettingsContext {
@@ -19,6 +20,8 @@ export interface SettingsContext {
 export const PER_MODEL_VIA_BRIDGE = "models.perModel is changed through models.updateSettings";
 
 const MODES: RecordingMode[] = ["push-to-talk", "toggle"];
+const THEME_MODES: ThemeMode[] = ["system", "light", "dark"];
+const THEME_ACCENTS: ThemeAccent[] = ["violet", "indigo", "ocean", "teal", "rose", "sunset"];
 export const TAP_THRESHOLD_RANGE = { min: 50, max: 2_000 } as const;
 
 export function createDefaultSettings(ctx: SettingsContext): Settings {
@@ -29,7 +32,7 @@ export function createDefaultSettings(ctx: SettingsContext): Settings {
     output: { directInput: true, clipboard: false },
     audio: { inputDeviceId: null, keepMicWarm: true },
     models: { activeId: ctx.defaultModelId, perModel: {} },
-    ui: { language: "system", onboardingCompleted: false, launchAtStartup: false },
+    ui: { language: "system", onboardingCompleted: false, launchAtStartup: false, theme: { mode: "system", accent: "violet" } },
     privacy: { saveRecordings: false },
   };
 }
@@ -127,6 +130,14 @@ export function mergeSettings(
     take(ui, "language", "ui.language", str, (v) => (next.ui.language = v), "must be a string");
     take(ui, "onboardingCompleted", "ui.onboardingCompleted", bool, (v) => (next.ui.onboardingCompleted = v), "must be a boolean");
     take(ui, "launchAtStartup", "ui.launchAtStartup", bool, (v) => (next.ui.launchAtStartup = v), "must be a boolean");
+    if (ui.theme !== undefined) {
+      if (!isObj(ui.theme)) errors.push("ui.theme must be an object");
+      else {
+        const theme = ui.theme;
+        take(theme, "mode", "ui.theme.mode", (v): v is ThemeMode => THEME_MODES.includes(v as ThemeMode), (v) => (next.ui.theme.mode = v), `must be one of ${THEME_MODES.join(", ")}`);
+        take(theme, "accent", "ui.theme.accent", (v): v is ThemeAccent => THEME_ACCENTS.includes(v as ThemeAccent), (v) => (next.ui.theme.accent = v), `must be one of ${THEME_ACCENTS.join(", ")}`);
+      }
+    }
   }
 
   const privacy = section("privacy");

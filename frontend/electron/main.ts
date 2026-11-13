@@ -23,6 +23,7 @@ import { electronClipboard, electronSecretCrypto, nullKeySource, robotKeyboard, 
 import { QuickActionWindow } from "./shell/quick-action-window.js";
 import { CHANNEL_ARG, detectHotkeyLimitation, detectMachine, PowerPolicy, resolveChannel, setLaunchAtStartup } from "./shell/system.js";
 import { platformKey } from "./services/variant-selection.js";
+import { ThemeSync } from "./shell/theme.js";
 import { TrayController } from "./shell/tray.js";
 
 const distDir = path.dirname(fileURLToPath(import.meta.url));
@@ -77,8 +78,11 @@ async function main(): Promise<void> {
   const renderer: RendererSource = { url: process.env.ELECTRON_RENDERER_URL ?? null, file: path.join(distDir, "..", "dist", "index.html") };
   const icon = path.join(distDir, "..", "assets", "icon.png");
   const preloadArgs = [`${CHANNEL_ARG}${channel}`];
-  const mainWindow = new MainWindow({ preload, preloadArgs, renderer, icon, trust });
-  const quickAction = new QuickActionWindow({ preload, preloadArgs, renderer, logger, trust });
+  const theme = new ThemeSync();
+  const background = () => theme.background();
+  const mainWindow = new MainWindow({ preload, preloadArgs, background, renderer, icon, trust });
+  const quickAction = new QuickActionWindow({ preload, preloadArgs, background, renderer, logger, trust });
+  theme.track(mainWindow, quickAction);
   const power = new PowerPolicy(logger);
   let tray: TrayController | null = null;
 
@@ -112,6 +116,7 @@ async function main(): Promise<void> {
       publishPacks: (packs) => broadcast(IPC.packsPush, packs),
       publishLevel: (level) => broadcast(IPC.levelPush, level),
       applyLaunchAtStartup: (enabled) => setLaunchAtStartup(enabled, logger),
+      applyTheme: ({ mode }) => theme.apply(mode),
       secretCrypto: electronSecretCrypto(safeStorage),
       openUri: (uri) => shell.openExternal(uri),
       publishIntegrationEvent: (event) => broadcast(IPC.integrationsEvent, event),
