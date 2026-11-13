@@ -203,7 +203,7 @@ export class EngineSupervisor implements EngineGateway {
     readline.createInterface({ input: child.stderr }).on("line", (line) => this.engineLog.info(line));
     child.once("error", (err) => this.fail(gen, { code: CoreEngineErrorCode.ENGINE_START_FAILED, message: err.message }, true));
     child.once("exit", (code, signal) => {
-      this.log.warn("engine exited", { pid: child.pid, code, signal });
+      (this.stopping ? this.log.info : this.log.warn)("engine exited", { pid: child.pid, code, signal });
       this.fail(gen, { code: CoreEngineErrorCode.ENGINE_CRASHED, message: `engine exited (code=${code}, signal=${signal})` }, true);
     });
 
