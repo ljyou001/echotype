@@ -1,0 +1,248 @@
+/*
+ * [INPUT]: 依赖 styles/tokens.css 的变量
+ * [OUTPUT]: 集成页样式：可拖拽行 .integration-row、插件目录 .plugin-catalog、弹窗表单 .integration-form、插件选择器 .plugin-picker
+ * [POS]: pages/IntegrationsPage.tsx 与 pages/integrations/* 共用的样式。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+
+/* ============================================================
+ * 我的集成：可拖拽行
+ * ============================================================ */
+.integration-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-2);
+  background: var(--surface);
+}
+
+.integration-row:first-child {
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+}
+
+.integration-row:last-child {
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
+
+.integration-row + .integration-row {
+  border-top: 1px solid var(--border);
+}
+
+.integration-row--dragging {
+  z-index: 1;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.integration-row--disabled .integration-row__icon,
+.integration-row--disabled .integration-row__text {
+  opacity: 0.5;
+}
+
+.integration-row__handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-subtle);
+  font-size: 18px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.integration-row__handle:hover {
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+}
+
+.integration-row__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  font-size: 19px;
+}
+
+.integration-row__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.integration-row__name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-weight: 600;
+}
+
+.integration-row__plugin {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.integration-row__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.integration-row__actions .switch {
+  margin-left: var(--space-2);
+}
+
+/* ============================================================
+ * 可用插件目录
+ * ============================================================ */
+.plugin-catalog {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.plugin-catalog__group {
+  padding: var(--space-4) var(--space-5);
+}
+
+.plugin-catalog__title {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 650;
+  color: var(--text-muted);
+}
+
+.plugin-catalog__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.plugin-catalog__list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plugin-catalog__icon {
+  width: 20px;
+  text-align: center;
+}
+
+/* ============================================================
+ * 弹窗：插件选择器与表单
+ * ============================================================ */
+.plugin-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--space-2);
+}
+
+.plugin-picker__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-3) var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    background var(--duration-fast) var(--ease);
+}
+
+.plugin-picker__item:hover {
+  border-color: var(--brand);
+}
+
+.plugin-picker__item--selected {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+
+.plugin-picker__icon {
+  font-size: 22px;
+}
+
+.plugin-picker__name {
+  max-width: 100%;
+  font-size: var(--text-sm);
+  font-weight: 550;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.integration-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.integration-form__row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.integration-form__icon .input {
+  text-align: center;
+  font-size: var(--text-lg);
+}
+
+.integration-form__warning {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  color: var(--warning);
+  font-size: var(--text-sm);
+}
+
+.integration-form__check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+
+.integration-form__check .checkbox {
+  margin-top: 2px;
+}
+
+.integration-form__check-hint {
+  display: block;
+  margin-top: 2px;
+}
+
+.integration-form__required {
+  color: var(--danger);
+}

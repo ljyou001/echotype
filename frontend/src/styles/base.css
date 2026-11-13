@@ -1,0 +1,305 @@
+/*
+ * [INPUT]: 依赖 ./tokens.css 的变量
+ * [OUTPUT]: 全局重置、排版、按钮（.btn 系列）、表单控件（.input / .select / .textarea）、kbd、滚动条
+ * [POS]: 样式系统第二层。只定义无业务含义的原子样式，页面与组件 CSS 在其上组合。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--brand);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-sunken);
+}
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  min-height: 22px;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--brand);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+
+/* ============================================================
+ * 按钮
+ * ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+  font-weight: 550;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn svg {
+  flex-shrink: 0;
+  font-size: 15px;
+}
+
+.btn--primary {
+  background: var(--brand);
+  color: var(--text-on-brand);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--brand-strong);
+}
+
+.btn--secondary {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: var(--brand-soft);
+  color: var(--text);
+}
+
+.btn--danger {
+  background: var(--danger);
+  color: var(--text-on-brand);
+}
+
+.btn--danger:hover:not(:disabled) {
+  filter: brightness(0.94);
+}
+
+.btn--danger-ghost {
+  background: transparent;
+  color: var(--danger);
+}
+
+.btn--danger-ghost:hover:not(:disabled) {
+  background: var(--danger-soft);
+}
+
+.btn--sm {
+  height: 28px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-sm);
+}
+
+.btn--lg {
+  height: 40px;
+  padding: 0 var(--space-5);
+}
+
+.btn--icon {
+  width: var(--control-height);
+  padding: 0;
+}
+
+.btn--icon.btn--sm {
+  width: 28px;
+}
+
+/* ============================================================
+ * 表单控件
+ * ============================================================ */
+.input,
+.select,
+.textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+
+.input:hover,
+.select:hover,
+.textarea:hover {
+  border-color: var(--border-hover);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: var(--focus-ring);
+}
+
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* 长设备名不撑破卡片：选中项单行省略 */
+.select {
+  padding-right: 32px;
+  appearance: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236f6c7d' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+}
+
+.textarea {
+  height: auto;
+  min-height: 72px;
+  padding: var(--space-2) var(--space-3);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field__label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.field__hint {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.field__error {
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -1,0 +1,36 @@
+/*
+ * [INPUT]: 依赖 styles/tokens.css 的变量；行式布局来自 components/components.css 的 .section/.setting-row
+ * [OUTPUT]: 设置页专属样式：.hotkey-control、.device-picker、.settings__footnote
+ * [POS]: pages/SettingsPage.tsx 的专属样式。分节与行由共享组件提供，这里只补页面特有的控件组合。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+.hotkey-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  white-space: nowrap;
+}
+
+.hotkey-control__key {
+  min-height: 26px;
+  padding: 0 10px;
+  font-size: var(--text-md);
+}
+
+/* 设备下拉框：独占一行，最长 560px，选中项单行省略 */
+.device-picker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 560px;
+}
+
+.device-picker .select {
+  flex: 1;
+}
+
+.settings__footnote {
+  padding: 0 var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-subtle);
+}

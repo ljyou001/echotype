@@ -1,0 +1,208 @@
+/*
+ * [INPUT]: 依赖 styles/tokens.css 的变量与 styles/shell.css 的 .card
+ * [OUTPUT]: 模型页样式：.models 列表、.model-card 卡片、.model-settings 设置区
+ * [POS]: pages/ModelsPage.tsx 与 pages/model-catalog/* 共用的样式。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+.models__helper-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-height);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.models__helper-toggle:hover {
+  color: var(--text);
+}
+
+.models__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.models__helpers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.models__helpers .models__list {
+  margin-top: var(--space-2);
+}
+
+/* ============================================================
+ * 卡片
+ * ============================================================ */
+.model-card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5) var(--space-5) 0;
+  transition: border-color var(--duration) var(--ease);
+}
+
+.model-card--active {
+  border-color: var(--success-ring);
+  box-shadow: 0 0 0 1px var(--success-halo), var(--shadow-sm);
+}
+
+.model-card__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.model-card__main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.model-card__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.model-card__name {
+  font-size: var(--text-lg);
+  font-weight: 650;
+}
+
+.model-card__desc {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+
+.model-card__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.model-card__facts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.model-card__facts svg {
+  flex-shrink: 0;
+  color: var(--text-subtle);
+}
+
+.model-card__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.model-card__progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.model-card__progress-label {
+  min-width: 120px;
+  text-align: right;
+}
+
+.model-card__error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+
+.model-card__error svg {
+  flex-shrink: 0;
+}
+
+.model-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-4) calc(-1 * var(--space-5)) 0;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.model-card__footer:last-child {
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
+
+.model-card__toggle svg {
+  transition: transform var(--duration) var(--ease);
+}
+
+.model-card__helper-note {
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
+/* 没有页脚的卡片（辅助模型未安装）补底部留白 */
+.model-card > :last-child:not(.model-card__footer):not(.model-settings) {
+  margin-bottom: var(--space-5);
+}
+
+/* ============================================================
+ * 单个模型的设置区
+ * ============================================================ */
+.model-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0 calc(-1 * var(--space-5));
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  border-top: 1px solid var(--border);
+  background: var(--surface-sunken);
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
+
+.model-settings__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.model-settings__toggles {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.model-settings__toggles .setting-row {
+  padding: var(--space-3) var(--space-4);
+}
+
+.model-settings__note {
+  font-size: var(--text-xs);
+  color: var(--text-subtle);
+}
