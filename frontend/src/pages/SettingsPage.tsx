@@ -1,15 +1,16 @@
 /**
- * [INPUT]: 依赖 store/appStore 的 settings 与 updateSettings；依赖 hooks 的 useAudioInputs、useMicTest、useHotkeyLabel；
+ * [INPUT]: 依赖 store/appStore 的 settings、updateSettings、selectHotkeyError 与 PageAnchor；依赖 utils/issues；依赖 hooks 的 useAudioInputs、useMicTest、useHotkeyLabel；
  *          依赖 components 的 PageHeader/Section/SettingRow、Switch/Segmented、LevelMeter、HotkeyModal、KeyHint；
  *          依赖 i18n/config 的 SUPPORTED_LANGUAGES；依赖 ./settings/AboutSection 与 ./settings/AppearanceSection
  * [OUTPUT]: 导出 SettingsPage 组件
  * [POS]: 全局设置页。六个分节：通用、外观、听写、麦克风、隐私、关于。每项改动立即经 updateSettings 交给 Core 校验与持久化，
  *        没有"保存"按钮。模型相关设置（标点、标点风格、数字格式化、语言、运行设备）在 Models 页，不在这里。
+ *        听写、麦克风两节带页内锚点 id（首页摘要卡与"选择麦克风"直达）；热键受限（hotkey.error）时热键行下方显示警示短语。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FiRefreshCw } from "react-icons/fi";
+import { FiAlertTriangle, FiRefreshCw } from "react-icons/fi";
 import type { RecordingMode, Settings } from "../../electron/ipc-contract";
 import { Segmented, Switch } from "../components/controls";
 import { HotkeyModal } from "../components/HotkeyModal";
@@ -20,8 +21,9 @@ import { useAudioInputs } from "../hooks/useAudioInputs";
 import { useHotkeyLabel } from "../hooks/useHotkeyLabel";
 import { useMicTest } from "../hooks/useMicTest";
 import { SUPPORTED_LANGUAGES } from "../i18n/config";
-import { selectSettings, useAppStore } from "../store/appStore";
+import { selectHotkeyError, selectSettings, useAppStore, type PageAnchor } from "../store/appStore";
 import { KEY_TOKEN } from "../utils/format";
+import { describeIssue } from "../utils/issues";
 import { AboutSection } from "./settings/AboutSection";
 import { AppearanceSection } from "./settings/AppearanceSection";
 import "./SettingsPage.css";
@@ -112,12 +114,23 @@ function DictationSection() {
   const [editingHotkey, setEditingHotkey] = useState(false);
   const output = outputChoiceOf(settings.output);
   const mode = settings.recording.mode;
+  const hotkeyError = useAppStore(selectHotkeyError);
+  const hotkeyIssue = hotkeyError ? describeIssue(t, "hotkey", hotkeyError) : null;
 
   return (
-    <Section title={t("settings.sections.dictation")}>
+    <Section id={"settings-dictation" satisfies PageAnchor} title={t("settings.sections.dictation")}>
       <SettingRow
         label={t("settings.hotkey.title")}
-        description={t("settings.hotkey.rowDescription")}
+        description={
+          <>
+            {t("settings.hotkey.rowDescription")}
+            {hotkeyIssue && (
+              <span className="field__warning" title={hotkeyIssue.body}>
+                <FiAlertTriangle aria-hidden /> {hotkeyIssue.short}
+              </span>
+            )}
+          </>
+        }
         control={
           <div className="hotkey-control">
             <kbd className="hotkey-control__key">{hotkey}</kbd>
@@ -191,7 +204,7 @@ function MicrophoneSection() {
   const systemDefault = inputs.find((i) => i.isDefault);
 
   return (
-    <Section title={t("settings.sections.microphone")}>
+    <Section id={"settings-microphone" satisfies PageAnchor} title={t("settings.sections.microphone")}>
       <SettingRow
         stacked
         label={t("settings.audio.title")}

@@ -1,15 +1,15 @@
 /**
- * [INPUT]: 依赖 bridge().history（list/remove/clear）与 bridge().output.copy；依赖 store/appStore 的 lastFinal 与 run/showToast；
+ * [INPUT]: 依赖 bridge().history（list/remove/clear）、bridge().output.copy 与 bridge().quickAction.open；依赖 store/appStore 的 lastFinal 与 run/showToast；
  *          依赖 store/integrationsStore 的默认集成；依赖 hooks/useIntegrationRun 运行默认集成；
  *          依赖 components 的 PageHeader、EmptyState、ConfirmDialog；依赖 utils/format
  * [OUTPUT]: 导出 HistoryPage 组件
  * [POS]: 历史页。Core 持久化听写记录，本页拉取并按天分组展示；新结果到达（lastFinal.at 变化）时自动刷新。
- *        支持本地搜索、复制、把一条交给默认集成（结果或回执以提示条显示）、删除单条与清空。
+ *        支持本地搜索、复制、在 Quick Action 中打开（任选动作，v2 行为）、一键交给默认集成（结果或回执以提示条显示）、删除单条与清空。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FiCheck, FiClock, FiCopy, FiSearch, FiTrash2, FiZap } from "react-icons/fi";
+import { FiCheck, FiClock, FiCopy, FiSearch, FiSend, FiTrash2, FiZap } from "react-icons/fi";
 import type { HistoryEntry, IntegrationInstanceView } from "../../electron/ipc-contract";
 import { bridge } from "../bridge";
 import { EmptyState, PageHeader } from "../components/layout";
@@ -151,8 +151,8 @@ interface HistoryRowProps {
 function HistoryRow({ entry, integration: defaultIntegration, onSend, onRemove }: HistoryRowProps) {
   const { t, i18n } = useTranslation();
   const run = useAppStore((s) => s.run);
-  const showToast = useAppStore((s) => s.showToast);
   const [copied, setCopied] = useState(false);
+  const openQuickAction = () => run(() => bridge().quickAction.open(entry.text));
   const copy = () =>
     run(async () => {
       await bridge().output.copy(entry.text);
@@ -179,6 +179,16 @@ function HistoryRow({ entry, integration: defaultIntegration, onSend, onRemove }
         >
           {copied ? <FiCheck /> : <FiCopy />}
         </button>
+        <button
+          type="button"
+          className="btn btn--ghost btn--icon btn--sm"
+          onClick={openQuickAction}
+          disabled={!entry.text}
+          title={t("history.actions.openInQuickAction")}
+          aria-label={t("history.actions.openInQuickAction")}
+        >
+          <FiZap />
+        </button>
         {defaultIntegration && (
           <button
             type="button"
@@ -187,7 +197,7 @@ function HistoryRow({ entry, integration: defaultIntegration, onSend, onRemove }
             title={t("history.actions.sendTo", { name: defaultIntegration.name })}
             aria-label={t("history.actions.sendTo", { name: defaultIntegration.name })}
           >
-            <FiZap />
+            <FiSend />
           </button>
         )}
         <button

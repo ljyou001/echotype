@@ -149,7 +149,8 @@
       "play": "Play audio",
       "search": "Search",
       "delete": "Delete",
-      "sendTo": "Send to {{name}}"
+      "sendTo": "Send to {{name}}",
+      "openInQuickAction": "Open in Quick Action"
     },
     "emptyDescription": "Hold your hotkey and speak. What you say shows up here.",
     "searchPlaceholder": "Search history",
@@ -765,5 +766,32 @@
     "noModel": "No model loaded",
     "chooseModel": "Choose a model",
     "fallback": "{{target}} unavailable — running on {{provider}}"
+  },
+  "issues": {
+    "dictation": {
+      "fallback": "Dictation didn't go through",
+      "fallbackShort": "Last dictation failed",
+      "DEVICE_UNAVAILABLE": {
+        "title": "Microphone unavailable",
+        "body": "EchoType couldn't open a microphone. Make sure one is connected and not in use by another app, then try again."
+      },
+      "DECODE_FAILED": {
+        "title": "Couldn't transcribe that",
+        "body": "Something went wrong while turning your speech into text. Try again."
+      },
+      "actions": {
+        "chooseMicrophone": "Choose microphone",
+        "openModels": "Go to Models"
+      }
+    },
+    "hotkey": {
+      "fallback": "Your hotkey isn't working",
+      "fallbackShort": "Needs attention",
+      "HOTKEY_WAYLAND_LIMITED": {
+        "title": "Your hotkey is limited on Wayland",
+        "short": "Limited on Wayland",
+        "body": "Wayland only passes your hotkey to EchoType while an X11 app is focused. To dictate in any app, sign in with an X11 session, such as “GNOME on Xorg”. You can also start dictation from Home at any time."
+      }
+    }
   }
 }

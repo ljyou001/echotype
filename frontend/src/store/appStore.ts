@@ -1,8 +1,10 @@
 /**
  * [INPUT]: 依赖 zustand 的 create；依赖 bridge() 访问 Core；依赖 ipc-contract 的快照与模型类型；
  *          依赖 i18n/config 的 resolveAppLanguage 同步界面语言；依赖 utils/theme 的 applyTheme 同步皮肤
- * [OUTPUT]: 导出 useAppStore、connectStore()、PageKey、Toast，以及选择器 selectSettings / selectActiveModel
- * [POS]: UI 层唯一的状态容器。镜像 Core 推送的 AppSnapshot、ModelView[] 与 EnginePackView[]，外加纯本地 UI 状态（当前页、提示条）。
+ * [OUTPUT]: 导出 useAppStore、connectStore()、PageKey、PageAnchor、Toast，
+ *           以及选择器 selectSettings / selectActiveModel / selectDictationError / selectHotkeyError
+ * [POS]: UI 层唯一的状态容器。镜像 Core 推送的 AppSnapshot、ModelView[] 与 EnginePackView[]，
+ *        外加纯本地 UI 状态（当前页与页内锚点、提示条）。
  *        模型专属设置只经 updateModelSettings → bridge.models.updateSettings，从不经全局 updateSettings。
  *        快照里的 ui.language 与 ui.theme 变化时，同步 i18n 与 <html> 上的皮肤。
  *        业务状态只读：所有动作都调用 bridge，等 Core 推回新快照，本地不自造业务真相。
@@ -10,6 +12,7 @@
  */
 import { create } from "zustand";
 import type {
+  AppError,
   AppSnapshot,
   DeepPartial,
   EnginePackView,
@@ -22,6 +25,8 @@ import i18n, { resolveAppLanguage } from "../i18n/config";
 import { applyTheme } from "../utils/theme";
 
 export type PageKey = "home" | "history" | "models" | "integrations" | "settings" | "debug";
+/** 页内锚点：setPage 带上它时，App 把对应分节滚进视野（如首页"选择麦克风"直达设置页的麦克风分节） */
+export type PageAnchor = "settings-dictation" | "settings-microphone";
 
 export interface Toast {
   id: number;
@@ -37,8 +42,9 @@ interface AppState {
 
   // ---------- 本地 UI 状态 ----------
   page: PageKey;
+  anchor: PageAnchor | null;
   toast: Toast | null;
-  setPage: (page: PageKey) => void;
+  setPage: (page: PageKey, anchor?: PageAnchor) => void;
   showToast: (message: string, kind?: Toast["kind"]) => void;
   dismissToast: () => void;
 
@@ -57,9 +63,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   models: [],
   packs: [],
   page: "home",
+  anchor: null,
   toast: null,
 
-  setPage: (page) => set({ page }),
+  setPage: (page, anchor) => set({ page, anchor: anchor ?? null }),
   showToast: (message, kind = "info") => set({ toast: { id: ++toastSeq, kind, message } }),
   dismissToast: () => set({ toast: null }),
 
@@ -100,6 +107,10 @@ export const selectActiveModel = (s: AppState): ModelView | undefined => {
   const activeId = s.snapshot?.settings.models.activeId;
   return s.models.find((m) => m.id === activeId) ?? s.models.find((m) => m.isActive);
 };
+
+// 两个错误槽位在 IPC v2 中途加入：旧 Core 的快照里没有它们，按"无错误"处理
+export const selectDictationError = (s: AppState): AppError | null => s.snapshot?.dictation.error ?? null;
+export const selectHotkeyError = (s: AppState): AppError | null => s.snapshot?.hotkey?.error ?? null;
 
 // ============================================================
 // 连接 Core：先订阅推送，再拉一次全量；推送先到则以推送为准

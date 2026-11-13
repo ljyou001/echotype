@@ -149,7 +149,8 @@
       "play": "播放音频",
       "search": "搜索",
       "delete": "删除",
-      "sendTo": "发送到 {{name}}"
+      "sendTo": "发送到 {{name}}",
+      "openInQuickAction": "在快捷操作中打开"
     },
     "emptyDescription": "按住热键说话，内容会出现在这里。",
     "searchPlaceholder": "搜索历史",
@@ -765,5 +766,32 @@
     "noModel": "未加载模型",
     "chooseModel": "选择模型",
     "fallback": "{{target}}不可用，正在用 {{provider}} 运行"
+  },
+  "issues": {
+    "dictation": {
+      "fallback": "这次听写没有成功",
+      "fallbackShort": "上次听写失败",
+      "DEVICE_UNAVAILABLE": {
+        "title": "麦克风不可用",
+        "body": "EchoType 打不开麦克风。请确认麦克风已连接、没有被其他应用占用，然后再试一次。"
+      },
+      "DECODE_FAILED": {
+        "title": "没能转成文字",
+        "body": "把语音转成文字时出了问题，请再试一次。"
+      },
+      "actions": {
+        "chooseMicrophone": "选择麦克风",
+        "openModels": "前往模型页"
+      }
+    },
+    "hotkey": {
+      "fallback": "热键无法使用",
+      "fallbackShort": "需要处理",
+      "HOTKEY_WAYLAND_LIMITED": {
+        "title": "Wayland 下热键受限",
+        "short": "Wayland 下受限",
+        "body": "在 Wayland 下，只有 X11 应用在前台时，EchoType 才能收到热键。想在任何应用里听写，请在登录时选择 X11 会话（如“GNOME on Xorg”）。你也可以随时在首页开始听写。"
+      }
+    }
   }
 }
