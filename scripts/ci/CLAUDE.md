@@ -15,6 +15,7 @@ mac/entitlements.mac.plist: mac 主程序与全部嵌套二进制（引擎、lla
 关联文件（不在本目录，同属打包层）
 ../../.github/workflows/build.yml: 发布流水线。tag `v*` 或手动触发；build（12 行）→ release（草稿）与 packs（engine-packs-v3）；手动可选 bench-macos
 ../../.github/workflows/ci.yml: push main 与 PR 的快速检查：renderer typecheck + vite build、Core typecheck + vitest、`cargo test --release --locked`（ubuntu-22.04 与 windows-2025）
+../../.github/workflows/cla.yml: PR 的 CLA 守门。按数字 ID 比对 PR 全部提交作者与 `.github/cla-signatures.txt`，未签署时留言并失败；用户名可改，不作凭据
 ../../frontend/electron-builder.cjs: electron-builder 唯一配置。渠道、资源布局、许可清单、签名、deb 依赖都在这里
 ../../engine/scripts/: make-pack.sh 与 bench.sh 的实现方（engine 会话），见 engine/scripts/CLAUDE.md
 ../windows/: Microsoft Store 的本地 AppX 打包，见 ../windows/CLAUDE.md
