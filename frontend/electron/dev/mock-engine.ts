@@ -5,7 +5,8 @@
  *        行为忠实于协议规则：token 校验(4401)、单客户端(4409)、SESSION_BUSY、MODEL_NOT_LOADED、
  *        PROVIDER_FALLBACK、20 Hz level、partial ≤ 300 ms、stop 后发一次固定文本的 final。
  *        model.load 按契约 v2.2 接收 {model, variant, model_dir, settings, companion?}，拒绝未解析的 provider:"auto"。
- *        CLI 入口见 mock-engine-main.ts；故障注入开关（hangFinal / noPong）用于测试 Core 的超时与重启。
+ *        CLI 入口见 mock-engine-main.ts；故障注入开关（hangFinal / noPong）用于测试 Core 的超时与重启；
+ *        brokenProviders 模拟 hello 列出却加载失败的 provider（真实引擎的 CUDA EP 没加载上），回退 cpu 并发 PROVIDER_FALLBACK。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import fs from "node:fs";
@@ -22,6 +23,7 @@ export interface MockEngineOptions {
   loadMs?: number;
   finalDelayMs?: number;
   providers?: string[];
+  brokenProviders?: string[]; // hello 里列出、加载时却失败（如 CUDA EP 没真正加载）：回退 cpu 并发 PROVIDER_FALLBACK
   hangFinal?: boolean; // stop 之后永不发 final：测试 Core 的 finalize 超时
   noPong?: boolean; // 不回 ping：测试 Core 的心跳判死
   log?: (msg: string) => void;
@@ -57,6 +59,7 @@ export async function createMockEngine(options: MockEngineOptions): Promise<{ po
   const loadMs = options.loadMs ?? 300;
   const finalDelayMs = options.finalDelayMs ?? 40;
   const providers = options.providers ?? ["cpu"];
+  const broken = options.brokenProviders ?? [];
   const log = options.log ?? (() => {});
 
   const wss = new WebSocketServer({ host: "127.0.0.1", port: options.port ?? 0 });
@@ -115,7 +118,7 @@ export async function createMockEngine(options: MockEngineOptions): Promise<{ po
       const settings = (p.settings ?? {}) as { provider?: string; language?: string };
       if (!settings.provider || settings.provider === "auto") throw new RequestError(EngineErrorCode.INVALID_REQUEST, "Core must resolve provider before model.load");
       let used = settings.provider;
-      if (!providers.includes(used)) {
+      if (!providers.includes(used) || broken.includes(used)) {
         emit("warning", { code: EngineErrorCode.PROVIDER_FALLBACK, message: `${used} unavailable, using cpu` });
         used = "cpu";
       }

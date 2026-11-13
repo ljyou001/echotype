@@ -1,5 +1,5 @@
 //! [INPUT]: 依赖 protocol（信封、错误码）、events::Emitter、audio::MicHub、asr（load_model、ModelHost、Detector、capabilities）、
-//!          dictation::DictationSession、audio::wav、platform
+//!          dictation::{DictationSession, offline::transcribe}、audio::wav、platform
 //! [OUTPUT]: 导出 Engine（actor）、Msg、DetectorFactory、Engine::spawn()
 //! [POS]: 引擎的业务中枢：ENGINE_PROTOCOL §4 全部方法与状态机 idle/loading/ready/error。
 //!        并发模型：Engine 只由一个 tokio 任务（actor）持有，请求按到达顺序逐个进入 dispatch，状态检查与迁移在 dispatch 内同步完成，
@@ -16,12 +16,13 @@ use serde_json::{json, Map, Value};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::asr::providers::capabilities;
-use crate::asr::vad::{Detector, VadParams, MAIN_VAD, PAUSE_VAD};
+use crate::asr::vad::{Detector, VadParams, SEGMENT_VAD};
 use crate::asr::{load_model, LoadParams, ModelHost, ModelSettings};
 use crate::audio::wav::read_wav_16k;
 use crate::audio::MicHub;
-use crate::dictation::segments::{SegmentTrack, SAMPLE_RATE};
-use crate::dictation::{Detectors, DictationSession};
+use crate::dictation::offline;
+use crate::dictation::segments::SAMPLE_RATE;
+use crate::dictation::{DictationSession, SharedVad};
 use crate::events::Emitter;
 use crate::platform::{arch_name, platform_name};
 use crate::protocol::{code, err_response, ok_response, opt_bool, opt_str, req_str, EResult, EngineError, Request, ENGINE_VERSION, PROTOCOL_VERSION};
@@ -51,7 +52,7 @@ pub struct Engine {
     session: Option<Arc<DictationSession>>,
     open: HashMap<String, Arc<DictationSession>>,
     open_count: watch::Sender<usize>,
-    detectors: Option<Arc<Mutex<Detectors>>>,
+    vad: Option<SharedVad>, // 第一次加载模型时建好，会话之间复用
     detector_factory: DetectorFactory,
     speculate: bool,
     load_lock: Arc<tokio::sync::Mutex<()>>,
@@ -76,7 +77,7 @@ impl Engine {
             session: None,
             open: HashMap::new(),
             open_count,
-            detectors: None,
+            vad: None,
             detector_factory,
             speculate,
             load_lock: Arc::default(),
@@ -252,8 +253,8 @@ impl Engine {
         };
         let old = self.host.take();
         self.set_state("loading");
-        let (out, lock, drain, factory, need_detectors) =
-            (self.out.clone(), self.load_lock.clone(), self.drain_wait(), self.detector_factory.clone(), self.detectors.is_none());
+        let (out, lock, drain, factory, need_vad) =
+            (self.out.clone(), self.load_lock.clone(), self.drain_wait(), self.detector_factory.clone(), self.vad.is_none());
         let fut = async move {
             let _guard = lock.lock().await;
             drain.await; // 换模型前等已 stop 的会话发出 final
@@ -262,27 +263,24 @@ impl Engine {
                     h.close();
                 }
                 let progress = |stage: &str, pct: u32| out.emit("progress", json!({"stage": stage, "pct": pct}));
-                let detectors = if need_detectors {
+                let vad = if need_vad {
                     progress("vad", 0);
-                    let d = Detectors {
-                        main: factory(MAIN_VAD).map_err(|e| EngineError::new(code::MODEL_LOAD_FAILED, format!("VAD: {e}")))?,
-                        pause: factory(PAUSE_VAD).map_err(|e| EngineError::new(code::MODEL_LOAD_FAILED, format!("VAD: {e}")))?,
-                    };
+                    let v = factory(SEGMENT_VAD).map_err(|e| EngineError::new(code::MODEL_LOAD_FAILED, format!("VAD: {e}")))?;
                     progress("vad", 100);
-                    Some(d)
+                    Some(v)
                 } else {
                     None
                 };
                 let warn = |c: &str, m: String| out.emit("warning", json!({"code": c, "message": m}));
-                load_model(params, &progress, &warn).map(|(h, info)| (h, info, detectors))
+                load_model(params, &progress, &warn).map(|(h, info)| (h, info, vad))
             })
             .await
             .map_err(wrap)?
         };
         self.later(id, fut, |e, r| match r {
-            Ok((host, info, detectors)) => {
-                if let Some(d) = detectors {
-                    e.detectors = Some(Arc::new(Mutex::new(d)));
+            Ok((host, info, vad)) => {
+                if let Some(v) = vad {
+                    e.vad = Some(Arc::new(Mutex::new(v)));
                 }
                 if let Some(old) = e.host.replace(host) {
                     std::thread::spawn(move || old.close()); // 并发的第二次 load 先完成时，释放被替换的模型
@@ -328,7 +326,7 @@ impl Engine {
             if self.session.is_some() || self.open.contains_key(&sid) {
                 return Err(EngineError::new(code::SESSION_BUSY, "a session is already recording"));
             }
-            if self.host.is_none() || self.state != "ready" || self.detectors.is_none() {
+            if self.host.is_none() || self.state != "ready" || self.vad.is_none() {
                 return Err(EngineError::new(code::MODEL_NOT_LOADED, "no model is loaded"));
             }
             if record_to.as_ref().is_some_and(|r| !r.is_absolute()) {
@@ -349,7 +347,7 @@ impl Engine {
             sid.clone(),
             monotonic_ms(),
             self.host.clone().unwrap(),
-            self.detectors.clone().unwrap(),
+            self.vad.clone().unwrap(),
             self.out.clone(),
             language,
             record_to,
@@ -449,35 +447,15 @@ impl Engine {
     }
 }
 
-/// 离线转写：与会话同一套 VAD 切段、补边、解码、拼接、文本管线（在解码线程上执行，与会话共用单飞队列）
+/// 离线转写（dictation::offline，与会话同一套解码单元）；在解码线程上执行，与会话共用单飞队列
 fn transcribe(host: &ModelHost, factory: &DetectorFactory, audio: &[f32], language: Option<&str>) -> EResult<Value> {
-    let t0 = Instant::now();
-    let mut det = factory(MAIN_VAD).map_err(|e| EngineError::new(code::INTERNAL, e))?;
-    let mut spans = det.accept(audio);
-    spans.extend(det.flush());
-    let mut track = SegmentTrack::default();
-    for (s, e) in spans {
-        track.add(s, e, audio.len());
-    }
-    if track.segments.is_empty() && !audio.is_empty() {
-        track.add(0, audio.len(), audio.len());
-    }
-    let mut decode_ms = 0;
-    for i in 0..track.segments.len() {
-        let (s, e) = (track.segments[i].start, track.segments[i].end);
-        let d = host.decode(&audio[s..e], language)?;
-        decode_ms += d.ms;
-        track.segments[i].text = Some(d.text);
-        track.segments[i].decoded = true;
-    }
-    let raw = track.joined(track.segments.len(), None);
-    let (text, punct_ms) = host.finish_text(&raw);
-    let text = crate::text::close_dangling(&text);
+    let mut det = factory(SEGMENT_VAD).map_err(|e| EngineError::new(code::INTERNAL, e))?;
+    let t = offline::transcribe(host, det.as_mut(), audio, language)?;
     Ok(json!({
-        "text": text,
+        "text": t.text,
         "duration_s": audio.len() as f64 / SAMPLE_RATE as f64,
-        "timings": {"decode_ms": decode_ms, "punct_ms": punct_ms, "segments": track.segments.len(),
-                    "audio_ms": audio.len() * 1000 / SAMPLE_RATE, "total_ms": t0.elapsed().as_millis() as u64},
+        "timings": {"decode_ms": t.decode_ms, "punct_ms": t.punct_ms, "segments": t.segments,
+                    "audio_ms": t.audio_ms, "total_ms": t.total_ms},
     }))
 }
 

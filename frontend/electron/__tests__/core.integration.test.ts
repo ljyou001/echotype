@@ -12,7 +12,7 @@ import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AppSnapshot } from "../ipc-contract.js";
+import type { AppError, AppSnapshot } from "../ipc-contract.js";
 import { Emitter } from "../core/emitter.js";
 import { Core } from "../core/create-core.js";
 import { createMemoryLogger } from "../core/logger.js";
@@ -55,6 +55,7 @@ interface BootOptions {
   machine?: Partial<MachineProfile>;
   prepare?: (paths: CorePaths) => void;
   engineCommand?: (pack: EnginePackRef | null) => EngineCommand;
+  hotkeyLimitation?: AppError | null;
 }
 
 function bootCore(opts: BootOptions = {}) {
@@ -71,6 +72,7 @@ function bootCore(opts: BootOptions = {}) {
   const quickActions: string[] = [];
   const themes: string[] = [];
   const machine: MachineProfile = { platform: "win32", arch: "x64", gpuVendors: [], ...opts.machine };
+  const logger = createMemoryLogger();
   const core = new Core(
     {
       paths,
@@ -83,8 +85,9 @@ function bootCore(opts: BootOptions = {}) {
         ((pack) => ({ ...mockEngineCommand({ ECHOTYPE_MOCK_LOAD_MS: "40", ...(pack ? { ECHOTYPE_MOCK_PROVIDERS: `${pack.providers.join(",")},cpu` } : {}) }), packId: pack?.id ?? null })),
       licensesFile: path.join(paths.home, "missing-licenses.json"),
       appVersion: "3.0.0-test",
-      logger: createMemoryLogger(),
+      logger,
       engineTuning: { backoffMs: [20, 20] },
+      hotkeyLimitation: opts.hotkeyLimitation,
     },
     {
       clipboard: {
@@ -113,13 +116,34 @@ function bootCore(opts: BootOptions = {}) {
   const loads = () => requests.mock.calls.filter(([m]) => m === "model.load");
   const rctrl = (down: boolean) => keys.emit("key", { keycode: RCTRL, down, ctrl: down, alt: false, shift: false, meta: false });
   const latest = () => snapshots.at(-1);
-  return { core, paths, pastes, snapshots, quickActions, themes, loads, rctrl, latest };
+  return { core, paths, pastes, snapshots, quickActions, themes, loads, rctrl, latest, logger };
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const ready = (latest: () => AppSnapshot | undefined) => waitFor(() => latest()?.engine.state === "ready", 15_000, "engine ready");
 
 describe("Core against the mock engine", () => {
+  it("puts the shell's hotkey limitation and a lost session in the snapshot", async () => {
+    const limitation: AppError = { code: "HOTKEY_WAYLAND_LIMITED", message: "Wayland" };
+    const { core, latest, rctrl } = bootCore({ hotkeyLimitation: limitation });
+    core.start();
+    await ready(latest);
+    expect(latest()!.hotkey).toEqual({ error: limitation });
+
+    rctrl(true);
+    await waitFor(() => latest()?.dictation.phase === "recording", 2_000, "recording");
+    process.kill(core.supervisor.status().pid!);
+    await waitFor(() => latest()?.dictation.error !== null && latest()?.dictation.phase === "idle", 5_000, "dictation.error");
+    expect(latest()!.dictation.error?.code).toMatch(/^ENGINE_/);
+    rctrl(false);
+
+    await ready(latest);
+    rctrl(true);
+    await waitFor(() => latest()?.dictation.phase === "recording", 2_000, "recording again");
+    expect(latest()!.dictation.error).toBeNull(); // 下一次开始即清空
+    rctrl(false);
+  });
+
   it("boots, loads the active model exactly once, and dictates end to end", async () => {
     const { core, paths, pastes, latest, loads, rctrl, quickActions } = bootCore();
     core.start();
@@ -133,6 +157,8 @@ describe("Core against the mock engine", () => {
     expect(params.settings.provider).toBe("cpu"); // auto 已解析
     expect(latest()!.engine).toMatchObject({ providerUsed: "cpu", engineVersion: "3.0.0-mock", error: null });
     expect(latest()!.activeModel).toMatchObject({ id: ACTIVE, variantId: "cpu-int8", target: "cpu", runtime: "sherpa-onnx", providerUsed: "cpu", fallback: false });
+    expect(latest()!.hotkey).toEqual({ error: null });
+    expect(latest()!.dictation.error).toBeNull();
 
     rctrl(true);
     await waitFor(() => latest()?.dictation.phase === "recording", 2_000, "recording");
@@ -220,6 +246,28 @@ describe("Core against the mock engine", () => {
     expect(params.settings.provider).toBe("cuda");
     expect(latest()?.activeModel ?? core.snapshot().activeModel).toMatchObject({ id: QWEN, target: "nvidia", runtime: "llama.cpp", providerUsed: "cuda", fallback: false });
     expect(core.models().find((m) => m.id === QWEN)?.selectedVariantId).toBe("cuda-gguf-q8");
+  });
+
+  const cudaVariant = CATALOG.models.find((m) => m.id === ACTIVE)?.variants.find((v) => v.requires_pack === "cuda");
+
+  it.runIf(cudaOffered && cudaVariant)("maps PROVIDER_FALLBACK (the CUDA provider did not load) to activeModel.fallback", async () => {
+    const { core, latest, loads, logger } = bootCore({
+      machine: { gpuVendors: ["nvidia"] },
+      prepare: (paths) => {
+        fakePack(paths, "cuda");
+        fakeInstall(paths, ACTIVE, cudaVariant!.id);
+      },
+      engineCommand: (pack) => ({
+        ...mockEngineCommand({ ECHOTYPE_MOCK_LOAD_MS: "40", ECHOTYPE_MOCK_PROVIDERS: pack ? "cuda,cpu" : "cpu", ECHOTYPE_MOCK_BROKEN_PROVIDERS: "cuda" }),
+        packId: pack?.id ?? null,
+      }),
+    });
+    core.start();
+    await ready(latest);
+    expect((loads().at(-1)![1] as { settings: { provider: string } }).settings.provider).toBe("cuda");
+    expect(core.snapshot().activeModel).toMatchObject({ id: ACTIVE, variantId: cudaVariant!.id, providerUsed: "cpu", fallback: true });
+    expect(latest()?.engine.providerUsed).toBe("cpu");
+    expect(logger.lines.some((l) => l.msg === "engine warning" && JSON.stringify(l.data).includes("PROVIDER_FALLBACK"))).toBe(true);
   });
 
   it.runIf(cudaOffered)("falls back to the bundled engine and reports PACK_OUTDATED when the pack engine cannot start", async () => {

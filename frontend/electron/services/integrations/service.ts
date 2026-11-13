@@ -71,7 +71,8 @@ export class IntegrationService {
   // ============================================================
   // 启动：读盘；首次运行时迁移 v2 或播种
   // ============================================================
-  start(): void {
+  /** 密钥先于实例落盘：迁移中途退出时实例文件尚不存在，下次启动会重新迁移，不丢密钥。 */
+  async start(): Promise<void> {
     const { instances, catalog, secrets } = this.d;
     instances.load();
     if (instances.exists()) return;
@@ -80,14 +81,14 @@ export class IntegrationService {
       instances.replaceAll(seedDefaults().filter((i) => catalog.actions.has(i.actionId)));
       return;
     }
-    instances.replaceAll(migrated.instances);
     for (const s of migrated.secrets) {
       try {
-        secrets.set(s.ref, s.value);
+        await secrets.set(s.ref, s.value);
       } catch (err) {
         this.log.warn("a legacy secret could not be stored securely and was dropped", { ref: s.ref, err: (err as Error).message });
       }
     }
+    instances.replaceAll(migrated.instances);
     backupAndScrubV2(this.d.legacyFile);
     this.log.info("migrated v2 integrations", { instances: migrated.instances.length, secrets: migrated.secrets.length });
   }
@@ -107,7 +108,7 @@ export class IntegrationService {
     return this.d.instances.list().map((i) => this.view(i));
   }
 
-  save(input: IntegrationInstanceInput): IntegrationInstanceView {
+  async save(input: IntegrationInstanceInput): Promise<IntegrationInstanceView> {
     const action = this.action(input?.actionId);
     const provider = action.needsProvider ? this.provider(input.providerId) : undefined;
     const id = typeof input.id === "string" && input.id ? input.id : randomUUID();
@@ -115,7 +116,7 @@ export class IntegrationService {
     if (input.id && !previous) throw new IntegrationError("NOT_FOUND", "That integration no longer exists.");
 
     const settings = this.cleanSettings(input.settings, action, provider);
-    this.writeSecrets(id, input.secrets, action, provider);
+    await this.writeSecrets(id, input.secrets, action, provider);
     const saved = this.d.instances.upsert({
       id,
       actionId: action.id,
@@ -142,7 +143,7 @@ export class IntegrationService {
     this.d.instances.reorder(Array.isArray(ids) ? ids.filter((x) => typeof x === "string") : []);
   }
 
-  secretStorage(): { available: boolean; backend: "os-keychain" | "basic_text" | "none" } {
+  secretStorage(): Promise<{ available: boolean; backend: "os-keychain" | "basic_text" | "none" }> {
     return this.d.secrets.status();
   }
 
@@ -165,7 +166,7 @@ export class IntegrationService {
     if (!action.needsProvider) return [];
     const provider = this.provider(draft.providerId);
     const settings = this.cleanSettings(draft.settings, action, provider);
-    const apiKey = this.draftApiKey(draft, provider);
+    const apiKey = await this.draftApiKey(draft, provider);
     const ep = { protocol: provider.protocol, baseUrl: this.baseUrl(provider, settings), apiKey };
     const ctx = this.context(AbortSignal.timeout(MODELS_TIMEOUT_MS), () => {});
     try {
@@ -237,7 +238,7 @@ export class IntegrationService {
 
   private async dispatch(ctx: RunnerContext, inst: StoredInstance, action: CatalogAction, text: string): Promise<{ text?: string; note?: string }> {
     const provider = action.needsProvider ? this.provider(inst.providerId) : undefined;
-    const { plain, secret } = this.vars(inst, action, provider);
+    const { plain, secret } = await this.vars(inst, action, provider);
 
     if (action.kind === "transform" && action.prompt && provider) {
       const dict = action.dictionary ? dictionaryPromptSuffix(this.d.dictionary.list()) : "";
@@ -311,7 +312,7 @@ export class IntegrationService {
     return providerSecret ? `provider:${provider!.id}:${key}` : `instance:${instanceId}:${key}`;
   }
 
-  private draftApiKey(draft: IntegrationInstanceInput, provider: CatalogProvider): string | undefined {
+  private async draftApiKey(draft: IntegrationInstanceInput, provider: CatalogProvider): Promise<string | undefined> {
     const typed = draft.secrets?.apiKey;
     if (typeof typed === "string" && typed.trim()) return typed.trim();
     return this.d.secrets.get(`provider:${provider.id}:apiKey`);
@@ -336,24 +337,24 @@ export class IntegrationService {
     return out;
   }
 
-  private writeSecrets(id: string, input: Record<string, string | null> | undefined, action: CatalogAction, provider?: CatalogProvider): void {
+  private async writeSecrets(id: string, input: Record<string, string | null> | undefined, action: CatalogAction, provider?: CatalogProvider): Promise<void> {
     if (!input) return;
     const declared = new Set([...action.fields, ...(provider?.fields ?? [])].filter((f) => f.type === "secret").map((f) => f.key));
     for (const [key, value] of Object.entries(input)) {
       if (!declared.has(key)) continue;
       const ref = this.ref(id, key, provider);
       if (value === null) this.d.secrets.delete(ref);
-      else if (typeof value === "string" && value.trim()) this.d.secrets.set(ref, value.trim());
+      else if (typeof value === "string" && value.trim()) await this.d.secrets.set(ref, value.trim());
     }
   }
 
   /** plain：非密钥变量（可进提示词）；secret：密钥变量（只给 HTTP/CLI 模板）。 */
-  private vars(inst: StoredInstance, action: CatalogAction, provider?: CatalogProvider): { plain: TemplateVars; secret: TemplateVars } {
+  private async vars(inst: StoredInstance, action: CatalogAction, provider?: CatalogProvider): Promise<{ plain: TemplateVars; secret: TemplateVars }> {
     const plain: TemplateVars = {};
     const secret: TemplateVars = {};
     for (const f of [...action.fields, ...(provider?.fields ?? [])]) {
       if (f.type === "secret") {
-        const v = this.d.secrets.get(this.ref(inst.id, f.key, provider));
+        const v = await this.d.secrets.get(this.ref(inst.id, f.key, provider));
         if (v !== undefined) secret[f.key] = v;
       } else {
         const v = inst.settings[f.key] ?? f.default;

@@ -101,7 +101,10 @@ export interface AppSnapshot {
     phase: DictationPhase;
     partialText: string;
     lastFinal: FinalResult | null;
+    error: AppError | null; // 最近一次听写失败（如 DEVICE_UNAVAILABLE）；下一次 start 时清空
   };
+  /** 热键层的问题，与引擎无关：如 HOTKEY_WAYLAND_LIMITED（Wayland 下全局热键受限）。无问题时为 null */
+  hotkey: { error: AppError | null };
   settings: Settings;
 }
 
@@ -332,6 +335,7 @@ export interface EchotypeBridge {
 
   quickAction: {
     getText(): Promise<string>; // text for the Quick Action window
+    open(text: string): Promise<void>; // 用给定文本打开 Quick Action（如历史页的某条记录）
     close(): Promise<void>;
     resize(height: number): Promise<void>;
     move(delta: { dx: number; dy: number }): void;
@@ -403,6 +407,7 @@ export const IPC = {
   outputCopy: "output:copy",
   outputType: "output:type",
   quickActionGetText: "quick-action:get-text",
+  quickActionOpen: "quick-action:open",
   quickActionClose: "quick-action:close",
   quickActionResize: "quick-action:resize",
   quickActionMove: "quick-action:move",

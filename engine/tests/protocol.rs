@@ -213,7 +213,7 @@ fn session_rules_final_and_cancel() {
     c.ok("session.stop", json!({"session_id": "s1"}));
     let f = c.wait_event("final", Duration::from_secs(10)).expect("final");
     assert_eq!(f["session_id"], "s1");
-    assert_eq!(f["text"], "w300, w500, w700."); // 段间 0.4 s < 0.6 s：小写续接，句号软化为逗号
+    assert_eq!(f["text"], "w300 w500 w700."); // 词间 0.4 s 停顿 < 断句阈值 0.6 s：一个解码单元，整段解码一次
     assert!(c.wait_event("level", Duration::from_millis(1)).is_some() || true);
 
     c.ok("session.start", json!({"session_id": "s3"}));

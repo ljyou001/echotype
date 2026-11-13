@@ -1,6 +1,6 @@
 //! [INPUT]: 只依赖标准库（Mutex + Condvar + 线程）
 //! [OUTPUT]: 导出 DecodeWorker —— 单线程解码执行器（强制队列 + 按 key 去重的推测槽）
-//! [POS]: 落实 ENGINE_PROTOCOL §8.5「单飞解码」。每个已加载模型（asr::host::ModelHost）拥有一个 DecodeWorker；
+//! [POS]: 落实 ENGINE_PROTOCOL §8.7「单飞解码」。每个已加载模型（asr::host::ModelHost）拥有一个 DecodeWorker；
 //!        会话与 transcribe.file 都把解码作业交给它。调度：强制作业（已闭合段、尾段、文件转写）先进先出，永远先于推测作业；
 //!        推测作业按 key 去重，新的替换旧的。正在运行的作业不可中断（sherpa 解码不可取消）。
 //! [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md

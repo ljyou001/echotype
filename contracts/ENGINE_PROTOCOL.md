@@ -79,6 +79,7 @@ Rules:
 {"release_to_final_ms":42,"decode_tail_ms":31,"punct_ms":6,"segments":3,"audio_ms":8400}
 ```
 `release_to_final_ms` is the latency KPI. It is the time from `session.stop` receipt to `final` send.
+`decode_tail_ms` is the decode time spent after `session.stop` (0 when a speculative result is reused). `segments` is the number of sentence units (§8).
 
 ## 6. `model.load` params
 
@@ -102,10 +103,14 @@ Core resolves `provider:"auto"` before sending. Unknown keys are model-specific;
 ## 8. Latency design (normative)
 
 The engine must meet this flow for every model:
-1. The mic stream feeds Silero VAD (sherpa-onnx built-in) in 30 ms frames.
-2. When VAD closes a speech segment, the engine decodes that segment at once, in a worker thread.
-3. At `session.stop`, the engine flushes VAD and decodes only the open tail segment.
-4. The engine joins the segment texts, runs the punctuation step and the text post-processing, then emits `final`.
-5. One decode runs at a time per session. A newer `partial` request replaces an older queued one. `final` never waits behind a `partial`.
-6. After `model.load`, the engine runs one warm-up decode on 1 s of silence.
-7. With `keep_warm:true`, the engine keeps the stream open and holds a 300 ms pre-roll ring buffer. `session.start` prepends the pre-roll, so the first syllable is never cut.
+Correctness comes first: `final` must equal the `transcribe.file` result for the same audio, word for word. The latency rules below apply only within that rule.
+
+1. The mic stream feeds Silero VAD (sherpa-onnx built-in) in 32 ms frames.
+2. The engine groups VAD speech segments into sentence units. A unit ends at a pause of 0.6 s or more, or at 8 s of span. Dictation and `transcribe.file` use the same unit rule.
+3. The engine always decodes a whole unit. It never decodes part of a unit and never joins partial texts.
+4. When a unit closes, the engine decodes it at once, in a worker thread. At each pause inside the open unit, the engine decodes the unit speculatively, as if it ended there.
+5. At `session.stop`, the engine flushes VAD and closes the open unit. It reuses the speculative result only if that audio slice equals the unit slice sample for sample. Otherwise it decodes the whole unit.
+6. The engine joins the unit texts, runs the punctuation step and the text post-processing, then emits `final`.
+7. One decode runs at a time per session. A forced decode (closed unit, stop) always runs before a speculative or `partial` one. A newer speculative or `partial` request replaces an older queued one.
+8. After `model.load`, the engine runs one warm-up decode on 1 s of silence.
+9. With `keep_warm:true`, the engine keeps the stream open and holds a 300 ms pre-roll ring buffer. `session.start` prepends the pre-roll, so the first syllable is never cut.

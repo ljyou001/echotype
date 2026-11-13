@@ -16,120 +16,169 @@ Summary, 10 s utterance (P50 ms):
 
 | model / variant | provider | threads | tail 0 | tail 300 | load ms | RSS MB |
 |---|---|---:|---:|---:|---:|---:|
-| fire-red-asr2-aed/cpu-int8 | cpu | 4 | 984 | 902 | 3591 | 1508 |
-| moonshine-v2-base-en/cpu-int8 | cpu | 4 | 69 | 0 | 660 | 383 |
-| paraformer-zh-small/cpu-int8 | cpu | 4 | 38 | 6 | 1056 | 320 |
-| paraformer-zh/cpu-int8 | cpu | 2 | 89 | 6 | 1365 | 458 |
-| paraformer-zh/cpu-int8 | cpu | 4 | 64 | 6 | 1496 | 469 |
-| paraformer-zh/cpu-int8 | cpu | 8 | 58 | 6 | 1421 | 458 |
-| parakeet-tdt-0.6b-v3/cpu-int8 | cpu | 4 | 100 | 39 | 1735 | 845 |
-| qwen3-asr-0.6b/cpu-int8 | cpu | 2 | 806 | 836 | 3068 | 1525 |
-| qwen3-asr-0.6b/cpu-int8 | cpu | 4 | 618 | 556 | 4057 | 1575 |
-| qwen3-asr-0.6b/cpu-int8 | cpu | 8 | 555 | 478 | 3177 | 1527 |
-| qwen3-asr-0.6b/cuda-gguf-q8 | cuda | 4 | 73 | 0 | 1972 | 153 |
-| qwen3-asr-1.7b/cuda-gguf-q8 | cuda | 4 | 84 | 16 | 1826 | 153 |
-| sensevoice-small/cpu-int8 | cpu | 2 | 120 | 0 | 856 | 344 |
-| sensevoice-small/cpu-int8 | cpu | 4 | 80 | 0 | 876 | 361 |
-| sensevoice-small/cpu-int8 | cpu | 8 | 64 | 0 | 866 | 349 |
-| sensevoice-small/cuda-fp32 | cuda | 4 | 38 | 0 | 4670 | 1320 |
-| whisper-large-v3-turbo/cpu-int8 | cpu | 4 | 1252 | 1204 | 1985 | 1475 |
+| fire-red-asr2-aed/cpu-int8 | cpu | 4 | 882 | 722 | 3265 | 1578 |
+| moonshine-v2-base-en/cpu-int8 | cpu | 4 | 88 | 0 | 727 | 372 |
+| paraformer-zh-small/cpu-int8 | cpu | 4 | 38 | 6 | 1016 | 311 |
+| paraformer-zh/cpu-int8 | cpu | 2 | 93 | 6 | 1425 | 448 |
+| paraformer-zh/cpu-int8 | cpu | 4 | 63 | 6 | 1415 | 459 |
+| paraformer-zh/cpu-int8 | cpu | 8 | 56 | 6 | 1391 | 450 |
+| parakeet-tdt-0.6b-v3/cpu-int8 | cpu | 4 | 194 | 46 | 1878 | 920 |
+| qwen3-asr-0.6b/cpu-int8 | cpu | 2 | 810 | 624 | 2610 | 1708 |
+| qwen3-asr-0.6b/cpu-int8 | cpu | 4 | 602 | 394 | 2962 | 1801 |
+| qwen3-asr-0.6b/cpu-int8 | cpu | 8 | 522 | 316 | 2605 | 1711 |
+| qwen3-asr-0.6b/cuda-gguf-q8 | cuda | 4 | 62 | 0 | 2023 | 153 |
+| qwen3-asr-1.7b/cuda-gguf-q8 | cuda | 4 | 102 | 0 | 1738 | 169 |
+| sensevoice-small/cpu-int8 | cpu | 2 | 114 | 0 | 947 | 349 |
+| sensevoice-small/cpu-int8 | cpu | 4 | 78 | 0 | 891 | 369 |
+| sensevoice-small/cpu-int8 | cpu | 8 | 62 | 0 | 897 | 352 |
+| sensevoice-small/cuda-fp32 | cuda | 4 | 42 | 0 | 2908 | 1311 |
+| whisper-large-v3-turbo/cpu-int8 | cpu | 4 | 1222 | 1056 | 1978 | 1660 |
 
 All rows:
 
 | model / variant | provider | threads | load ms | RSS MB | audio | tail | P50 | P95 | client P50 | segs | n |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| fire-red-asr2-aed/cpu-int8 | cpu | 4 | 3591 | 1508 | 3.9 s | 0 ms | 1161 | 1209 | 1162 | 1.0 | 4 |
-| fire-red-asr2-aed/cpu-int8 | cpu | 4 | 3591 | 1508 | 4.2 s | 300 ms | 1108 | 1210 | 1108 | 1.0 | 4 |
-| fire-red-asr2-aed/cpu-int8 | cpu | 4 | 3591 | 1508 | 10.4 s | 0 ms | 984 | 1010 | 985 | 3.0 | 4 |
-| fire-red-asr2-aed/cpu-int8 | cpu | 4 | 3591 | 1508 | 10.7 s | 300 ms | 902 | 911 | 904 | 3.0 | 4 |
-| fire-red-asr2-aed/cpu-int8 | cpu | 4 | 3591 | 1508 | 29.7 s | 0 ms | 290 | 297 | 291 | 14.0 | 2 |
-| fire-red-asr2-aed/cpu-int8 | cpu | 4 | 3591 | 1508 | 30.0 s | 300 ms | 328 | 331 | 328 | 14.0 | 2 |
-| moonshine-v2-base-en/cpu-int8 | cpu | 4 | 660 | 383 | 2.3 s | 0 ms | 60 | 62 | 61 | 1.0 | 4 |
-| moonshine-v2-base-en/cpu-int8 | cpu | 4 | 660 | 383 | 2.6 s | 300 ms | 0 | 0 | 0 | 1.0 | 4 |
-| moonshine-v2-base-en/cpu-int8 | cpu | 4 | 660 | 383 | 10.2 s | 0 ms | 69 | 72 | 70 | 3.0 | 4 |
-| moonshine-v2-base-en/cpu-int8 | cpu | 4 | 660 | 383 | 10.5 s | 300 ms | 0 | 0 | 0 | 3.0 | 4 |
-| moonshine-v2-base-en/cpu-int8 | cpu | 4 | 660 | 383 | 29.7 s | 0 ms | 50 | 54 | 51 | 9.0 | 2 |
-| moonshine-v2-base-en/cpu-int8 | cpu | 4 | 660 | 383 | 30.0 s | 300 ms | 0 | 0 | 1 | 9.0 | 2 |
-| paraformer-zh-small/cpu-int8 | cpu | 4 | 1056 | 320 | 3.9 s | 0 ms | 20 | 20 | 20 | 1.0 | 4 |
-| paraformer-zh-small/cpu-int8 | cpu | 4 | 1056 | 320 | 4.2 s | 300 ms | 2 | 3 | 3 | 1.0 | 4 |
-| paraformer-zh-small/cpu-int8 | cpu | 4 | 1056 | 320 | 10.4 s | 0 ms | 38 | 40 | 39 | 3.0 | 4 |
-| paraformer-zh-small/cpu-int8 | cpu | 4 | 1056 | 320 | 10.7 s | 300 ms | 6 | 7 | 7 | 3.0 | 4 |
-| paraformer-zh-small/cpu-int8 | cpu | 4 | 1056 | 320 | 29.7 s | 0 ms | 34 | 36 | 35 | 14.0 | 2 |
-| paraformer-zh-small/cpu-int8 | cpu | 4 | 1056 | 320 | 30.0 s | 300 ms | 15 | 15 | 16 | 14.0 | 2 |
-| paraformer-zh/cpu-int8 | cpu | 2 | 1365 | 458 | 10.4 s | 0 ms | 89 | 96 | 90 | 3.0 | 4 |
-| paraformer-zh/cpu-int8 | cpu | 2 | 1365 | 458 | 10.7 s | 300 ms | 6 | 7 | 7 | 3.0 | 4 |
-| paraformer-zh/cpu-int8 | cpu | 4 | 1496 | 469 | 3.9 s | 0 ms | 36 | 39 | 37 | 1.0 | 4 |
-| paraformer-zh/cpu-int8 | cpu | 4 | 1496 | 469 | 4.2 s | 300 ms | 2 | 2 | 3 | 1.0 | 4 |
-| paraformer-zh/cpu-int8 | cpu | 4 | 1496 | 469 | 10.4 s | 0 ms | 64 | 67 | 65 | 3.0 | 4 |
-| paraformer-zh/cpu-int8 | cpu | 4 | 1496 | 469 | 10.7 s | 300 ms | 6 | 6 | 7 | 3.0 | 4 |
-| paraformer-zh/cpu-int8 | cpu | 4 | 1496 | 469 | 29.7 s | 0 ms | 45 | 46 | 46 | 14.0 | 2 |
-| paraformer-zh/cpu-int8 | cpu | 4 | 1496 | 469 | 30.0 s | 300 ms | 16 | 18 | 17 | 14.0 | 2 |
-| paraformer-zh/cpu-int8 | cpu | 8 | 1421 | 458 | 10.4 s | 0 ms | 58 | 59 | 59 | 3.0 | 4 |
-| paraformer-zh/cpu-int8 | cpu | 8 | 1421 | 458 | 10.7 s | 300 ms | 6 | 7 | 7 | 3.0 | 4 |
-| parakeet-tdt-0.6b-v3/cpu-int8 | cpu | 4 | 1735 | 845 | 2.3 s | 0 ms | 132 | 138 | 133 | 1.0 | 4 |
-| parakeet-tdt-0.6b-v3/cpu-int8 | cpu | 4 | 1735 | 845 | 2.6 s | 300 ms | 26 | 30 | 27 | 1.0 | 4 |
-| parakeet-tdt-0.6b-v3/cpu-int8 | cpu | 4 | 1735 | 845 | 10.2 s | 0 ms | 100 | 103 | 101 | 3.0 | 4 |
-| parakeet-tdt-0.6b-v3/cpu-int8 | cpu | 4 | 1735 | 845 | 10.5 s | 300 ms | 39 | 42 | 40 | 3.0 | 4 |
-| parakeet-tdt-0.6b-v3/cpu-int8 | cpu | 4 | 1735 | 845 | 29.7 s | 0 ms | 114 | 114 | 114 | 9.0 | 2 |
-| parakeet-tdt-0.6b-v3/cpu-int8 | cpu | 4 | 1735 | 845 | 30.0 s | 300 ms | 0 | 0 | 1 | 9.0 | 2 |
-| qwen3-asr-0.6b/cpu-int8 | cpu | 2 | 3068 | 1525 | 10.4 s | 0 ms | 806 | 822 | 807 | 3.0 | 4 |
-| qwen3-asr-0.6b/cpu-int8 | cpu | 2 | 3068 | 1525 | 10.7 s | 300 ms | 836 | 899 | 836 | 3.0 | 4 |
-| qwen3-asr-0.6b/cpu-int8 | cpu | 4 | 4057 | 1575 | 3.9 s | 0 ms | 864 | 1091 | 865 | 1.0 | 4 |
-| qwen3-asr-0.6b/cpu-int8 | cpu | 4 | 4057 | 1575 | 4.2 s | 300 ms | 606 | 1093 | 607 | 1.0 | 4 |
-| qwen3-asr-0.6b/cpu-int8 | cpu | 4 | 4057 | 1575 | 10.4 s | 0 ms | 618 | 713 | 619 | 3.0 | 4 |
-| qwen3-asr-0.6b/cpu-int8 | cpu | 4 | 4057 | 1575 | 10.7 s | 300 ms | 556 | 571 | 557 | 3.0 | 4 |
-| qwen3-asr-0.6b/cpu-int8 | cpu | 4 | 4057 | 1575 | 29.7 s | 0 ms | 322 | 334 | 323 | 14.0 | 2 |
-| qwen3-asr-0.6b/cpu-int8 | cpu | 4 | 4057 | 1575 | 30.0 s | 300 ms | 394 | 428 | 396 | 14.0 | 2 |
-| qwen3-asr-0.6b/cpu-int8 | cpu | 8 | 3177 | 1527 | 10.4 s | 0 ms | 555 | 666 | 556 | 3.0 | 4 |
-| qwen3-asr-0.6b/cpu-int8 | cpu | 8 | 3177 | 1527 | 10.7 s | 300 ms | 478 | 485 | 478 | 3.0 | 4 |
-| qwen3-asr-0.6b/cuda-gguf-q8 | cuda | 4 | 1972 | 153 | 3.9 s | 0 ms | 64 | 84 | 64 | 1.0 | 4 |
-| qwen3-asr-0.6b/cuda-gguf-q8 | cuda | 4 | 1972 | 153 | 4.2 s | 300 ms | 0 | 0 | 0 | 1.0 | 4 |
-| qwen3-asr-0.6b/cuda-gguf-q8 | cuda | 4 | 1972 | 153 | 10.4 s | 0 ms | 73 | 87 | 73 | 3.0 | 4 |
-| qwen3-asr-0.6b/cuda-gguf-q8 | cuda | 4 | 1972 | 153 | 10.7 s | 300 ms | 0 | 26 | 1 | 3.0 | 4 |
-| qwen3-asr-0.6b/cuda-gguf-q8 | cuda | 4 | 1972 | 153 | 29.7 s | 0 ms | 48 | 58 | 48 | 14.0 | 2 |
-| qwen3-asr-0.6b/cuda-gguf-q8 | cuda | 4 | 1972 | 153 | 30.0 s | 300 ms | 47 | 64 | 48 | 14.0 | 2 |
-| qwen3-asr-1.7b/cuda-gguf-q8 | cuda | 4 | 1826 | 153 | 3.9 s | 0 ms | 72 | 74 | 72 | 1.0 | 4 |
-| qwen3-asr-1.7b/cuda-gguf-q8 | cuda | 4 | 1826 | 153 | 4.2 s | 300 ms | 0 | 25 | 0 | 1.0 | 4 |
-| qwen3-asr-1.7b/cuda-gguf-q8 | cuda | 4 | 1826 | 153 | 10.4 s | 0 ms | 84 | 102 | 85 | 3.0 | 4 |
-| qwen3-asr-1.7b/cuda-gguf-q8 | cuda | 4 | 1826 | 153 | 10.7 s | 300 ms | 16 | 36 | 16 | 3.0 | 4 |
-| qwen3-asr-1.7b/cuda-gguf-q8 | cuda | 4 | 1826 | 153 | 29.7 s | 0 ms | 64 | 80 | 65 | 14.0 | 2 |
-| qwen3-asr-1.7b/cuda-gguf-q8 | cuda | 4 | 1826 | 153 | 30.0 s | 300 ms | 56 | 70 | 57 | 14.0 | 2 |
-| sensevoice-small/cpu-int8 | cpu | 2 | 856 | 344 | 10.4 s | 0 ms | 120 | 122 | 120 | 3.0 | 4 |
-| sensevoice-small/cpu-int8 | cpu | 2 | 856 | 344 | 10.7 s | 300 ms | 0 | 0 | 0 | 3.0 | 4 |
-| sensevoice-small/cpu-int8 | cpu | 4 | 876 | 361 | 3.9 s | 0 ms | 45 | 51 | 46 | 1.0 | 4 |
-| sensevoice-small/cpu-int8 | cpu | 4 | 876 | 361 | 4.2 s | 300 ms | 0 | 0 | 0 | 1.0 | 4 |
-| sensevoice-small/cpu-int8 | cpu | 4 | 876 | 361 | 10.4 s | 0 ms | 80 | 98 | 81 | 3.0 | 4 |
-| sensevoice-small/cpu-int8 | cpu | 4 | 876 | 361 | 10.7 s | 300 ms | 0 | 0 | 0 | 3.0 | 4 |
-| sensevoice-small/cpu-int8 | cpu | 4 | 876 | 361 | 29.7 s | 0 ms | 38 | 41 | 38 | 14.0 | 2 |
-| sensevoice-small/cpu-int8 | cpu | 4 | 876 | 361 | 30.0 s | 300 ms | 0 | 0 | 1 | 14.0 | 2 |
-| sensevoice-small/cpu-int8 | cpu | 8 | 866 | 349 | 10.4 s | 0 ms | 64 | 68 | 65 | 3.0 | 4 |
-| sensevoice-small/cpu-int8 | cpu | 8 | 866 | 349 | 10.7 s | 300 ms | 0 | 0 | 1 | 3.0 | 4 |
-| sensevoice-small/cuda-fp32 | cuda | 4 | 4670 | 1320 | 3.9 s | 0 ms | 39 | 53 | 39 | 1.0 | 4 |
-| sensevoice-small/cuda-fp32 | cuda | 4 | 4670 | 1320 | 4.2 s | 300 ms | 0 | 0 | 0 | 1.0 | 4 |
-| sensevoice-small/cuda-fp32 | cuda | 4 | 4670 | 1320 | 10.4 s | 0 ms | 38 | 44 | 38 | 3.0 | 4 |
-| sensevoice-small/cuda-fp32 | cuda | 4 | 4670 | 1320 | 10.7 s | 300 ms | 0 | 0 | 1 | 3.0 | 4 |
-| sensevoice-small/cuda-fp32 | cuda | 4 | 4670 | 1320 | 29.7 s | 0 ms | 41 | 46 | 42 | 14.0 | 2 |
-| sensevoice-small/cuda-fp32 | cuda | 4 | 4670 | 1320 | 30.0 s | 300 ms | 0 | 0 | 1 | 14.0 | 2 |
-| whisper-large-v3-turbo/cpu-int8 | cpu | 4 | 1985 | 1475 | 3.9 s | 0 ms | 1382 | 1387 | 1383 | 1.0 | 4 |
-| whisper-large-v3-turbo/cpu-int8 | cpu | 4 | 1985 | 1475 | 4.2 s | 300 ms | 1270 | 1332 | 1272 | 1.0 | 4 |
-| whisper-large-v3-turbo/cpu-int8 | cpu | 4 | 1985 | 1475 | 10.4 s | 0 ms | 1252 | 1281 | 1253 | 3.0 | 4 |
-| whisper-large-v3-turbo/cpu-int8 | cpu | 4 | 1985 | 1475 | 10.7 s | 300 ms | 1204 | 1250 | 1205 | 3.0 | 4 |
-| whisper-large-v3-turbo/cpu-int8 | cpu | 4 | 1985 | 1475 | 29.7 s | 0 ms | 1272 | 1298 | 1273 | 14.0 | 2 |
-| whisper-large-v3-turbo/cpu-int8 | cpu | 4 | 1985 | 1475 | 30.0 s | 300 ms | 1009 | 1040 | 1010 | 14.0 | 2 |
+| fire-red-asr2-aed/cpu-int8 | cpu | 4 | 3265 | 1578 | 3.9 s | 0 ms | 1001 | 1016 | 1002 | 1.0 | 4 |
+| fire-red-asr2-aed/cpu-int8 | cpu | 4 | 3265 | 1578 | 4.2 s | 300 ms | 792 | 804 | 793 | 1.0 | 4 |
+| fire-red-asr2-aed/cpu-int8 | cpu | 4 | 3265 | 1578 | 10.4 s | 0 ms | 882 | 885 | 883 | 2.0 | 4 |
+| fire-red-asr2-aed/cpu-int8 | cpu | 4 | 3265 | 1578 | 10.7 s | 300 ms | 722 | 744 | 723 | 2.0 | 4 |
+| fire-red-asr2-aed/cpu-int8 | cpu | 4 | 3265 | 1578 | 29.7 s | 0 ms | 1593 | 1672 | 1594 | 5.0 | 2 |
+| fire-red-asr2-aed/cpu-int8 | cpu | 4 | 3265 | 1578 | 30.0 s | 300 ms | 1382 | 1409 | 1383 | 5.0 | 2 |
+| moonshine-v2-base-en/cpu-int8 | cpu | 4 | 727 | 372 | 2.3 s | 0 ms | 61 | 63 | 62 | 1.0 | 4 |
+| moonshine-v2-base-en/cpu-int8 | cpu | 4 | 727 | 372 | 2.6 s | 300 ms | 0 | 0 | 0 | 1.0 | 4 |
+| moonshine-v2-base-en/cpu-int8 | cpu | 4 | 727 | 372 | 10.2 s | 0 ms | 88 | 90 | 89 | 2.0 | 4 |
+| moonshine-v2-base-en/cpu-int8 | cpu | 4 | 727 | 372 | 10.5 s | 300 ms | 0 | 0 | 1 | 2.0 | 4 |
+| moonshine-v2-base-en/cpu-int8 | cpu | 4 | 727 | 372 | 29.7 s | 0 ms | 47 | 50 | 48 | 6.0 | 2 |
+| moonshine-v2-base-en/cpu-int8 | cpu | 4 | 727 | 372 | 30.0 s | 300 ms | 0 | 0 | 1 | 6.0 | 2 |
+| paraformer-zh-small/cpu-int8 | cpu | 4 | 1016 | 311 | 3.9 s | 0 ms | 38 | 39 | 39 | 1.0 | 4 |
+| paraformer-zh-small/cpu-int8 | cpu | 4 | 1016 | 311 | 4.2 s | 300 ms | 2 | 2 | 3 | 1.0 | 4 |
+| paraformer-zh-small/cpu-int8 | cpu | 4 | 1016 | 311 | 10.4 s | 0 ms | 38 | 42 | 40 | 2.0 | 4 |
+| paraformer-zh-small/cpu-int8 | cpu | 4 | 1016 | 311 | 10.7 s | 300 ms | 6 | 6 | 7 | 2.0 | 4 |
+| paraformer-zh-small/cpu-int8 | cpu | 4 | 1016 | 311 | 29.7 s | 0 ms | 58 | 62 | 59 | 5.0 | 2 |
+| paraformer-zh-small/cpu-int8 | cpu | 4 | 1016 | 311 | 30.0 s | 300 ms | 16 | 16 | 17 | 5.0 | 2 |
+| paraformer-zh/cpu-int8 | cpu | 2 | 1425 | 448 | 10.4 s | 0 ms | 93 | 97 | 94 | 2.0 | 4 |
+| paraformer-zh/cpu-int8 | cpu | 2 | 1425 | 448 | 10.7 s | 300 ms | 6 | 6 | 6 | 2.0 | 4 |
+| paraformer-zh/cpu-int8 | cpu | 4 | 1415 | 459 | 3.9 s | 0 ms | 72 | 77 | 73 | 1.0 | 4 |
+| paraformer-zh/cpu-int8 | cpu | 4 | 1415 | 459 | 4.2 s | 300 ms | 2 | 3 | 3 | 1.0 | 4 |
+| paraformer-zh/cpu-int8 | cpu | 4 | 1415 | 459 | 10.4 s | 0 ms | 63 | 69 | 64 | 2.0 | 4 |
+| paraformer-zh/cpu-int8 | cpu | 4 | 1415 | 459 | 10.7 s | 300 ms | 6 | 6 | 6 | 2.0 | 4 |
+| paraformer-zh/cpu-int8 | cpu | 4 | 1415 | 459 | 29.7 s | 0 ms | 88 | 90 | 89 | 5.0 | 2 |
+| paraformer-zh/cpu-int8 | cpu | 4 | 1415 | 459 | 30.0 s | 300 ms | 16 | 16 | 17 | 5.0 | 2 |
+| paraformer-zh/cpu-int8 | cpu | 8 | 1391 | 450 | 10.4 s | 0 ms | 56 | 57 | 57 | 2.0 | 4 |
+| paraformer-zh/cpu-int8 | cpu | 8 | 1391 | 450 | 10.7 s | 300 ms | 6 | 6 | 7 | 2.0 | 4 |
+| parakeet-tdt-0.6b-v3/cpu-int8 | cpu | 4 | 1878 | 920 | 2.3 s | 0 ms | 136 | 137 | 137 | 1.0 | 4 |
+| parakeet-tdt-0.6b-v3/cpu-int8 | cpu | 4 | 1878 | 920 | 2.6 s | 300 ms | 27 | 30 | 28 | 1.0 | 4 |
+| parakeet-tdt-0.6b-v3/cpu-int8 | cpu | 4 | 1878 | 920 | 10.2 s | 0 ms | 194 | 196 | 195 | 2.0 | 4 |
+| parakeet-tdt-0.6b-v3/cpu-int8 | cpu | 4 | 1878 | 920 | 10.5 s | 300 ms | 46 | 49 | 47 | 2.0 | 4 |
+| parakeet-tdt-0.6b-v3/cpu-int8 | cpu | 4 | 1878 | 920 | 29.7 s | 0 ms | 116 | 120 | 116 | 6.0 | 2 |
+| parakeet-tdt-0.6b-v3/cpu-int8 | cpu | 4 | 1878 | 920 | 30.0 s | 300 ms | 0 | 0 | 1 | 6.0 | 2 |
+| qwen3-asr-0.6b/cpu-int8 | cpu | 2 | 2610 | 1708 | 10.4 s | 0 ms | 810 | 846 | 810 | 2.0 | 4 |
+| qwen3-asr-0.6b/cpu-int8 | cpu | 2 | 2610 | 1708 | 10.7 s | 300 ms | 624 | 646 | 624 | 2.0 | 4 |
+| qwen3-asr-0.6b/cpu-int8 | cpu | 4 | 2962 | 1801 | 3.9 s | 0 ms | 668 | 740 | 669 | 1.0 | 4 |
+| qwen3-asr-0.6b/cpu-int8 | cpu | 4 | 2962 | 1801 | 4.2 s | 300 ms | 460 | 490 | 461 | 1.0 | 4 |
+| qwen3-asr-0.6b/cpu-int8 | cpu | 4 | 2962 | 1801 | 10.4 s | 0 ms | 602 | 639 | 603 | 2.0 | 4 |
+| qwen3-asr-0.6b/cpu-int8 | cpu | 4 | 2962 | 1801 | 10.7 s | 300 ms | 394 | 411 | 395 | 2.0 | 4 |
+| qwen3-asr-0.6b/cpu-int8 | cpu | 4 | 2962 | 1801 | 29.7 s | 0 ms | 694 | 699 | 694 | 5.0 | 2 |
+| qwen3-asr-0.6b/cpu-int8 | cpu | 4 | 2962 | 1801 | 30.0 s | 300 ms | 596 | 627 | 597 | 5.0 | 2 |
+| qwen3-asr-0.6b/cpu-int8 | cpu | 8 | 2605 | 1711 | 10.4 s | 0 ms | 522 | 532 | 523 | 2.0 | 4 |
+| qwen3-asr-0.6b/cpu-int8 | cpu | 8 | 2605 | 1711 | 10.7 s | 300 ms | 316 | 330 | 317 | 2.0 | 4 |
+| qwen3-asr-0.6b/cuda-gguf-q8 | cuda | 4 | 2023 | 153 | 3.9 s | 0 ms | 60 | 63 | 61 | 1.0 | 4 |
+| qwen3-asr-0.6b/cuda-gguf-q8 | cuda | 4 | 2023 | 153 | 4.2 s | 300 ms | 0 | 0 | 0 | 1.0 | 4 |
+| qwen3-asr-0.6b/cuda-gguf-q8 | cuda | 4 | 2023 | 153 | 10.4 s | 0 ms | 62 | 98 | 63 | 2.0 | 4 |
+| qwen3-asr-0.6b/cuda-gguf-q8 | cuda | 4 | 2023 | 153 | 10.7 s | 300 ms | 0 | 0 | 1 | 2.0 | 4 |
+| qwen3-asr-0.6b/cuda-gguf-q8 | cuda | 4 | 2023 | 153 | 29.7 s | 0 ms | 82 | 100 | 83 | 5.0 | 2 |
+| qwen3-asr-0.6b/cuda-gguf-q8 | cuda | 4 | 2023 | 153 | 30.0 s | 300 ms | 0 | 0 | 1 | 5.0 | 2 |
+| qwen3-asr-1.7b/cuda-gguf-q8 | cuda | 4 | 1738 | 169 | 3.9 s | 0 ms | 86 | 122 | 87 | 1.0 | 4 |
+| qwen3-asr-1.7b/cuda-gguf-q8 | cuda | 4 | 1738 | 169 | 4.2 s | 300 ms | 0 | 0 | 0 | 1.0 | 4 |
+| qwen3-asr-1.7b/cuda-gguf-q8 | cuda | 4 | 1738 | 169 | 10.4 s | 0 ms | 102 | 127 | 102 | 2.0 | 4 |
+| qwen3-asr-1.7b/cuda-gguf-q8 | cuda | 4 | 1738 | 169 | 10.7 s | 300 ms | 0 | 0 | 1 | 2.0 | 4 |
+| qwen3-asr-1.7b/cuda-gguf-q8 | cuda | 4 | 1738 | 169 | 29.7 s | 0 ms | 108 | 125 | 109 | 5.0 | 2 |
+| qwen3-asr-1.7b/cuda-gguf-q8 | cuda | 4 | 1738 | 169 | 30.0 s | 300 ms | 0 | 0 | 2 | 5.0 | 2 |
+| sensevoice-small/cpu-int8 | cpu | 2 | 947 | 349 | 10.4 s | 0 ms | 114 | 116 | 115 | 2.0 | 4 |
+| sensevoice-small/cpu-int8 | cpu | 2 | 947 | 349 | 10.7 s | 300 ms | 0 | 0 | 1 | 2.0 | 4 |
+| sensevoice-small/cpu-int8 | cpu | 4 | 891 | 369 | 3.9 s | 0 ms | 98 | 102 | 99 | 1.0 | 4 |
+| sensevoice-small/cpu-int8 | cpu | 4 | 891 | 369 | 4.2 s | 300 ms | 0 | 0 | 0 | 1.0 | 4 |
+| sensevoice-small/cpu-int8 | cpu | 4 | 891 | 369 | 10.4 s | 0 ms | 78 | 80 | 79 | 2.0 | 4 |
+| sensevoice-small/cpu-int8 | cpu | 4 | 891 | 369 | 10.7 s | 300 ms | 0 | 0 | 1 | 2.0 | 4 |
+| sensevoice-small/cpu-int8 | cpu | 4 | 891 | 369 | 29.7 s | 0 ms | 97 | 99 | 98 | 5.0 | 2 |
+| sensevoice-small/cpu-int8 | cpu | 4 | 891 | 369 | 30.0 s | 300 ms | 0 | 0 | 1 | 5.0 | 2 |
+| sensevoice-small/cpu-int8 | cpu | 8 | 897 | 352 | 10.4 s | 0 ms | 62 | 64 | 62 | 2.0 | 4 |
+| sensevoice-small/cpu-int8 | cpu | 8 | 897 | 352 | 10.7 s | 300 ms | 0 | 0 | 1 | 2.0 | 4 |
+| sensevoice-small/cuda-fp32 | cuda | 4 | 2908 | 1311 | 3.9 s | 0 ms | 48 | 60 | 49 | 1.0 | 4 |
+| sensevoice-small/cuda-fp32 | cuda | 4 | 2908 | 1311 | 4.2 s | 300 ms | 0 | 0 | 0 | 1.0 | 4 |
+| sensevoice-small/cuda-fp32 | cuda | 4 | 2908 | 1311 | 10.4 s | 0 ms | 42 | 50 | 43 | 2.0 | 4 |
+| sensevoice-small/cuda-fp32 | cuda | 4 | 2908 | 1311 | 10.7 s | 300 ms | 0 | 0 | 1 | 2.0 | 4 |
+| sensevoice-small/cuda-fp32 | cuda | 4 | 2908 | 1311 | 29.7 s | 0 ms | 47 | 50 | 48 | 5.0 | 2 |
+| sensevoice-small/cuda-fp32 | cuda | 4 | 2908 | 1311 | 30.0 s | 300 ms | 0 | 0 | 2 | 5.0 | 2 |
+| whisper-large-v3-turbo/cpu-int8 | cpu | 4 | 1978 | 1660 | 3.9 s | 0 ms | 1408 | 1496 | 1409 | 1.0 | 4 |
+| whisper-large-v3-turbo/cpu-int8 | cpu | 4 | 1978 | 1660 | 4.2 s | 300 ms | 1138 | 1211 | 1139 | 1.0 | 4 |
+| whisper-large-v3-turbo/cpu-int8 | cpu | 4 | 1978 | 1660 | 10.4 s | 0 ms | 1222 | 1276 | 1223 | 2.0 | 4 |
+| whisper-large-v3-turbo/cpu-int8 | cpu | 4 | 1978 | 1660 | 10.7 s | 300 ms | 1056 | 1094 | 1057 | 2.0 | 4 |
+| whisper-large-v3-turbo/cpu-int8 | cpu | 4 | 1978 | 1660 | 29.7 s | 0 ms | 2698 | 2742 | 2699 | 5.0 | 2 |
+| whisper-large-v3-turbo/cpu-int8 | cpu | 4 | 1978 | 1660 | 30.0 s | 300 ms | 2481 | 2528 | 2482 | 5.0 | 2 |
 
 Sample finals (10 s, tail 0):
 
-- fire-red-asr2-aed/cpu-int8 [cpu]: 开放时间早上九点至下午五点，The tribal chieftain called for the boy and presented him with fifty pieces of gold.
-- moonshine-v2-base-en/cpu-int8 [cpu]: The tribal chieftain called for the boy, and presented him with fifty pieces of gold. Ask not what y
-- paraformer-zh-small/cpu-int8 [cpu]: 开放时间早上九点至下午五点，the driver tieve, then gone for the boy and presented him at fifty pieces of gold.
-- paraformer-zh/cpu-int8 [cpu]: 开放时间早上九点至下午五点，the tribal tifand gled for the boy, and resented him the fifty pieces of cold.
-- parakeet-tdt-0.6b-v3/cpu-int8 [cpu]: The tribal chief then called for the boy, and presented him with fifty pieces of gold. Ask not what 
-- qwen3-asr-0.6b/cpu-int8 [cpu]: 開放時間：早上九點至下午五點。The tribal chief then called for the boy, and presented him with fifty pieces of gold
+- fire-red-asr2-aed/cpu-int8 [cpu]: 开放时间早上9点至下午5点。The driver's teeth can't call for the boy and presented him with fifty pieces of gold.
+- moonshine-v2-base-en/cpu-int8 [cpu]: The tribal chieftain called for the boy and presented him with fifty pieces of gold. Ask not what yo
+- paraformer-zh-small/cpu-int8 [cpu]: 开放时间早上9点至下午5点。the drible time got for the boy and presented him at fifty pieces of gold.
+- paraformer-zh/cpu-int8 [cpu]: 开放时间早上9点至下午5点，the and resented him the fifty pieces of cold.
+- parakeet-tdt-0.6b-v3/cpu-int8 [cpu]: The tribal chieftain called for the boy, and presented him with fifty pieces of gold. Ask not what y
+- qwen3-asr-0.6b/cpu-int8 [cpu]: 開放時間：早上9點至下午5點。The trouble's often gone for the boy, and presented him with fifty pieces of gold.
 - qwen3-asr-0.6b/cuda-gguf-q8 [cuda]: 開放時間：早上九點至下午五點。The tribal chief then called for the boy, and presented him with fifty pieces of gold
-- qwen3-asr-1.7b/cuda-gguf-q8 [cuda]: 開放時間：早上九點至下午五點。The tribal chieftain called for the boy, and presented him with fifty pieces of gold.
-- sensevoice-small/cpu-int8 [cpu]: 开放时间早上9点至下午5点。The tribal chieftain called for the boy, and presented him with 50 pieces of code.
-- sensevoice-small/cuda-fp32 [cuda]: 开放时间早上9点至下午5点。The tribal chieftain called for the boy, and presented him with 50 pieces of code.
-- whisper-large-v3-turbo/cpu-int8 [cpu]: 开放时间早上九点至下午五点 The tribal chieftain called for the boy, and presented him with 50 pieces of gold.
+- qwen3-asr-1.7b/cuda-gguf-q8 [cuda]: 開放時間：早上九點至下午五點。The tribal chief then called for the boy, and presented him with fifty pieces of gold
+- sensevoice-small/cpu-int8 [cpu]: 开饭时间早上9点至下午5点，The tribal chief them called for the boy, and presented him with 50 pieces of code.
+- sensevoice-small/cuda-fp32 [cuda]: 开饭时间早上9点至下午5点，The tribal chief then called for the boy, and presented him with 50 pieces of code.
+- whisper-large-v3-turbo/cpu-int8 [cpu]: The tribal chieftain called for the boy, and presented him with 50 pieces of gold.
+
+## Sentence units: before and after (2026-11-13)
+
+> Hand-maintained. The engine before this change split decode units at 0.25 s pauses and stitched the audio after the last
+> pause onto a speculative decode; now a unit is a sentence (0.6 s pause) decoded whole, and every model speculates
+> (design/ENGINE_NOTES.md §9). Same machine and clips as above, 4 threads, P50 of 4 runs, `release_to_final_ms`.
+
+| model (cpu-int8) | audio | tail | before | after | change |
+|---|---:|---:|---:|---:|---:|
+| sensevoice-small | 3 s | 0 ms | 46 | 98 | +52 |
+| sensevoice-small | 3 s | 300 ms | 0 | 0 | +0 |
+| sensevoice-small | 10 s | 0 ms | 77 | 78 | +1 |
+| sensevoice-small | 10 s | 300 ms | 0 | 0 | +0 |
+| paraformer-zh | 3 s | 0 ms | 37 | 72 | +35 |
+| paraformer-zh | 3 s | 300 ms | 2 | 2 | +0 |
+| paraformer-zh | 10 s | 0 ms | 65 | 63 | -2 |
+| paraformer-zh | 10 s | 300 ms | 6 | 6 | +0 |
+| parakeet-tdt-0.6b-v3 | 3 s | 0 ms | 128 | 136 | +8 |
+| parakeet-tdt-0.6b-v3 | 3 s | 300 ms | 21 | 27 | +6 |
+| parakeet-tdt-0.6b-v3 | 10 s | 0 ms | 102 | 194 | +92 |
+| parakeet-tdt-0.6b-v3 | 10 s | 300 ms | 36 | 46 | +10 |
+| qwen3-asr-0.6b | 3 s | 0 ms | 637 | 668 | +31 |
+| qwen3-asr-0.6b | 3 s | 300 ms | 555 | 460 | -95 |
+| qwen3-asr-0.6b | 10 s | 0 ms | 577 | 602 | +25 |
+| qwen3-asr-0.6b | 10 s | 300 ms | 516 | 394 | -122 |
+
+One clip played alone, released 0.3 s after it (the `smoke:real` case):
+
+| model (cpu-int8) | clip | before | after | final before | final after |
+|---|---|---:|---:|---|---|
+| paraformer-zh | en.wav | 8 | 6 | the tribal tifhim called for the boy and presented him the fifty pieces of cold. | the tribal drifting called for the boy and presented him that fifty pieces of cold. |
+| parakeet-tdt-0.6b-v3 | en.wav | 0 | 0 | The tribal chief then called for the boy, and presented him with fifty pieces of gold. | The tribal chieftain called for the boy, and presented him with fifty pieces of gold. |
+| qwen3-asr-0.6b | en.wav | 38 | 255 | The tribal chief then called for the boy, and presented him with fifty pieces of gold. | The tribal chief then called for the boy and presented him with fifty pieces of gold. |
+| sensevoice-small | en.wav | 0 | 0 | The tribal chieftain called for the boy, and presented him with 50 pieces of code. | The tribal chieftain called for the boy and presented him with 50 pieces of gold. |
+| paraformer-zh | zh.wav | 3 | 3 | 开放时间，早上九点至下午五点。 | 开放时间，早上9点至下午5点。 |
+| paraformer-zh-small | zh.wav | 2 | 3 | 开放时间，早上九点至下午五点。 | 开放时间，早上9点至下午5点。 |
+| qwen3-asr-0.6b | zh.wav | 701 | 578 | 开放时间：早上九点至下午五点。 | 开放时间：早上九点至下午五点。 |
+| sensevoice-small | zh.wav | 0 | 0 | 开放时间早上9点至下午5点。 | 开放时间早上9点至下午5点。 |
+
+Why some numbers went up: at release the engine now decodes the whole open sentence instead of the fragment after the
+last pause. That fragment decode is what produced "boy, and … code", "开饭" and "九点是". Releases 0.3 s after
+speech stay at 0 ms for the speculating fast models; Qwen3-ASR on CPU is faster than before at tail 300 on the composite
+utterances because it now speculates too. It is slower on en.wav alone (38 → 255 ms): before, the 0.48 s pause after "boy"
+split the clip and only "and presented him …" was left to decode at release, at the price of the extra comma.
+
+The 3/10/30 s composites above join clips with 0.45 s of silence (about 0.36 s as the VAD measures it), shorter than the
+0.6 s sentence pause, so the Chinese and the English sentence now fall into one decode unit. Models that decode one
+language per call show it in the sample finals: Whisper drops the Chinese sentence, Paraformer drops English words.
+Dictation in one language, and language switches with a real sentence pause, are not affected.
 
 ## Python prototype (2026-11-13, superseded by the native engine)
 

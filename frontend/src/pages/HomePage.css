@@ -191,6 +191,10 @@
   color: var(--warning);
 }
 
+.summary__detail svg {
+  vertical-align: -2px;
+}
+
 .summary__chevron {
   position: absolute;
   top: 50%;

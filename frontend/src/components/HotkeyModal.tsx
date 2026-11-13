@@ -1,16 +1,21 @@
 /**
- * [INPUT]: 依赖 react 的 useState/useEffect/useCallback；依赖 bridge().hotkey.validate；依赖 ./Modal；
- *          依赖 utils/hotkey 的 formatHotkeyLabel；依赖 react-i18next；样式在 ./HotkeyModal.css
+ * [INPUT]: 依赖 react 的 useState/useEffect/useCallback；依赖 bridge().hotkey.validate；依赖 ./Modal 与 ./layout 的 Notice；
+ *          依赖 store/appStore 的 selectHotkeyError；依赖 utils/hotkey 的 formatHotkeyLabel、utils/issues 的 describeIssue；
+ *          依赖 react-i18next；样式在 ./HotkeyModal.css
  * [OUTPUT]: 导出 HotkeyModal 组件
  * [POS]: 热键设置弹窗。录制按键组合（区分左右修饰键）或从推荐键里选，经 Core 校验后回调 onSave。
  *        只负责"选出一个合法的 accelerator"，持久化由调用方 updateSettings 完成。
+ *        热键层有问题（snapshot.hotkey.error，如 Wayland 下受限）时，顶部先说明问题与出路：换哪个键都绕不开它。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FiX } from "react-icons/fi";
 import { bridge } from "../bridge";
+import { selectHotkeyError, useAppStore } from "../store/appStore";
 import { formatHotkeyLabel } from "../utils/hotkey";
+import { describeIssue } from "../utils/issues";
+import { Notice } from "./layout";
 import { Modal } from "./Modal";
 import "./HotkeyModal.css";
 
@@ -67,6 +72,8 @@ export function HotkeyModal({ current, onClose, onSave }: HotkeyModalProps) {
   const [pressed, setPressed] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [validating, setValidating] = useState(false);
+  const hotkeyError = useAppStore(selectHotkeyError);
+  const issue = hotkeyError ? describeIssue(t, "hotkey", hotkeyError) : null;
 
   const tryApply = useCallback(
     async (accelerator: string) => {
@@ -146,6 +153,12 @@ export function HotkeyModal({ current, onClose, onSave }: HotkeyModalProps) {
         </>
       }
     >
+      {issue && hotkeyError && (
+        <Notice title={issue.title}>
+          {issue.body}
+          {!issue.known && <code>{hotkeyError.code}</code>}
+        </Notice>
+      )}
       <p className="muted hotkey-modal__intro">{t("settings.hotkey.description")}</p>
 
       <div className="hotkey-recorder">

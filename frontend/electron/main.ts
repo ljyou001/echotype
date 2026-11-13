@@ -1,6 +1,7 @@
 /**
  * [INPUT]: 依赖 electron 的 app、Menu、net；依赖 core/ 的 Core、paths、logger；依赖 engine/engine-command；
- *          依赖 shell/ 的窗口、托盘、IPC、系统能力与平台适配器；依赖 dev/smoke（仅 ECHOTYPE_SMOKE=1）
+ *          依赖 shell/ 的窗口、托盘、IPC、系统能力与平台适配器；
+ *          依赖 dev/ 的 smoke 工厂（仅 ECHOTYPE_SMOKE=1 走 mock 引擎、ECHOTYPE_SMOKE=real 走真实引擎）
  * [OUTPUT]: 无导出。Electron 主进程入口
  * [POS]: 纯装配：解析运行时布局 → 探测本机（GPU、渠道、Wayland）→ 创建日志与 Core（注入 Electron 适配器）→ 注册 IPC →
  *        托盘与窗口 → 退出时优雅关停引擎。
@@ -16,7 +17,9 @@ import { Core } from "./core/create-core.js";
 import { createFileLogger } from "./core/logger.js";
 import { resolveCatalogPath, resolveCorePaths, resolveLicensesPath, type RuntimeLayout } from "./core/paths.js";
 import { resolveEngineCommand } from "./engine/engine-command.js";
-import { prepareSmokeHome, runSmoke } from "./dev/smoke.js";
+import { mockSmoke } from "./dev/smoke.js";
+import { realSmoke } from "./dev/smoke-real.js";
+import type { SmokeFactory } from "./dev/smoke-kit.js";
 import { registerIpc } from "./shell/ipc.js";
 import { MainWindow, type RendererSource } from "./shell/main-window.js";
 import { electronClipboard, electronSecretCrypto, nullKeySource, robotKeyboard, uiohookKeySource } from "./shell/platform-adapters.js";
@@ -34,8 +37,9 @@ const layout: RuntimeLayout = {
   distDir,
 };
 const catalogFile = resolveCatalogPath(layout);
-const SMOKE = process.env.ECHOTYPE_SMOKE === "1";
-if (SMOKE) app.setPath("userData", prepareSmokeHome(catalogFile)); // 临时 ECHOTYPE_HOME，且与正在运行的 EchoType 互不抢单例锁
+const SMOKES: Record<string, SmokeFactory> = { "1": mockSmoke, real: realSmoke };
+const smoke = app.isPackaged ? null : (SMOKES[process.env.ECHOTYPE_SMOKE ?? ""]?.(catalogFile, layout) ?? null);
+if (smoke) app.setPath("userData", smoke.home); // 临时 ECHOTYPE_HOME，且与正在运行的 EchoType 互不抢单例锁
 
 // ============================================================
 // 进程调优（沿用 v2）：隐藏窗口不降频，主进程略高优先级，热键回调更及时
@@ -59,8 +63,6 @@ async function main(): Promise<void> {
   Menu.setApplicationMenu(null);
   const machine = await detectMachine(logger);
   const channel = resolveChannel();
-  const hotkeyLimitation = detectHotkeyLimitation();
-  if (hotkeyLimitation) logger.warn(hotkeyLimitation.message, { code: hotkeyLimitation.code });
 
   // ============================================================
   // 窗口：只有本应用创建的 webContents 能调用 IPC
@@ -84,6 +86,7 @@ async function main(): Promise<void> {
   const quickAction = new QuickActionWindow({ preload, preloadArgs, background, renderer, logger, trust });
   theme.track(mainWindow, quickAction);
   const power = new PowerPolicy(logger);
+  const chromiumFetch = net.fetch as unknown as typeof fetch; // 走 Chromium 网络栈，遵循系统代理
   let tray: TrayController | null = null;
 
   // ============================================================
@@ -100,12 +103,13 @@ async function main(): Promise<void> {
       licensesFile: resolveLicensesPath(layout),
       appVersion: app.getVersion(),
       logger,
+      hotkeyLimitation: detectHotkeyLimitation(),
     },
     {
       clipboard: electronClipboard(),
       keyboard: robotKeyboard(),
-      keySource: SMOKE ? nullKeySource : uiohookKeySource(),
-      fetch: net.fetch as unknown as typeof globalThis.fetch, // 走 Chromium 网络栈，遵循系统代理
+      keySource: smoke ? nullKeySource : uiohookKeySource(),
+      fetch: smoke?.adaptFetch?.(chromiumFetch) ?? chromiumFetch,
       openQuickAction: (text) => quickAction.open(text, core.integrations.instanceCount()),
       publishSnapshot: (snapshot) => {
         broadcast(IPC.snapshotPush, snapshot);
@@ -145,12 +149,16 @@ async function main(): Promise<void> {
   app.on("second-instance", () => mainWindow.show());
   app.on("activate", () => mainWindow.show());
 
-  if (SMOKE) {
-    setTimeout(() => app.exit(2), 90_000).unref();
-    const code = await runSmoke({ core, preload, preloadArgs, trust, logger });
+  if (smoke) {
+    setTimeout(() => app.exit(2), smoke.budgetMs).unref();
+    const code = await smoke.run({ core, preload, preloadArgs, trust, logger, logFile: logger.file });
     await core.dispose();
     logger.close();
-    app.exit(code);
+    try {
+      smoke.finish?.(code);
+    } finally {
+      app.exit(code);
+    }
     return;
   }
 

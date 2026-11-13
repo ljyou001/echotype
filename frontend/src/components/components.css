@@ -1,6 +1,6 @@
 /*
  * [INPUT]: 依赖 styles/tokens.css 的变量
- * [OUTPUT]: 共享组件样式：Switch、Segmented、ProgressBar、Badge、Section/SettingRow、EmptyState、Modal、Toast、
+ * [OUTPUT]: 共享组件样式：Switch、Segmented、ProgressBar、Badge、Section/SettingRow、Notice、EmptyState、Modal、Toast、
  *           LevelMeter、spinner、搜索框、Drawer、LanguageTags（HotkeyModal 与 Orb 的样式各在同名 .css）
  * [POS]: components/ 目录下全部组件的样式，与组件同目录放置。页面专属样式在 pages/*.css。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -185,6 +185,7 @@
   flex-direction: column;
   gap: var(--space-3);
   min-width: 0;
+  scroll-margin-top: var(--space-6); /* 锚点跳转时标题不贴顶 */
 }
 
 .section__head {
@@ -269,6 +270,53 @@
 
 .setting-row--stacked .setting-row__control {
   align-self: start;
+}
+
+/* ============================================================
+ * Notice：警示条（听写失败、热键受限）
+ * ============================================================ */
+.notice {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--warning-ring);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  text-align: left;
+}
+
+.notice__icon {
+  flex: none;
+  margin-top: 3px;
+  color: var(--warning);
+}
+
+.notice__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.notice__title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.notice__text {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.notice__text code {
+  margin-left: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.notice__action {
+  margin-top: var(--space-2);
 }
 
 /* ============================================================

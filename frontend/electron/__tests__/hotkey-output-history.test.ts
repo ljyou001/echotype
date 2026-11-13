@@ -202,3 +202,77 @@ describe("HistoryStore", () => {
     expect(empty.list()).toEqual([]);
   });
 });
+
+describe("HotkeyService error (snapshot.hotkey.error)", () => {
+  function source(failures: number) {
+    let left = failures;
+    const calls = { start: 0 };
+    const src: KeySource = {
+      start: () => {
+        calls.start++;
+        if (left-- > 0) throw new Error("hook_run failed");
+      },
+      stop: () => {},
+      onKey: () => () => {},
+    };
+    return { src, calls };
+  }
+
+  it("reports HOTKEY_HOOK_FAILED, retries, and clears it once the hook starts", async () => {
+    vi.useFakeTimers();
+    try {
+      const { src, calls } = source(2);
+      const svc = new HotkeyService(src, createMemoryLogger(), { retryMs: 1_000 });
+      const seen: Array<string | null> = [];
+      svc.onError((e) => seen.push(e?.code ?? null));
+      svc.setAccelerator("RCtrl");
+      svc.start();
+      expect(svc.error()?.code).toBe("HOTKEY_HOOK_FAILED");
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(calls.start).toBe(2);
+      expect(svc.error()?.code).toBe("HOTKEY_HOOK_FAILED");
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(calls.start).toBe(3);
+      expect(svc.error()).toBeNull();
+      expect(seen).toEqual(["HOTKEY_HOOK_FAILED", null]); // 重试失败不重复推送
+
+      svc.stop();
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(calls.start).toBe(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stop() ends the retries", async () => {
+    vi.useFakeTimers();
+    try {
+      const { src, calls } = source(99);
+      const svc = new HotkeyService(src, createMemoryLogger(), { retryMs: 1_000 });
+      svc.start();
+      svc.stop();
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(calls.start).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reports HOTKEY_INVALID for an unparsable accelerator and clears it with a valid one", () => {
+    const svc = new HotkeyService(source(0).src, createMemoryLogger());
+    expect(svc.setAccelerator("Ctrl+NoSuchKey")).toBe(false);
+    expect(svc.error()?.code).toBe("HOTKEY_INVALID");
+    expect(svc.setAccelerator("RAlt+L")).toBe(true);
+    expect(svc.error()).toBeNull();
+  });
+
+  it("passes the shell's platform limitation through, behind real failures", () => {
+    const limitation = { code: "HOTKEY_WAYLAND_LIMITED", message: "Wayland" };
+    const svc = new HotkeyService(source(0).src, createMemoryLogger(), { limitation });
+    expect(svc.error()).toEqual(limitation);
+    svc.setAccelerator("Ctrl+NoSuchKey");
+    expect(svc.error()?.code).toBe("HOTKEY_INVALID");
+    svc.setAccelerator("RCtrl");
+    expect(svc.error()).toEqual(limitation);
+  });
+});

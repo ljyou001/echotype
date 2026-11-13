@@ -2,7 +2,7 @@
 //! [OUTPUT]: 导出 enabled()、EnergyDetector（能量门限 VAD）、transcribe_tones()（把正弦音段识别成 w<频率>）、tone()、words()
 //! [POS]: 测试替身，让 cargo test 与协议级端到端测试不依赖 GB 级模型与声卡。只有环境变量 ECHOTYPE_TESTKIT=1 时
 //!        main.rs 才换成能量 VAD、asr::host 才接受 runtime = "testkit"，生产环境不会误用。
-//!        约定：每个「词」是一段特定频率的正弦音；识别结果逐词核对，证明分段、推测复用、余段拼接不丢词、不重词。
+//!        约定：每个「词」是一段特定频率的正弦音；识别结果逐词核对，证明分段、推测复用、整段解码不丢词、不重词。
 //! [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 
 use crate::asr::vad::Detector;
@@ -59,9 +59,6 @@ impl Detector for EnergyDetector {
     }
     fn in_speech(&self) -> bool {
         self.start.is_some()
-    }
-    fn open_start(&self) -> Option<usize> {
-        self.start
     }
     fn accept(&mut self, samples: &[f32]) -> Vec<(usize, usize)> {
         self.pending.extend_from_slice(samples);

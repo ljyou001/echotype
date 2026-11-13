@@ -3,7 +3,7 @@
  * [OUTPUT]: 导出 Core（服务装配 + 跨服务操作）、CoreConfig、CoreAdapters、CoreError
  * [POS]: Core 层的组合根，不 import electron。main.ts 注入 Electron 适配器后得到一个可运行的 Core；
  *        smoke 与测试注入假适配器得到同一个 Core。服务之间的连线（谁在何时通知谁）只写在这里：
- *        热键 → 听写 · 听写空闲 → 补做被推迟的模型加载 · 设置变化 → 热键/麦克风/模型/开机启动/外观主题 ·
+ *        热键 → 听写 · 热键错误变化 → 快照 · 听写空闲 → 补做被推迟的模型加载 · 设置变化 → 热键/麦克风/模型/开机启动/外观主题 ·
  *        引擎包装卸或失效 → 换引擎二进制 · 装需要引擎包的 variant → 先装引擎包 ·
  *        状态变化 → ≤ 30 Hz 推送 AppSnapshot · 安装进度 → ≤ 10 Hz 推送列表。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -57,6 +57,8 @@ export interface CoreConfig {
   licensesFile: string;
   appVersion: string;
   logger: Logger;
+  /** shell 探测到的热键平台限制（Linux + Wayland → HOTKEY_WAYLAND_LIMITED），进 snapshot.hotkey.error */
+  hotkeyLimitation?: AppError | null;
   /** 测试用：缩短退避与心跳 */
   engineTuning?: Partial<Pick<SupervisorOptions, "backoffMs" | "pingIntervalMs" | "readyTimeoutMs">>;
 }
@@ -87,11 +89,11 @@ export class CoreError extends Error {
 }
 
 const NO_SECRET_CRYPTO: SecretCrypto = {
-  backend: () => "none",
-  encrypt: () => {
+  backend: async () => "none",
+  encrypt: async () => {
     throw new Error("Secure storage is not available.");
   },
-  decrypt: () => {
+  decrypt: async () => {
     throw new Error("Secure storage is not available.");
   },
 };
@@ -203,7 +205,7 @@ export class Core {
       openQuickAction: adapters.openQuickAction,
       logger,
     });
-    this.hotkey = new HotkeyService(adapters.keySource, logger);
+    this.hotkey = new HotkeyService(adapters.keySource, logger, { limitation: config.hotkeyLimitation ?? null });
 
     // ============================================================
     // 连线
@@ -224,6 +226,7 @@ export class Core {
       if (s.state === "failed" && s.packId) this.fallBackFromPack(s.packId, s.error);
     });
     this.runtime.onStatus(() => this.pushes.snapshot.request());
+    this.hotkey.onError(() => this.pushes.snapshot.request());
     this.dictation.onChange((s) => {
       this.pushes.snapshot.request();
       if (s.phase === "idle") this.runtime.notifyIdle();
@@ -245,7 +248,7 @@ export class Core {
     this.packs.scan();
     this.registry.scan();
     this.history.load();
-    this.integrations.start();
+    void this.integrations.start().catch((err) => this.log.error("integrations failed to start", err)); // 只有 v2 密钥迁移是异步的
     this.hotkey.setAccelerator(this.settings.get().hotkey.accelerator);
     this.hotkey.start();
     this.supervisor.start();
@@ -267,6 +270,7 @@ export class Core {
       engine: deriveEngineSnapshot(this.supervisor.status(), rt),
       activeModel: deriveActiveModel(rt, this.catalog),
       dictation: this.dictation.state(),
+      hotkey: { error: this.hotkey.error() },
       settings: this.settings.get(),
     };
   }

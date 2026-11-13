@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * [INPUT]: 依赖 contracts/models.catalog.json 中已回写的 variants[].asset 与 engine_packs；依赖 staging 目录 %USERPROFILE%/.echotype-staging/models-v3/ 里的 zip
+ * [INPUT]: 依赖 contracts/models.catalog.json 中已回写的 variants[].asset 与 engine_packs；依赖 staging 目录 %USERPROFILE%/.echotype-staging/models-v4/ 里的 zip
  * [OUTPUT]: 写出 scripts/models/UPLOAD.md（按 release 分组的 zip 表、总大小、gh release 命令）
  * [POS]: package-models.mjs 的下游。只读 catalog 与磁盘，不改 catalog，不上传。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -12,11 +12,12 @@ import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const catalog = JSON.parse(readFileSync(resolve(HERE, '../../contracts/models.catalog.json'), 'utf8'))
-const OUT_DIR = join(homedir(), '.echotype-staging', 'models-v3')
+const OUT_DIR = join(homedir(), '.echotype-staging', 'models-v4')
 const gib = (n) => (n / 1024 ** 3).toFixed(2) + ' GiB'
 const mib = (n) => (n / 1024 ** 2).toFixed(1) + ' MiB'
 const fwd = (p) => p.replaceAll('\\', '/')
 const BT = '`'
+const home = (p) => fwd(p).replace(fwd(homedir()), '$HOME') // 文档里不写本机用户名
 
 // models-v4：按资产名去重（GGUF 变体共享一个资产）
 const rows = []
@@ -32,7 +33,7 @@ for (const m of catalog.models) {
   }
 }
 
-// engine-packs-v3：由 engine / ci 会话产出；sha256 为空即 pending
+// engine-packs-v4：由 engine / ci 会话产出；sha256 为空即 pending
 const packs = []
 for (const pk of catalog.engine_packs ?? []) {
   for (const { asset } of Object.values(pk.platforms)) packs.push(asset)
@@ -41,7 +42,7 @@ for (const pk of catalog.engine_packs ?? []) {
 const total = rows.reduce((s, r) => s + r.size, 0)
 const table = rows.map((r) => `| ${BT}${r.name}${BT} | ${mib(r.size)} | ${BT}${r.sha256}${BT} |`).join('\n')
 const packTable = packs.map((a) => `| ${BT}${a.name}${BT} | ${a.sha256 ? mib(a.size_bytes) : 'pending'} | ${a.sha256 ? BT + a.sha256 + BT : 'pending'} |`).join('\n')
-const files = rows.map((r) => `  "${fwd(r.path)}"`)
+const files = rows.map((r) => `  "${home(r.path)}"`)
 const bash = files.join(' \\\n')
 const ps = files.join(` ${BT}\n`)
 
@@ -53,7 +54,7 @@ const doc = `# 上传 Release 资产
 
 ## 1. release ${BT}models-v4${BT}（模型）
 
-共 ${rows.length} 个 zip，合计 **${gib(total)}**（${mib(total)}）。每个都小于 GitHub 单文件 2 GiB 上限。zip 在 ${BT}${OUT_DIR}${BT}。
+共 ${rows.length} 个 zip，合计 **${gib(total)}**（${mib(total)}）。每个都小于 GitHub 单文件 2 GiB 上限。zip 在 ${BT}~/.echotype-staging/models-v4${BT}。
 三个 GGUF 变体（cuda / apple-metal / vulkan）共用一个 ${BT}*--gguf-q8.zip${BT}，只传一次。
 
 | 文件 | 大小 | sha256 |
@@ -81,7 +82,7 @@ gh release create models-v4 --repo ljyou001/echotype --title "Models v4" --notes
 ${ps}
 ${BT}${BT}${BT}
 
-## 2. release ${BT}engine-packs-v3${BT}（引擎包）
+## 2. release ${BT}engine-packs-v4${BT}（引擎包）
 
 由 engine / ci 会话产出。sha256 为 pending 表示文件还没有。文件齐了之后，他们填 catalog 并在这里追加命令。
 
