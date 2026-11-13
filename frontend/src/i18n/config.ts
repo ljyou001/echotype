@@ -1,3 +1,10 @@
+/**
+ * [INPUT]: 依赖 i18next、react-i18next；依赖 ./locales/*.json 全部语言包
+ * [OUTPUT]: 导出 i18n 实例（默认导出）、SUPPORTED_LANGUAGES、resolveAppLanguage()
+ * [POS]: 界面语言的唯一配置点。en 是回退语言：其他语言包缺的键自动显示英文。
+ *        当前语言由 store/appStore 按 settings.ui.language 同步，"system" 跟随系统语言。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import en from "./locales/en.json";

@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Echotype",
+    "name": "EchoType",
     "subtitle": "More than speak n' type"
   },
   "hotkeyLabel": {
@@ -36,18 +36,23 @@
     "models": "Models",
     "integrations": "Integrations",
     "settings": "Settings",
-    "debug": "Debug"
+    "debug": "Diagnostics",
+    "label": "Main navigation"
   },
   "status": {
     "loading": "Loading",
     "ready": "Ready",
     "capturing": "Capturing",
-    "recording": "Recording",
+    "recording": "Listening",
     "error": "Error",
     "offline": "Offline",
     "standby": "Standby",
     "connected": "Connected",
-    "disconnected": "Disconnected"
+    "disconnected": "Disconnected",
+    "starting": "Starting",
+    "noModel": "No model",
+    "finalizing": "Transcribing",
+    "stopped": "Stopped"
   },
   "home": {
     "statusMessage": {
@@ -66,8 +71,9 @@
       "model": "Model",
       "hotkey": "Hotkey",
       "mode": "Mode",
-      "input": "Input",
-      "recordingMode": "Recording Mode"
+      "input": "Microphone",
+      "recordingMode": "Recording mode",
+      "noModel": "None selected"
     },
     "modes": {
       "streaming": "Streaming",
@@ -96,29 +102,75 @@
       "integrationShortPressSuffix": " to open integration tool",
       "integrationLongPressPrefix": "Long press ",
       "integrationLongPressSuffix": " to open integration tool"
+    },
+    "hero": {
+      "starting": "Starting the speech engine…",
+      "loading": "Loading the speech model…",
+      "loadingModel": "Loading {{name}}…",
+      "ready": "Ready to dictate",
+      "noModel": "Choose a speech model to get started",
+      "recording": "Listening…",
+      "finalizing": "Transcribing…",
+      "error": "The speech engine stopped working",
+      "stopped": "The speech engine is off"
+    },
+    "hint": {
+      "hold": "Hold {{key}} and speak. Release it to insert the text.",
+      "toggle": "Press {{key}} to start dictating. Press it again to insert the text.",
+      "quickActionHold": "Tap {{key}} to open Quick Action.",
+      "quickActionToggle": "Hold {{key}} for half a second to open Quick Action.",
+      "starting": "This usually takes a second or two.",
+      "finalizing": "Your text is on its way.",
+      "noModel": "Download a model on the Models page. It runs entirely on this computer.",
+      "stopped": "Start the engine to dictate again."
+    },
+    "actions": {
+      "start": "Start dictation",
+      "stop": "Stop",
+      "chooseModel": "Choose a model",
+      "restart": "Restart engine",
+      "startEngine": "Start engine"
+    },
+    "live": {
+      "title": "Live transcript",
+      "placeholder": "Start speaking…"
+    },
+    "result": {
+      "title": "Last dictation",
+      "meta": "{{duration}} of audio · text in {{ms}} ms",
+      "latencyHint": "Time from releasing the hotkey to the text appearing"
     }
   },
   "history": {
     "title": "History",
-    "description": "Recent dictation results.",
-    "empty": "No history yet.",
+    "description": "Everything you've dictated, stored on this computer.",
+    "empty": "No dictations yet",
     "actions": {
       "play": "Play audio",
       "search": "Search",
-      "delete": "Delete"
-    }
+      "delete": "Delete",
+      "sendTo": "Send to {{name}}"
+    },
+    "emptyDescription": "Hold your hotkey and speak. What you say shows up here.",
+    "searchPlaceholder": "Search history",
+    "noMatches": "Nothing matches “{{query}}”",
+    "clearAll": "Clear history",
+    "clearConfirmTitle": "Clear all history?",
+    "clearConfirmMessage_one": "This permanently deletes {{count}} dictation from this computer.",
+    "clearConfirmMessage_other": "This permanently deletes {{count}} dictations from this computer."
   },
   "models": {
     "title": "Models",
-    "description": "Switch models and review capabilities.",
-    "showAuxiliaryModels": "Show auxiliary models",
+    "description": "Choose the speech model EchoType uses. Everything runs on this computer.",
+    "showAuxiliaryModels": "Show helper models",
     "waitingForModel": "No models found. Connecting to model...",
     "status": {
       "running": "Running",
       "installed": "Installed",
       "comingSoon": "Coming soon",
       "auxiliary": "Auxiliary Model",
-      "auxiliaryNote": "Used automatically with ASR models"
+      "auxiliaryNote": "Installed automatically with the models that need it.",
+      "active": "Active"
     },
     "info": {
       "family": "Family",
@@ -127,14 +179,15 @@
       "devices": "Devices",
       "deviceSupport": "Device Support",
       "currentDevice": "Current Device",
-      "notes": "Notes"
+      "notes": "Notes",
+      "languagesMore": "{{list}} +{{count}} more"
     },
     "types": {
       "asr": "ASR",
       "punctuation": "Punctuation"
     },
     "settings": {
-      "title": "Model Settings",
+      "title": "Settings",
       "device": "Device",
       "language": "Language",
       "qwenBackend": "Qwen3 runtime",
@@ -143,54 +196,113 @@
       "streamingOff": "Offline",
       "apply": "Apply Settings",
       "auto": "Auto",
-      "autoDetect": "Auto Detect",
+      "autoDetect": "Detect automatically",
       "hints": {
-        "languageSelection": "Select the language for transcription, or use Auto Detect",
+        "languageSelection": "Pin a language if detection picks the wrong one.",
         "qwenBackend": "transformers is recommended for general use",
         "streaming": "Streaming: real-time results; Offline: results after recording completes"
-      }
+      },
+      "provider": "Run on",
+      "providerHint": "Auto picks the fastest option on this computer.",
+      "providerCpuOnly": "This model runs on the CPU.",
+      "punctuation": "Punctuation",
+      "punctuationNative": "Built into this model. Turn it off to get plain text with no punctuation.",
+      "punctuationCompanion": "Added by a small companion model that installs with this one. Turn it off to skip that step.",
+      "itn": "Number formatting",
+      "itnDescription": "Write spoken numbers as digits, so “three point five” becomes 3.5.",
+      "appliesNow": "Changes apply to your next dictation. Changing where it runs reloads the model."
+    },
+    "empty": {
+      "title": "No models available",
+      "description": "The model catalog hasn't loaded yet. Restart EchoType if this persists."
+    },
+    "helpers": {
+      "title": "Helper models",
+      "description": "Installed automatically alongside the speech models that need them."
+    },
+    "tiers": {
+      "instant": "Instant",
+      "balanced": "Balanced",
+      "accurate": "Accurate"
+    },
+    "punctuationMode": {
+      "native": "Built-in punctuation",
+      "companion": "Punctuation add-on"
+    },
+    "install": {
+      "not_installed": "Not installed",
+      "downloading": "Downloading…",
+      "downloadingPct": "Downloading · {{pct}}%",
+      "verifying": "Verifying…",
+      "extracting": "Unpacking…",
+      "installed": "Installed",
+      "error": "Download failed"
+    },
+    "actions": {
+      "download": "Download",
+      "retry": "Try again",
+      "use": "Use this model",
+      "remove": "Remove"
+    },
+    "remove": {
+      "title": "Remove {{name}}?",
+      "message": "This frees up {{size}} of disk space. You can download it again any time.",
+      "messageActive": "This is your active model. Dictation stops until you choose another one. Frees up {{size}}."
+    },
+    "providers": {
+      "cpu": "CPU",
+      "cuda": "NVIDIA GPU (CUDA)",
+      "coreml": "Apple Neural Engine (Core ML)",
+      "directml": "GPU (DirectML)"
     }
   },
   "integrations": {
     "title": "Integrations",
-    "description": "Plugin-based workflows for search and automation.",
-    "myIntegrations": "My Integrations",
-    "addIntegration": "Add Integration",
-    "emptyState": "No integrations added yet. Click \"Add Integration\" to get started.",
-    "availablePlugins": "Available Plugins",
+    "description": "Send what you said to search, AI, and translation tools from Quick Action.",
+    "myIntegrations": "My integrations",
+    "addIntegration": "Add integration",
+    "emptyState": "No integrations yet. Add one to use it from Quick Action.",
+    "availablePlugins": "Available plugins",
     "comingSoon": "Coming soon",
     "quickAction": {
       "title": "Quick Action",
-      "lastText": "Last transcribed text",
+      "lastText": "Last dictation",
       "noText": "No text available",
-      "hint": "Press Enter for default"
+      "hint": "Press Enter for default",
+      "hintNamed": "Press Enter to send to {{name}}",
+      "noIntegrations": "No integrations are on. Turn some on in Integrations.",
+      "waiting": "Waiting for a reply…",
+      "approvalRequired": "Approval needed",
+      "allow": "Allow",
+      "deny": "Deny"
     },
     "outputMode": {
-      "clipboard": "Copy to Clipboard",
-      "direct": "Direct Input",
-      "both": "Both (Clipboard + Direct)"
+      "clipboard": "Copy the text, then open the service",
+      "direct": "Send the text directly",
+      "both": "Send directly and copy"
     },
     "actions": {
       "enable": "Enable",
       "disable": "Disable",
-      "setDefault": "Set Default",
+      "setDefault": "Make default",
       "configure": "Configure",
       "remove": "Remove",
-      "enabled": "Enabled"
+      "enabled": "On",
+      "reorder": "Drag to reorder"
     },
     "categories": {
-      "search": "Search Engines",
-      "ai": "AI Assistants",
-      "translation": "Translation Services",
+      "search": "Search",
+      "ai": "AI assistants",
+      "translation": "Translation",
       "custom": "Custom"
     },
     "dialog": {
-      "addTitle": "Add Integration",
+      "addTitle": "Add integration",
       "configureTitle": "Configure",
-      "selectPlugin": "Select Plugin",
-      "instanceName": "Instance Name",
+      "selectPlugin": "Choose a service",
+      "instanceName": "Name",
       "icon": "Icon",
-      "outputMode": "Output Mode",
+      "outputMode": "Output",
       "outputModeDescSupported": "Choose how to send text to this service. Direct input uses URL parameters or API.",
       "outputModeDescUnsupported": "This service doesn't support direct input. Text will be copied to clipboard for manual pasting.",
       "cancel": "Cancel",
@@ -200,7 +312,9 @@
       "save": "Save",
       "confirmRemoveTitle": "Remove integration?",
       "confirmRemove": "Are you sure you want to remove this integration?",
-      "manualPasteRequired": "⚠️ Manual paste required"
+      "manualPasteRequired": "This service can't receive text directly. EchoType copies it so you can paste with Ctrl+V.",
+      "configureNamed": "Configure {{name}}",
+      "confirmRemoveNamed": "“{{name}}” will be removed from Quick Action."
     },
     "plugins": {
       "clawbot": {
@@ -250,29 +364,37 @@
         "name": "Workflow",
         "description": "Custom automation workflows"
       }
+    },
+    "myIntegrationsDescription": "Drag to reorder. The default runs when you press Enter in Quick Action.",
+    "availablePluginsDescription": "Add any of these with “Add integration”.",
+    "default": "Default",
+    "errors": {
+      "pluginMissing": "The “{{id}}” plugin isn't available in this version."
     }
   },
   "settings": {
     "title": "Settings",
-    "description": "Global application settings.",
+    "description": "Dictation, microphone, and app preferences.",
     "startup": {
       "title": "Startup",
       "autoStart": "Launch at startup",
-      "autoLoadModel": "Auto-load model on startup"
+      "autoLoadModel": "Auto-load model on startup",
+      "autoStartDescription": "Start EchoType in the background when you sign in."
     },
     "language": {
-      "title": "Language",
+      "title": "App language",
       "systemDefault": "System default",
       "en": "English",
-      "zh": "中文"
+      "zh": "中文",
+      "description": "The language of EchoType's menus and messages."
     },
     "hotkey": {
       "title": "Hotkey",
       "current": "Current hotkey",
-      "configure": "Configure Hotkey",
+      "configure": "Change hotkey",
       "pressKeys": "Press any key...",
       "clickToRecord": "Click to record a new hotkey",
-      "quickSelect": "Quick Select",
+      "quickSelect": "Recommended keys",
       "quickSelectDescMac": "Right-side modifier keys or function keys are recommended to avoid conflicts with system shortcuts",
       "quickSelectDescWin": "Right-side modifier keys or special lock keys are recommended to avoid conflicts with system shortcuts",
       "quickKeyDescMac": {
@@ -293,7 +415,7 @@
         "PrtSc": "Print Screen key",
         "CapsLock": "Caps Lock key"
       },
-      "description": "Set a global hotkey to toggle recording. Default is a single key (right-side modifier), but key combinations are also supported.",
+      "description": "Pick the key you hold to dictate. A single right-side modifier works best because it rarely clashes with other shortcuts.",
       "note": "Important Notes",
       "noteItem1": "Default uses single key (Right Ctrl/Cmd) to avoid conflicts",
       "noteItem2": "Right-side keys (Right Ctrl, Right Alt, Right Win/Cmd) are most stable",
@@ -305,24 +427,49 @@
         "alreadyInUse": "This hotkey is already in use",
         "invalid": "Invalid hotkey combination",
         "systemShortcut": "This is a system shortcut"
-      }
+      },
+      "rowDescription": "The key you press to dictate, anywhere on your computer.",
+      "change": "Change",
+      "modalTitle": "Change hotkey",
+      "stopRecording": "Stop recording"
     },
     "recordingMode": {
-      "title": "Recording Mode",
-      "pushToTalk": "Push-to-Talk",
+      "title": "Recording mode",
+      "pushToTalk": "Hold to talk",
       "toggleMode": "Toggle",
       "pushToTalkDesc": "Hold hotkey to record, release to stop (like a walkie-talkie)",
-      "toggleModeDesc": "Press hotkey once to start recording, press again to stop"
+      "toggleModeDesc": "Press hotkey once to start recording, press again to stop",
+      "holdExplain": "Hold {{key}} while you speak and release it to insert the text. A quick tap opens Quick Action instead.",
+      "toggleExplain": "Press {{key}} once to start and again to stop. Hold it for half a second to open Quick Action."
     },
     "audio": {
-      "title": "Audio Input Device",
-      "microphone": "Microphone"
+      "title": "Input device",
+      "microphone": "Microphone",
+      "description": "The microphone EchoType records from.",
+      "systemDefault": "System default",
+      "systemDefaultNamed": "System default ({{name}})",
+      "refresh": "Refresh device list",
+      "test": "Test microphone",
+      "testDescription": "Turn on and speak to check the level.",
+      "testOn": "Speak normally. The bar should reach about two-thirds.",
+      "level": "Input level",
+      "keepWarm": "Keep microphone ready",
+      "keepWarmOn": "Dictation starts instantly and your first word is never cut off. Your system shows the microphone as in use while EchoType runs.",
+      "keepWarmOff": "The microphone opens only while you dictate. The start of your first word may be clipped."
     },
     "output": {
-      "title": "Output Method",
-      "directInput": "Direct Input",
-      "clipboard": "Copy to Clipboard",
-      "atLeastOne": "⚠️ At least one output method must be enabled"
+      "title": "Output",
+      "directInput": "Paste into the active app",
+      "clipboard": "Keep text on the clipboard",
+      "atLeastOne": "At least one output must stay on so your text goes somewhere.",
+      "directInputDescription": "Type the text where your cursor is.",
+      "clipboardDescription": "Leave the text on the clipboard so you can paste it again.",
+      "paste": "Paste",
+      "copy": "Copy",
+      "both": "Both",
+      "pasteDescription": "Type the text where your cursor is.",
+      "copyDescription": "Put the text on the clipboard so you can paste it where you want.",
+      "bothDescription": "Type the text where your cursor is and keep a copy on the clipboard."
     },
     "textProcessing": {
       "title": "Text Processing",
@@ -336,6 +483,17 @@
     },
     "log": {
       "title": "Model log"
+    },
+    "modelSettingsMoved": "Punctuation, number formatting, and recognition language are set per model on the Models page.",
+    "sections": {
+      "general": "General",
+      "dictation": "Dictation",
+      "microphone": "Microphone",
+      "privacy": "Privacy"
+    },
+    "privacy": {
+      "saveRecordings": "Save recordings",
+      "saveRecordingsDescription": "Keep the audio of each dictation on this computer. Useful for troubleshooting. Off by default."
     }
   },
   "errors": {
@@ -373,36 +531,38 @@
     },
     "unknown": {
       "title": "Model error",
-      "message": "Unknown error"
+      "message": "Something went wrong."
     }
   },
   "onboarding": {
     "title": "Welcome to EchoType",
-    "subtitle": "Voice input needs microphone and hotkey access. Please complete the steps below.",
+    "subtitle": "Three quick steps and you're ready to dictate anywhere.",
     "stepPermissions": "Permissions",
-    "stepMicrophone": "Choose Microphone",
-    "stepModels": "AI Models",
+    "stepMicrophone": "Microphone",
+    "stepModels": "Speech model",
     "permissions": {
       "microphone": "Microphone",
       "microphoneDesc": "Used to record speech and transcribe to text.",
       "openMicrophone": "Open microphone settings",
       "accessibility": "Hotkey / Accessibility",
-      "accessibilityDescWin": "On Windows, no separate permission is usually needed. If hotkeys don't work, ensure the app is running.",
+      "accessibilityDescWin": "Windows doesn't need a separate permission for global hotkeys.",
       "accessibilityDescMac": "Required for global hotkeys (e.g. start/stop recording). Allow this app under Accessibility.",
       "openAccessibility": "Open accessibility settings",
       "checking": "Checking…",
       "granted": "Granted",
       "denied": "Not granted",
-      "recheck": "Recheck"
+      "recheck": "Recheck",
+      "unknown": "Not checked"
     },
     "microphone": {
-      "title": "Choose microphone",
-      "description": "Select the microphone for voice input. You'll see the level meter when speaking.",
-      "finish": "Finish"
+      "title": "Microphone",
+      "description": "Speak a few words. The bar should move with your voice.",
+      "finish": "Get started",
+      "none": "No microphone found. Plug one in, then reopen this step."
     },
     "models": {
       "title": "Download AI Models",
-      "description": "We noticed that some required AI models are missing from your computer. You need to download them to start using EchoType.",
+      "description": "Pick a speech model. It runs entirely on this computer, so your voice never leaves it. You can add more later on the Models page.",
       "paraformer": "Paraformer (Core)",
       "paraformerDesc": "The primary speech recognition model, supports Chinese and English transcription.",
       "qwen": "Qwen3 (Advanced)",
@@ -411,20 +571,51 @@
       "extracting": "Extracting...",
       "installed": "Installed",
       "error": "Failed",
-      "download": "Download"
+      "download": "Download",
+      "recommended": "Recommended",
+      "finishHint": "Download a speech model to continue."
     },
     "next": "Next",
     "back": "Back"
   },
   "common": {
-    "defaultMicrophone": "Default microphone",
-    "empty": "(empty)"
+    "defaultMicrophone": "System default",
+    "empty": "(empty)",
+    "cancel": "Cancel",
+    "close": "Close",
+    "copy": "Copy",
+    "copied": "Copied",
+    "save": "Save"
   },
   "debug": {
     "modelStatus": "Model status",
     "modelLog": {
       "title": "Model log",
       "empty": "No model log yet. The latest backend log will appear here when running."
-    }
+    },
+    "title": "Diagnostics",
+    "description": "Engine status and tools for troubleshooting.",
+    "engineTitle": "Speech engine",
+    "engineState": "State",
+    "provider": "Running on",
+    "engineVersion": "Engine version",
+    "loadProgress": "Load progress",
+    "activeModel": "Active model",
+    "modelsInstalled": "Models installed",
+    "dictationPhase": "Dictation",
+    "platform": "Platform",
+    "openLogs": "Open logs folder",
+    "restartEngine": "Restart engine",
+    "keysTitle": "Key listener",
+    "keysDescription": "Shows key presses inside this window, including left and right modifiers.",
+    "startListening": "Start listening",
+    "stopListening": "Stop",
+    "clear": "Clear",
+    "pressAnyKey": "Press any key…",
+    "keysIdle": "Start listening to see key codes.",
+    "snapshotTitle": "App state",
+    "snapshotDescription": "The latest snapshot from the app core. Attach it when you report a problem.",
+    "showSnapshot": "Show snapshot",
+    "snapshotCopied": "Snapshot copied"
   }
 }
