@@ -70,7 +70,7 @@ export class FakeEngine implements EngineGateway {
     this.calls.push({ method, params });
     if (!this.connected) return Promise.reject(new EngineError("ENGINE_NOT_READY", "engine down"));
     const fn = this.handlers.get(method);
-    return Promise.resolve(fn ? fn(params) : {}) as Promise<EngineResult<M>>;
+    return new Promise((resolve) => resolve(fn ? fn(params) : {})) as Promise<EngineResult<M>>; // handler 抛错 → 拒绝
   }
 
   methods(): EngineMethod[] {

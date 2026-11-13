@@ -90,13 +90,14 @@ export class ModelRegistry {
   install(id: string, chain: string[] = []): Promise<void> {
     const running = this.inflight.get(id);
     if (running) return running.promise;
-    if (this.isInstalled(id)) return Promise.resolve();
     let model: CatalogModel;
     try {
       model = this.opts.catalog.require(id);
     } catch (err) {
       return Promise.reject(err);
     }
+    // 本体已装但依赖缺失（例如用户手动删了标点模型）时，仍然补装依赖
+    if (this.isInstalled(id) && (model.requires ?? []).every((r) => this.isInstalled(r))) return Promise.resolve();
     if (chain.includes(id)) return Promise.reject(new InstallError("CATALOG_CYCLE", `requires cycle: ${[...chain, id].join(" → ")}`));
 
     const controller = new AbortController();
@@ -107,12 +108,14 @@ export class ModelRegistry {
           await this.install(dep, [...chain, id]);
           if (controller.signal.aborted) throw abortError();
         }
-        await installModel(model, this.opts.modelsDir, {
-          signal: controller.signal,
-          fetch: this.opts.fetch,
-          logger: this.log,
-          onProgress: (stage, pct) => this.setState(id, { status: stage, pct, error: null }),
-        });
+        if (!this.isInstalled(id)) {
+          await installModel(model, this.opts.modelsDir, {
+            signal: controller.signal,
+            fetch: this.opts.fetch,
+            logger: this.log,
+            onProgress: (stage, pct) => this.setState(id, { status: stage, pct, error: null }),
+          });
+        }
         this.setState(id, INSTALLED);
         this.log.info("installed", { id });
       } catch (err) {

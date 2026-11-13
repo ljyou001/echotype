@@ -95,7 +95,9 @@ afterAll(() => {
   server.close();
 });
 
-function entry(id: string, over: Partial<CatalogModel> & { download: Partial<CatalogModel["download"]> }): CatalogModel {
+type EntryOverrides = Omit<Partial<CatalogModel>, "download"> & { download: Partial<CatalogModel["download"]> };
+
+function entry(id: string, { download, ...over }: EntryOverrides): CatalogModel {
   return {
     id,
     name: id,
@@ -114,7 +116,7 @@ function entry(id: string, over: Partial<CatalogModel> & { download: Partial<Cat
     defaults: { provider: "cpu", language: "zh", punctuation: true, itn: false },
     status: "stable",
     ...over,
-    download: { url: null, format: "tar.bz2", sha256: null, size_bytes: 0, archive_root: null, ...over.download },
+    download: { url: null, format: "tar.bz2", sha256: null, size_bytes: 0, archive_root: null, ...download },
   };
 }
 
