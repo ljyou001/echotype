@@ -4,8 +4,11 @@
  * [POS]: `npm run smoke:real` 的执行体（开发专用）：真实 Electron + Core + 真实 Rust 引擎 + 真实模型下载。
  *        全新临时 ECHOTYPE_HOME；模型经 window.echotype.models.install 走真实安装（下载 → sha256 → 解压），
  *        默认从 GitHub 下载，ECHOTYPE_SMOKE_ASSETS=<目录> 时从本地镜像下载同名 zip。
- *        没有麦克风：引擎以 --fake-mic 播放 ECHOTYPE_SMOKE_WAVS 里的 zh.wav、en.wav（经 ECHOTYPE_ENGINE_ARGS 传入）。
+ *        没有麦克风：引擎以 --fake-mic 播放 zh.wav、en.wav（经 ECHOTYPE_ENGINE_ARGS 传入）。样例目录缺省为
+ *        <repo>/engine/target/test-wavs（engine/scripts/fetch-test-wavs.sh 的输出），ECHOTYPE_SMOKE_WAVS 覆盖；
+ *        缺文件时一行报错并给出该跑的命令，Core 不替人下载。
  *        检查：hello → 默认模型安装与加载 → 中文听写与历史 → 英文半角标点 → 配套标点模型 → 杀引擎后自动恢复 → activeModel。
+ *        文本按 EXPECT 比对：样例按 sha256 钉死，引擎整句解码 + ITN，结果确定。
  *        结尾打印每个模型的 load_ms 与 release_to_final_ms（取自 Core 日志）。输出关闭，不装全局键盘钩子。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -44,15 +47,27 @@ interface Clip {
 /** 片段播完后再等这么久才松键（"停 0.3 s 松键"，与 design/BENCHMARKS.md 的第二列同一场景） */
 const TAIL_MS = 300;
 const FULL_WIDTH = /[，。？！、；：]/;
-const HALF_WIDTH = /[.,?!;:]/;
-const HAN = /\p{Script=Han}/u;
+/** fetch-test-wavs.sh 的缺省输出目录（相对仓库根） */
+const DEFAULT_WAVS = path.join("engine", "target", "test-wavs");
+
+// ============================================================
+// 期望文本。zh 只比尾巴"早上9点至下午5点。"（ITN + 句号）：SenseVoice 把"开放"听成"开饭"，是模型差异，不断言；
+// 配套标点模型的 zh 整句比对（逗号来自标点模型）；en 只有默认模型（多语种）听，比对句尾（半角、"boy" 后无逗号、ITN 数字）。
+// en 末词不比：经 Core 的 SenseVoice cpu-int8 稳定听成 "code"，引擎自己的基准里是 "gold"，与"开饭"同属模型差异
+// ============================================================
+const EXPECT = {
+  zhTail: "早上9点至下午5点。",
+  zhCompanion: "开放时间，早上9点至下午5点。",
+  enTail: /called for the boy and presented him with 50 pieces of \w+\.$/,
+} as const;
 
 export const realSmoke: SmokeFactory = (catalogFile, layout) => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "echotype-smoke-real-"));
   process.env.ECHOTYPE_HOME = home;
   delete process.env.ECHOTYPE_ENGINE; // 永远拉起真实引擎
   writeSmokeSettings(home);
-  const clips = findClips(process.env.ECHOTYPE_SMOKE_WAVS);
+  const wavs = wavSource(layout.repoRoot);
+  const clips = findClips(wavs.dir);
   if (clips) {
     // FakeBackend 每次 session.start 切到下一个文件：zh → en → zh …；引擎重启后从 zh 重新开始
     const fakeMic = clips.map((c) => `--fake-mic "${c.file}"`).join(" ");
@@ -65,7 +80,7 @@ export const realSmoke: SmokeFactory = (catalogFile, layout) => {
     home,
     budgetMs: 30 * 60_000, // 首次从 GitHub 下载约 300 MB
     adaptFetch: mirror ? (base) => mirror.adapt(base) : undefined,
-    run: (ctx) => runRealSmoke(ctx, { engine, clips, mirror, catalog, home }),
+    run: (ctx) => runRealSmoke(ctx, { engine, wavs, clips, mirror, catalog, home }),
     finish: (code) => {
       mirror?.close();
       // 引擎已停，模型（约 600 MB 解压后）可以删；Chromium 在退出前仍占着 userData，所以目录本身留下
@@ -77,6 +92,7 @@ export const realSmoke: SmokeFactory = (catalogFile, layout) => {
 
 interface RunOptions {
   engine: string;
+  wavs: WavSource;
   clips: Clip[] | null;
   mirror: AssetMirror | null;
   catalog: Catalog;
@@ -124,9 +140,10 @@ async function runRealSmoke(ctx: SmokeContext, o: RunOptions): Promise<number> {
     if (clip.name !== expected) throw new Error(`fake mic order: next clip is ${clip.name}.wav, expected ${expected}.wav`);
     sessions++;
     const before = core.dictation.state().lastFinal;
+    const startedAt = Date.now(); // 从发出 start 起算：假麦克风在引擎收到 session.start 时开播，轮询"recording"的延迟不算进尾巴
     await js(`window.echotype.dictation.start()`);
     await until(() => core.dictation.state().phase === "recording", 5_000, "recording");
-    await sleep(clip.seconds * 1000 + TAIL_MS);
+    await sleep(Math.max(0, startedAt + clip.seconds * 1000 + TAIL_MS - Date.now()));
     await js(`window.echotype.dictation.stop()`);
     await until(() => core.dictation.state().phase === "idle", 15_000, `final for ${clip.name}.wav`);
     const final = core.dictation.state().lastFinal;
@@ -144,11 +161,11 @@ async function runRealSmoke(ctx: SmokeContext, o: RunOptions): Promise<number> {
   };
 
   try {
-    checks.check("engine binary exists", fs.existsSync(o.engine), { engine: o.engine, fix: "cd engine && cargo build --release, or set ECHOTYPE_ENGINE_PATH" });
-    checks.check("zh.wav and en.wav found", o.clips !== null, {
-      ECHOTYPE_SMOKE_WAVS: process.env.ECHOTYPE_SMOKE_WAVS ?? null,
-      fix: "point ECHOTYPE_SMOKE_WAVS at a folder with test_wavs/zh.wav and en.wav from sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2",
-    });
+    // 前置条件缺了就一行说清楚该跑什么
+    if (!fs.existsSync(o.engine)) throw new Error(`engine binary not found at ${o.engine}. Run \`cd engine && cargo build --release\` or set ECHOTYPE_ENGINE_PATH`);
+    checks.check("engine binary exists", true);
+    if (!o.clips) throw new Error(`zh.wav and en.wav not found in ${o.wavs.dir}. Run \`${o.wavs.fetch}\``);
+    checks.check(`zh.wav and en.wav found in ${o.wavs.dir}`, true);
     const plan = planModels(o.catalog);
 
     // ---------- 握手 ----------
@@ -167,13 +184,13 @@ async function runRealSmoke(ctx: SmokeContext, o: RunOptions): Promise<number> {
     checks.check(`load ${plan.first.id}: activeModel variant / runtime / providerUsed`, active?.variantId === firstVariant.id && active.runtime === "sherpa-onnx" && active.providerUsed === "cpu" && active.fallback === false, active);
 
     const zh = await dictate("zh");
-    checks.check(`dictation zh.wav → final (${plan.first.id})`, HAN.test(zh), zh);
+    checks.check(`dictation zh.wav → final ends with "${EXPECT.zhTail}" (${plan.first.id})`, zh.endsWith(EXPECT.zhTail), zh);
     const history = await js<HistoryEntry[]>(`window.echotype.history.list()`);
     checks.check("final → history entry", history.length === 1 && history[0].text === zh, history);
 
     const en = await dictate("en");
     if (plan.first.languages?.includes("en")) {
-      checks.check("English with punct_style auto → half-width punctuation", /[A-Za-z]/.test(en) && HALF_WIDTH.test(en) && !FULL_WIDTH.test(en), en);
+      checks.check(`English with punct_style auto → half-width, ends with "called for the boy and presented him with 50 pieces of <word>."`, EXPECT.enTail.test(en) && !FULL_WIDTH.test(en), en);
     }
 
     // ---------- 配套标点：安装标点模型与 ASR → 激活 → 中文 ----------
@@ -185,8 +202,8 @@ async function runRealSmoke(ctx: SmokeContext, o: RunOptions): Promise<number> {
     const loading = await waitLog("loading model", (d) => d.id === plan.companion.id, "loading model log line");
     const zhCompanion = await dictate("zh");
     checks.check(
-      `companion punctuation: ${plan.companion.id} + ${plan.punct.id}`,
-      String(loading.companion).startsWith(`${plan.punct.id}/`) && HAN.test(zhCompanion) && FULL_WIDTH.test(zhCompanion),
+      `companion punctuation: ${plan.companion.id} + ${plan.punct.id} → "${EXPECT.zhCompanion}"`,
+      String(loading.companion).startsWith(`${plan.punct.id}/`) && zhCompanion === EXPECT.zhCompanion,
       { companion: loading.companion, text: zhCompanion },
     );
 
@@ -201,7 +218,7 @@ async function runRealSmoke(ctx: SmokeContext, o: RunOptions): Promise<number> {
     sessions = 0;
     await awaitLoaded(plan.companion, before);
     const afterRestart = await dictate("zh");
-    checks.check("engine killed → supervisor restarts it → model reloads → dictation works", HAN.test(afterRestart), afterRestart);
+    checks.check("engine killed → supervisor restarts it → model reloads → same text", afterRestart === EXPECT.zhCompanion, afterRestart);
 
     const final = core.snapshot().activeModel;
     checks.check(
@@ -239,8 +256,22 @@ function cpuVariant(model: CatalogModel): CatalogVariant {
   return v;
 }
 
-function findClips(dir: string | undefined): Clip[] | null {
-  if (!dir) return null;
+// ============================================================
+// 样例：ECHOTYPE_SMOKE_WAVS，缺省 fetch-test-wavs.sh 的输出目录。fetch 是缺文件时提示的命令
+// ============================================================
+interface WavSource {
+  dir: string;
+  fetch: string;
+}
+
+function wavSource(repoRoot: string): WavSource {
+  const override = process.env.ECHOTYPE_SMOKE_WAVS;
+  const script = "bash engine/scripts/fetch-test-wavs.sh";
+  if (override) return { dir: path.resolve(override), fetch: `${script} "${override}"` };
+  return { dir: path.join(repoRoot, DEFAULT_WAVS), fetch: script };
+}
+
+function findClips(dir: string): Clip[] | null {
   const clips: Clip[] = [];
   for (const name of ["zh", "en"] as const) {
     const file = path.resolve(dir, `${name}.wav`);
