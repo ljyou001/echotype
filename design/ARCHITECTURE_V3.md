@@ -1,5 +1,7 @@
 # EchoType v3 架构大修
 
+> 修订 2026-11-13：引擎改为原生二进制；模型按硬件拆分 variant；模型专属设置只在模型页；新增 CI 会话。
+
 > 状态：已定稿，多会话并行实施中 · 2026-11-13
 > 契约：`contracts/ENGINE_PROTOCOL.md` · `contracts/MODEL_MANIFEST.md` · `contracts/models.catalog.json` · `frontend/electron/ipc-contract.ts`
 
@@ -29,7 +31,6 @@ uiohook(main) → IPC → 渲染进程 App.tsx 状态机(窗口常隐藏) → WS
 |---|---|
 | PyInstaller 后端（torch + transformers + qwen_asr + nagisa + jieba + funasr_onnx） | **5.1 GB** |
 | 标点模型目录 `punc_ct-transformer_cn-en`（含 41 MB jieba 词典等） | **1.0 GB** |
-| Qwen3-ASR-0.6B safetensors（fp16） | 1.8 GB |
 | Paraformer int8 | 233 MB |
 
 ### 1.5 配置有 5 个真相源
@@ -61,9 +62,9 @@ uiohook(main) → IPC → 渲染进程 App.tsx 状态机(窗口常隐藏) → WS
 │ ModelRegistry(目录/下载/校验/安装) · EngineSupervisor(拉起/   │
 │ 握手/心跳/重启) · History · QuickAction 窗口                 │
 └──── WS 127.0.0.1:随机端口 + token: ENGINE_PROTOCOL v3 ───────┘
-┌ Engine 层 ── backend (独立进程) ────────────────────────────┐
+┌ Engine 层 ── engine (独立原生进程) ─────────────────────────┐
 │ 无状态推理服务。拥有麦克风 · Silero VAD 分段 · sherpa-onnx    │
-│ 识别 · 标点/ITN 管线 · CPU/CUDA/CoreML provider。不落盘配置。  │
+│ / llama.cpp 识别 · 标点/ITN · 按模型分 variant。不落盘配置。  │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -99,20 +100,22 @@ VAD 边说边解码已闭合的段，松键只解尾段；单飞解码，final �
 
 | 决策 | 选择 | 理由 |
 |---|---|---|
-| 推理运行时 | sherpa-onnx（替换 torch/transformers/funasr_onnx） | 一个 C++ 核心覆盖 Paraformer/SenseVoice/Whisper/Moonshine/Parakeet 等，自带标点与 VAD，CPU/CUDA/CoreML 皆有预编译包 |
-| 引擎进程 | 保留 Python 薄封装 + PyInstaller | 风险最低，复用现有代码；协议边界已固定，日后可换成 C++ 二进制而 Core 不动 |
-| 引擎变体 | 默认 CPU 包；CUDA 作为可选下载的变体 | CUDA 运行库本身就有数百 MB，不该让所有用户承担 |
+| 引擎语言 | 原生二进制（Rust 优先），不再使用 Python | 用户要求；启动快、体积小、可为 6 个平台目标编译 |
+| 推理运行时 | sherpa-onnx（C API）为主，llama.cpp（GGUF）用于 GPU 版本 | 全部为 C/C++ 核心，彻底去掉 torch |
+| 按模型分别优化 | 每个模型按硬件拆成多个 variant，各自实测 | int8 ONNX 适合 CPU，GPU 用 fp16 ONNX 或 GGUF；只有实测更快才列出 |
+| GPU 分发 | 基础安装包只含 CPU 引擎（macOS 含 Metal/CoreML）；CUDA 引擎包按需下载 | CUDA 运行库本身数百 MB，不该让所有用户承担 |
+| 模型分发 | 统一重新打包为 zip，托管在本仓库 GitHub Release `models-v3` | 与 v2 一致，Core 只需解 zip |
 | 外壳 | 继续 Electron | 体积问题 95% 来自 Python/torch，换 Tauri 收益不抵重写成本 |
-| Qwen3-ASR | sherpa-onnx 2.x 原生 int8（937 MB，自带标点） | 不再需要 torch。1.7B 或 GPU 加速日后走 llama.cpp mtmd |
 | 默认模型 | SenseVoice Small int8（2024-07-17 版，228 MB） | 非自回归，自带标点与 ITN；配合 VAD 分段可达毫秒级 |
-| 未采用 | sherpa-onnx-node 跑在 Electron utilityProcess | 包更小，但 npm 包只有 CPU 版，且 Node 无原生录音；GPU 需求使 Python 引擎更合适 |
 
 ## 4. 并行实施分工（互不踩踏）
 
 | 会话 | 独占目录 | 不得修改 |
 |---|---|---|
-| engine | `backend/**` · `launcher.py` · `echotype-backend.spec` · `requirements-backend.txt` · `scripts/windows/deploy-01-*` · `contracts/models.catalog.json` 的字段值 | `frontend/**` |
-| core | `frontend/electron/**`（契约文件除外）· `frontend/package.json` · `frontend/tsconfig.*.json` · `frontend/electron-builder.cjs` | `frontend/src/**` · `backend/**` |
+| engine | `engine/**`（新 Rust 工程）· 删除 `backend/**` `launcher.py` `echotype-backend.spec` `requirements-backend.txt` · catalog 的 `arch` `providers` `bench` `settings` 字段 | `frontend/**` · `.github/**` · `scripts/**` |
+| models | `scripts/models/**`（模型重打包与上传清单）· catalog 的 `download` `files` 字段 | 其余所有目录 |
+| core | `frontend/electron/**`（契约文件除外）· `frontend/package.json`（`build` 字段除外）· `frontend/tsconfig.*.json` | `frontend/src/**` · `engine/**` · `frontend/electron-builder.cjs` |
+| ci | `.github/workflows/build.yml` `ci.yml` · `frontend/electron-builder.cjs` · `frontend/package.json` 的 `build` 字段 · `scripts/ci/**` · `scripts/windows/**`（清理旧流水线） | 其余所有目录 |
 | ui | `frontend/src/**` · `frontend/index.html` · `frontend/vite.config.ts` | `frontend/electron/**` · `frontend/package.json` |
 | orchestrator | `contracts/**` 结构 · `frontend/electron/ipc-contract.ts` · `CLAUDE.md` · 本文档 · 最终集成 | — |
 
