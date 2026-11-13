@@ -13,6 +13,7 @@ import type { RuntimeStatus } from "../services/model-runtime.js";
 export class Coalescer {
   private timer: NodeJS.Timeout | null = null;
   private last = 0;
+  private disposed = false;
 
   constructor(
     private readonly fn: () => void,
@@ -20,7 +21,7 @@ export class Coalescer {
   ) {}
 
   request(): void {
-    if (this.timer) return;
+    if (this.timer || this.disposed) return;
     const wait = Math.max(0, this.minIntervalMs - (Date.now() - this.last));
     this.timer = setTimeout(() => {
       this.timer = null;
@@ -29,7 +30,9 @@ export class Coalescer {
     }, wait);
   }
 
+  /** 退出流程中引擎停机仍会触发状态变化；dispose 之后的请求一律忽略。 */
   dispose(): void {
+    this.disposed = true;
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
   }
