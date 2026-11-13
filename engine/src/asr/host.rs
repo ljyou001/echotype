@@ -1,6 +1,6 @@
 //! [INPUT]: 依赖 asr::recognizers（sherpa 分派、companion 标点）、asr::llama（llama.cpp sidecar）、asr::providers（能力探测）、
 //!          dictation::worker::DecodeWorker、text::pipeline、platform::default_threads、protocol
-//! [OUTPUT]: 导出 ModelSettings、Decoded、ModelHost、load_model()
+//! [OUTPUT]: 导出 ModelSettings、Decoded、ModelHost（含 decoded_audio_ms：累计送解码的音频，测重复解码）、load_model()
 //! [POS]: 一个已加载模型的全部运行态：识别器（sherpa 或 llama sidecar）+ companion 标点 + 文本管线 + 单飞解码线程。
 //!        engine 用 load_model() 创建、close() 释放；dictation::session 与 transcribe.file 只通过 decode()（解码线程内）
 //!        与 finish_text()（任意线程）使用它。provider 降级在这里发生：请求的 provider 不可用、构建失败或 CUDA EP 未真正加载 → cpu + PROVIDER_FALLBACK。
@@ -8,6 +8,7 @@
 //! [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
@@ -83,6 +84,8 @@ pub struct ModelHost {
     backend: Backend,
     pipeline: Mutex<TextPipeline>,
     pub worker: DecodeWorker,
+    /// 送进识别器的音频累计毫秒（含预热与推测）：衡量有没有重复解码
+    decoded_ms: AtomicU64,
 }
 
 impl ModelHost {
@@ -105,7 +108,12 @@ impl ModelHost {
                 crate::testkit::transcribe_tones(samples)
             }
         };
+        self.decoded_ms.fetch_add((samples.len() * 1000 / SAMPLE_RATE as usize) as u64, Ordering::Relaxed);
         Ok(Decoded { text: text.trim().to_string(), ms: t0.elapsed().as_millis() as u64 })
+    }
+
+    pub fn decoded_audio_ms(&self) -> u64 {
+        self.decoded_ms.load(Ordering::Relaxed)
     }
 
     /// 标点 → 样式 → ITN → 空格。companion 标点串行化执行。
@@ -149,6 +157,7 @@ impl ModelHost {
                 None,
             )),
             worker: DecodeWorker::start("decode-testkit"),
+            decoded_ms: AtomicU64::new(0),
         })
     }
 }
@@ -292,6 +301,7 @@ pub fn load_model(p: LoadParams, progress: &dyn Fn(&str, u32), warn: &dyn Fn(&st
         settings,
         backend,
         pipeline: Mutex::new(pipeline),
+        decoded_ms: AtomicU64::new(0),
     });
     let load_ms = t_start.elapsed().as_millis() as u64;
 

@@ -1,6 +1,6 @@
 //! [INPUT]: 依赖 echotype_engine 的 dictation::DictationSession、asr::host::ModelHost::testkit、testkit（音调与能量 VAD）、events::Emitter
 //! [OUTPUT]: cargo test 用例：ENGINE_PROTOCOL §8 延迟流程 —— 边说边解、尾段解码、推测复用、余段续接、cancel 不发 final、
-//!           final 只发一次、final 不排在推测后面、无语音时空 final、final 字段形状
+//!           final 只发一次、final 不排在推测后面、闭段落后于推测时只解余段、无语音时空 final、final 字段形状
 //! [POS]: 直接驱动 DictationSession（不经声卡与 WS）。「词 = 音调」，逐词核对 final，证明三条路径不丢词、不重词。
 //! [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 
@@ -153,6 +153,24 @@ fn final_does_not_wait_for_queued_speculation() {
     assert_eq!(tokens(f["text"].as_str().unwrap()), freqs.iter().map(|f| format!("w{f}")).collect::<Vec<_>>());
     // 至多等一个正在运行的推测（150 ms）再解余段（150 ms）；排队的推测被丢弃
     assert!(f["timings"]["release_to_final_ms"].as_u64().unwrap() < 600);
+}
+
+#[test]
+fn closed_segment_behind_a_running_speculation_decodes_only_the_remainder() {
+    let mut r = rig(true, 300);
+    r.feed(&words(&[300, 500, 700, 900, 1100], 0.2, 0.15, 0.3));
+    r.wait("partial", Duration::from_secs(5), |v| tokens(v["text"].as_str().unwrap()).len() == 4); // 工作线程空闲
+    let before = r.host.decoded_audio_ms();
+    r.feed(&vec![0.0; 2400]); // 0.15 s 停顿：推测（五个词）开始运行 300 ms
+    r.feed(&words(&[1300], 0.2, 0.0, 0.0));
+    r.feed(&vec![0.0; 9600]); // 主 VAD 在推测运行中闭合整段：推测没覆盖最后一个词
+    r.session.finish(Instant::now());
+    let f = r.wait("final", Duration::from_secs(5), |_| true);
+    let want: Vec<String> = [300, 500, 700, 900, 1100, 1300].iter().map(|f| format!("w{f}")).collect();
+    assert_eq!(tokens(f["text"].as_str().unwrap()), want);
+    // 推测（≈ 1.9 s）+ 余段（≈ 0.5 s）；整段重解会再多 ≈ 2.3 s
+    let decoded = r.host.decoded_audio_ms() - before;
+    assert!(decoded < 3200, "decoded {decoded} ms of audio after the checkpoint: the closed segment was decoded again");
 }
 
 #[test]

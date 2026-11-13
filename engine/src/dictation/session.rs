@@ -4,9 +4,9 @@
 //! [POS]: 一次听写的全部状态与 ENGINE_PROTOCOL §8 的延迟流程。状态机 recording → stopping → done；recording/stopping → cancelled（不发 final）。
 //!        线程：feed/finish 在泵线程；run_* 在模型的 DecodeWorker 线程；cancel 在引擎 actor。共享状态都在 self.st 锁内，解码在锁外。
 //!        两个 VAD：主 VAD（静音 0.25 s）切出解码单元，每段闭合即强制解码；停顿 VAD（静音 0.1 s）报停顿时推测解码开放段。
-//!        推测结果三用：partial 文本；主 VAD 随后闭合同一段且语音没越过停顿点 → 直接复用；松键时段仍开放 →
-//!        停顿后没有新语音就复用，有新语音只解码停顿之后的余段并续接。正在运行且能被复用的推测会被等待，
-//!        排队中的推测在 stop 时丢弃（final 不排在推测后面）。推测只对 features.partials 为 true 的快模型开启。
+//!        推测结果三用：partial 文本；主 VAD 闭段或松键 flush 时，停顿后没有新语音就直接复用，有新语音只解码停顿
+//!        之后的余段并续接（闭段时正在跑的旧推测也这样用，工作线程落后时不整段重解）。正在运行的推测会被等待，
+//!        排队中的推测在 stop 时丢弃（final 不排在推测后面）。推测只对 features.partials 为 true 的模型开启。
 //! [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 
 use std::collections::HashMap;
@@ -28,6 +28,9 @@ use crate::text::merge_continuation;
 const PARTIAL_MIN_INTERVAL: Duration = Duration::from_millis(300); // §5：partial 至多每 300 ms 一次
 const SPEC_MIN_AUDIO: usize = SAMPLE_RATE * 3 / 10;
 const END_TOLERANCE: usize = 1024; // 两个 VAD 对同一处语音结束的判定相差不超过两个窗口
+// 推测起点来自 onset 估计（vad.rs），比主 VAD 报的段起点晚 10–20 ms；段起点前还有 0.2 s 补边，
+// 晚两个窗口以内仍然覆盖全部语音。没有这个容差，每个段都被判成「推测没覆盖」而整段重解
+const START_TOLERANCE: usize = 1024;
 const FALLBACK_MIN_AUDIO: usize = SAMPLE_RATE * 3 / 10;
 const FALLBACK_PEAK: f32 = 0.005_623; // -45 dBFS：VAD 一段都没检出但确有声音时，整段兜底解码一次
 
@@ -166,6 +169,7 @@ impl DictationSession {
             st.buf.len()
         };
         self.host.worker.drop_speculative(&self.spec_key);
+        log::debug!(target: "echotype::session", "session {} stop at {:.2} s of audio", self.id, available as f64 / SAMPLE_RATE as f64);
         let (flushed, speech_open) = {
             let mut d = self.detectors.lock().unwrap();
             let speech_open = d.pause.in_speech();
@@ -213,6 +217,8 @@ impl DictationSession {
             }
             Spec { start, audio_end: available, speech_end: pause_end, version: st.track.segments.len(), text: String::new() }
         };
+        log::debug!(target: "echotype::session", "session {} pause: speech ended {:.2} s, seen at {:.2} s, speculate {:.2} s", self.id,
+            pause_end as f64 / SAMPLE_RATE as f64, available as f64 / SAMPLE_RATE as f64, (available - spec.start) as f64 / SAMPLE_RATE as f64);
         let me = self.arc();
         self.host.worker.submit_speculative(&self.spec_key, Box::new(move || me.run_spec(spec)));
     }
@@ -223,7 +229,7 @@ impl DictationSession {
         }
         let running = st.spec_running.is_some();
         let Some(cand) = st.spec_running.as_ref().or(st.spec.as_ref()) else { return Plan::Full };
-        if cand.start > seg_start || cand.version != version {
+        if cand.start > seg_start + START_TOLERANCE || cand.version != version {
             return Plan::Full;
         }
         let covered = if flushed {
@@ -231,12 +237,13 @@ impl DictationSession {
         } else {
             vad_end <= cand.speech_end + END_TOLERANCE
         };
-        match (covered, flushed, running) {
-            (true, _, true) => Plan::Await(Mode::Reuse),
-            (true, _, false) => Plan::Reuse(cand.clone()),
-            (false, true, true) => Plan::Await(Mode::Remainder),
-            (false, true, false) => Plan::Remainder(cand.clone()),
-            _ => Plan::Full,
+        // 没覆盖到段尾 = 停顿后又有语音：只解停顿之后的余段。闭段与松键同一规则——闭段时工作线程落后（慢模型），
+        // 正在运行的旧推测没覆盖整段，整段重解会让解码量与 tail 300 的延迟翻倍
+        match (covered, running) {
+            (true, true) => Plan::Await(Mode::Reuse),
+            (true, false) => Plan::Reuse(cand.clone()),
+            (false, true) => Plan::Await(Mode::Remainder),
+            (false, false) => Plan::Remainder(cand.clone()),
         }
     }
 
@@ -257,7 +264,8 @@ impl DictationSession {
             }
             (idx, plan, st.phase == Phase::Recording)
         };
-        log::debug!(target: "echotype::session", "session {} seg {idx} {}: {}", self.id, if flushed { "flushed" } else { "closed" },
+        log::debug!(target: "echotype::session", "session {} seg {idx} {} (vad {:.2}–{:.2} s): {}", self.id, if flushed { "flushed" } else { "closed" },
+            start as f64 / SAMPLE_RATE as f64, end as f64 / SAMPLE_RATE as f64,
             match &plan { Plan::Full => "full", Plan::Reuse(_) => "reuse", Plan::Remainder(_) => "remainder", Plan::Await(Mode::Reuse) => "await-reuse", Plan::Await(Mode::Remainder) => "await-remainder" });
         match plan {
             Plan::Full => {

@@ -4,7 +4,7 @@
 一次听写从开始到 final 的全部逻辑，落实 ENGINE_PROTOCOL §8。延迟 KPI `release_to_final_ms` 在这里决定。
 
 ## 成员清单
-session.rs: DictationSession（实现 audio::Sink）。状态机 recording → stopping → done / cancelled。主 VAD 闭段即强制解码；停顿 VAD 报停顿时推测解码开放段；stop 时复用覆盖全部语音的推测，或只解码最后一次停顿之后的余段（merge_continuation 续接）。cancel 不发 final。推测只对 features.partials 为 true 的快模型开启
+session.rs: DictationSession（实现 audio::Sink）。状态机 recording → stopping → done / cancelled。主 VAD 闭段即强制解码；停顿 VAD 报停顿时推测解码开放段；闭段或 stop 时复用覆盖全部语音的推测，否则只解码最后一次停顿之后的余段（merge_continuation 续接）；工作线程落后时闭段也走余段，不整段重解。cancel 不发 final。推测只对 features.partials 为 true 的快模型开启
 segments.rs: AudioBuffer、SegmentTrack（前补 0.2 s、后补 0.15 s、去重叠、按序拼接；段间隔 < 0.6 s 时 soften 软化句末标点）
 worker.rs: DecodeWorker。单线程；强制队列 FIFO 永远先于推测槽；推测按 key 去重，新的替换旧的；close() 跑完强制作业后退出
 mod.rs: 公开接口
