@@ -1,0 +1,2 @@
+# Windows runner 默认 core.autocrlf=true。bash 脚本必须保持 LF，否则 Git Bash 报 $'\r'
+*.sh text eol=lf
