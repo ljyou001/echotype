@@ -18,14 +18,12 @@
     "preview": "vite preview",
     "start": "electron .",
     "package": "npm run build && electron-builder build --config electron-builder.cjs --config.directories.output=dist-package",
-    "dist": "electron-builder --config electron-builder.cjs",
-    "postinstall": "node -e \"if(process.platform==='darwin') { require('child_process').execSync('electron-rebuild -f -w uiohook-napi,@hurdlegroup/robotjs', {stdio:'inherit'}) }\""
+    "dist": "electron-builder --config electron-builder.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^9.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@hurdlegroup/robotjs": "^0.12.3",
     "extract-zip": "^2.0.1",
     "i18next": "^25.8.0",
     "jimp": "^0.22.12",
@@ -33,7 +31,8 @@
     "react-dom": "^18.3.1",
     "react-i18next": "^16.5.4",
     "react-icons": "^5.5.0",
-    "uiohook-napi": "^1.5.4",
+    "robotjs": "^0.9.1",
+    "uiohook-napi": "^1.5.5",
     "ws": "^8.23.0",
     "zustand": "^5.0.10"
   },
@@ -46,12 +45,70 @@
     "@vitejs/plugin-react": "^4.4.1",
     "concurrently": "^9.1.0",
     "cross-env": "^7.0.3",
-    "electron": "^31.6.0",
-    "electron-builder": "^24.13.3",
+    "electron": "^45.3.1",
+    "electron-builder": "~26.18.1",
     "esbuild": "^0.21.5",
     "typescript": "^5.8.2",
     "vite": "^5.4.11",
     "vitest": "^2.1.9",
     "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.echotype.app",
+    "productName": "EchoType",
+    "copyright": "Copyright © 2026 ljyou001",
+    "directories": {
+      "output": "dist-package"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "assets/**/*"
+    ],
+    "extraResources": [],
+    "win": {
+      "target": [
+        "zip",
+        "appx"
+      ],
+      "icon": "assets/icon.png",
+      "extraResources": [
+        {
+          "from": "../dist/echotype-backend",
+          "to": "backend"
+        },
+        {
+          "from": "../backend/models_catalog.json",
+          "to": "backend/models_catalog.json"
+        }
+      ]
+    },
+    "appx": {
+      "identityName": "${env.APPX_IDENTITY_NAME}",
+      "publisher": "${env.WINDOWS_PUBLISHER_ID}",
+      "publisherDisplayName": "${env.APPX_PUBLISHER_DISPLAY_NAME}",
+      "applicationId": "EchoType",
+      "displayName": "EchoType",
+      "languages": [
+        "en-US",
+        "zh-CN"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "assets/icon.png",
+      "extraResources": [
+        {
+          "from": "../dist/echotype-backend",
+          "to": "backend"
+        },
+        {
+          "from": "../backend/models_catalog.json",
+          "to": "backend/models_catalog.json"
+        }
+      ]
+    }
   }
 }
