@@ -1,0 +1,44 @@
+[package]
+name = "echotype-engine"
+version = "3.0.0"
+edition = "2021"
+rust-version = "1.85"
+publish = false
+license = "AGPL-3.0-only"
+description = "EchoType engine: local push-to-talk speech recognition (ENGINE_PROTOCOL v3)"
+
+[lib]
+name = "echotype_engine"
+path = "src/lib.rs"
+
+[[bin]]
+name = "echotype-engine"
+path = "src/main.rs"
+
+[features]
+default = ["static"]
+# CPU 基础引擎：sherpa-onnx 静态库（含 CPU 版 ONNX Runtime）
+static = ["sherpa-onnx/static"]
+# GPU 引擎包：链接 sherpa-onnx 共享库（SHERPA_ONNX_LIB_DIR 指向 CUDA 版归档）
+shared = ["sherpa-onnx/shared"]
+
+[dependencies]
+sherpa-onnx = { version = "=2.0.1", default-features = false }
+cpal = "=0.18.2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-std", "io-util", "sync", "time", "process"] }
+tokio-tungstenite = "0.30"
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+hound = "3.5"
+fancy-regex = "0.20"
+
+[dev-dependencies]
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 4
+strip = true
+panic = "abort"
