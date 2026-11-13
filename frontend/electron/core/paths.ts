@@ -1,0 +1,53 @@
+/**
+ * [INPUT]: 依赖 node:os、node:path
+ * [OUTPUT]: 导出 CorePaths、resolveCorePaths、resolveCatalogPath、RuntimeLayout
+ * [POS]: Core 全部磁盘位置的唯一来源。其他模块只接收已解析的路径，不自己拼 ~/.echotype。
+ *        环境变量 ECHOTYPE_HOME 覆盖用户数据根目录：测试、smoke 与 mock 联调都指向临时目录，
+ *        从不触碰用户真实的 ~/.echotype/settings.json。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+import os from "node:os";
+import path from "node:path";
+
+export interface CorePaths {
+  home: string;
+  settingsFile: string;
+  historyFile: string;
+  integrationsFile: string;
+  modelsDir: string;
+  logsDir: string;
+  recordingsDir: string;
+}
+
+export function resolveCorePaths(env: NodeJS.ProcessEnv = process.env, homedir: string = os.homedir()): CorePaths {
+  const home = env.ECHOTYPE_HOME ? path.resolve(env.ECHOTYPE_HOME) : path.join(homedir, ".echotype");
+  return {
+    home,
+    settingsFile: path.join(home, "settings.json"),
+    historyFile: path.join(home, "history.jsonl"),
+    integrationsFile: path.join(home, "integrations.json"),
+    modelsDir: path.join(home, "models"),
+    logsDir: path.join(home, "logs"),
+    recordingsDir: path.join(home, "recordings"),
+  };
+}
+
+/**
+ * 运行时布局：开发态与打包态的差异只在这里出现一次。
+ * - repoRoot：开发态的仓库根（dist-electron 的上两级）
+ * - resourcesPath：打包态的 process.resourcesPath
+ * - distDir：编译产物目录（dist-electron），mock 引擎脚本在其 dev/ 下
+ */
+export interface RuntimeLayout {
+  isPackaged: boolean;
+  resourcesPath: string;
+  repoRoot: string;
+  distDir: string;
+}
+
+/** 模型目录：打包态由 electron-builder 以 extraResource 放入 resources/contracts/。 */
+export function resolveCatalogPath(layout: RuntimeLayout): string {
+  return layout.isPackaged
+    ? path.join(layout.resourcesPath, "contracts", "models.catalog.json")
+    : path.join(layout.repoRoot, "contracts", "models.catalog.json");
+}

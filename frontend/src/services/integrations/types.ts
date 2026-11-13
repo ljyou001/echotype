@@ -1,5 +1,9 @@
-// Integration Plugin System Types
-
+/**
+ * [INPUT]: 无依赖（纯类型）
+ * [OUTPUT]: 导出 OutputMode、ReplyMessage、IntegrationInstance、IntegrationPlugin、ConfigField、IntegrationsConfig
+ * [POS]: 集成插件系统的类型契约。IntegrationInstance 由 Core 原样持久化（契约里是 unknown[]），形状只由 UI 定义。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
 export type OutputMode = 'direct' | 'clipboard' | 'both';
 
 // Message type for plugin responses

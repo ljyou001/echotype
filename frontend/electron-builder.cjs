@@ -34,22 +34,24 @@ module.exports = {
         "dist-electron/**/*",
         "assets/**/*"
     ],
+    // 所有平台共用：引擎在 resources/engine/（见 electron/engine/engine-command.ts 的 ENGINE_EXECUTABLE），
+    // 模型目录在 resources/contracts/（见 electron/core/paths.ts 的 resolveCatalogPath）。
+    extraResources: [
+        {
+            from: "../dist/echotype-engine",
+            to: "engine"
+        },
+        {
+            from: "../contracts/models.catalog.json",
+            to: "contracts/models.catalog.json"
+        }
+    ],
     win: {
         target: [
             "zip",
             "appx"
         ],
-        icon: "assets/icon.png",
-        extraResources: [
-            {
-                from: "../dist/echotype-backend",
-                to: "backend"
-            },
-            {
-                from: "../backend/models_catalog.json",
-                to: "backend/models_catalog.json"
-            }
-        ]
+        icon: "assets/icon.png"
     },
     appx: {
         identityName: process.env.APPX_IDENTITY_NAME,
@@ -61,16 +63,6 @@ module.exports = {
     },
     mac: {
         target: ["dmg"],
-        icon: "assets/icon.png",
-        extraResources: [
-            {
-                from: "../dist/echotype-backend",
-                to: "backend"
-            },
-            {
-                from: "../backend/models_catalog.json",
-                to: "backend/models_catalog.json"
-            }
-        ]
+        icon: "assets/icon.png"
     }
 };
