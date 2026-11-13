@@ -179,6 +179,18 @@
   text-overflow: ellipsis;
 }
 
+.summary__detail {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.summary__detail--warn {
+  color: var(--warning);
+}
+
 .summary__chevron {
   position: absolute;
   top: 50%;

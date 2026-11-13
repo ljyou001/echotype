@@ -183,7 +183,8 @@
       "notes": "说明",
       "languagesMore": "{{list}} 等 {{count}} 种",
       "benchShort": "约 {{ms}} 毫秒",
-      "benchHint": "10 秒语音从松开热键到出字的典型耗时"
+      "benchHint": "10 秒语音从松开热键到出字的典型耗时",
+      "moreLanguages": "+{{count}}"
     },
     "types": {
       "asr": "语音识别",
@@ -239,6 +240,15 @@
       "num_threads": {
         "label": "CPU 线程数",
         "help": "0 表示由 EchoType 决定。"
+      },
+      "punct_style": {
+        "label": "标点风格",
+        "help": "自动：中文句子用中文标点（，。），英文句子用英文标点（, .）。",
+        "options": {
+          "auto": "自动（随语言）",
+          "zh": "中文标点",
+          "en": "英文标点"
+        }
       }
     },
     "empty": {
@@ -293,41 +303,32 @@
       "appliesNow": "改动从下一次听写生效。更改运行设备会重新加载模型。"
     },
     "variants": {
-      "title": "版本",
-      "selected": "当前选择",
       "downloadGpu": "下载 GPU 版本（{{size}}）",
       "downloadCpu": "下载 CPU 版本（{{size}}）",
       "noneUsable": "这台电脑上暂时没有能运行此模型的版本。",
-      "targets": {
-        "cpu": "CPU",
-        "gpu": "GPU",
-        "cuda": "CUDA",
-        "metal": "Metal",
-        "vulkan": "Vulkan"
-      },
-      "noneUsableWithPack": "需要 GPU。在本页顶部下载 GPU 加速后即可使用。"
+      "noneUsableWithPack": "需要 GPU。在「管理模型」里安装 GPU 运行库后即可使用。"
     },
     "license": {
       "open": "查看许可证",
       "checkCommercial": "商用前请先确认许可证。"
     },
     "packs": {
-      "title": "GPU 加速",
-      "description": "下载 {{name}} 引擎（约 {{size}}），在显卡上运行支持的模型。",
-      "descriptions": {
-        "cuda": "下载 CUDA 引擎（约 {{size}}），在 NVIDIA 显卡上运行支持的模型。",
-        "vulkan": "下载 Vulkan 引擎（约 {{size}}），在 AMD 或 Intel 显卡上运行支持的模型。"
-      },
-      "names": {
-        "cuda": "CUDA",
-        "vulkan": "Vulkan"
-      },
-      "download": "下载（{{size}}）",
-      "installed": "{{name}} 引擎已安装。在模型设置的「运行设备」里选择它。",
-      "inUse": "当前模型正在显卡上运行。",
-      "badgeInUse": "使用中",
       "removeTitle": "删除 {{name}} 引擎？",
       "removeMessage": "设为在此显卡上运行的模型会改回 CPU。将释放 {{size}}。"
+    },
+    "targets": {
+      "cpu": "CPU",
+      "nvidia": "NVIDIA 显卡",
+      "apple": "Apple 芯片",
+      "vulkan": "Vulkan 显卡"
+    },
+    "providerShort": {
+      "cpu": "CPU",
+      "cuda": "CUDA",
+      "metal": "Metal",
+      "coreml": "Core ML",
+      "vulkan": "Vulkan",
+      "directml": "DirectML"
     }
   },
   "integrations": {
@@ -563,11 +564,36 @@
       "general": "通用",
       "dictation": "听写",
       "microphone": "麦克风",
-      "privacy": "隐私"
+      "privacy": "隐私",
+      "about": "关于"
     },
     "privacy": {
       "saveRecordings": "保存录音",
       "saveRecordingsDescription": "把每次听写的音频保存在本机，便于排查问题。默认关闭。"
+    },
+    "about": {
+      "version": "版本",
+      "channel": "{{channel}} 版",
+      "channels": {
+        "github": "GitHub",
+        "steam": "Steam",
+        "msstore": "Microsoft Store"
+      },
+      "licenses": "许可证",
+      "licensesDescription": "EchoType 使用的语音模型与开源组件。",
+      "viewLicenses": "查看许可证",
+      "licensesTitle": "许可证",
+      "modelLicenses": "语音模型",
+      "modelLicensesHint": "每个模型有各自的许可证，商用前请先确认。",
+      "componentLicenses": "开源组件",
+      "commercial": {
+        "yes": "可商用",
+        "no": "仅限非商用",
+        "unclear": "商用前请确认"
+      },
+      "source": "源代码",
+      "sourceDescription": "EchoType 是开源软件。",
+      "reportIssue": "反馈问题"
     }
   },
   "errors": {
@@ -691,6 +717,33 @@
     "snapshotDescription": "核心层推送的最新快照。反馈问题时请附上。",
     "showSnapshot": "查看快照",
     "snapshotCopied": "快照已复制",
-    "enginePacks": "引擎包"
+    "enginePacks": "引擎包",
+    "runMode": "运行方式",
+    "fallback": "已回退到 CPU"
+  },
+  "manager": {
+    "open": "管理模型",
+    "title": "管理模型",
+    "storage": "已用 {{used}} · 剩余 {{free}}",
+    "runtimes": "GPU 运行库",
+    "runtimesDescription": "模型的 GPU 版本需要它。装一次，所有模型共用。",
+    "runtimeName": "{{target}}运行库",
+    "runtimeNote": "所有在这块显卡上运行的模型共用。",
+    "speechModels": "语音模型",
+    "installedSize": "占用 {{size}}",
+    "inUse": "使用中",
+    "alsoDownloadsRuntime": "会一并下载 {{name}}（{{size}}）。",
+    "notOnThisComputer": "这台电脑不可用",
+    "removeVariantTitle": "删除 {{name}} · {{version}}？",
+    "removeVariantMessage": "将释放 {{size}}，之后可随时重新下载。",
+    "removeVariantInUse": "这是正在使用的版本。删除后要等其他版本或模型就绪才能继续听写。将释放 {{size}}。",
+    "installingRuntime": "正在安装{{name}} · {{pct}}%",
+    "needsRuntime": "还需要{{name}}（{{size}}）才能运行。",
+    "installingRuntimeStage": "正在安装{{name}}…"
+  },
+  "statusBar": {
+    "noModel": "未加载模型",
+    "chooseModel": "选择模型",
+    "fallback": "{{target}}不可用，正在用 {{provider}} 运行"
   }
 }

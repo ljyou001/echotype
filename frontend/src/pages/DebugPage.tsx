@@ -2,7 +2,7 @@
  * [INPUT]: 依赖 store/appStore 的快照、模型、引擎包、run；依赖 bridge().system（restartEngine/openLogsFolder/platform/arch）与 ipcVersion；
  *          依赖 components 的 PageHeader、Section、Badge；依赖 utils/status
  * [OUTPUT]: 导出 DebugPage 组件
- * [POS]: 诊断页。展示引擎状态、实际运行设备、引擎版本、加载进度与错误码；提供重启引擎、打开日志目录；
+ * [POS]: 诊断页。展示引擎状态、运行方式（版本 · provider · runtime，含回退）、引擎版本、加载进度与错误码；提供重启引擎、打开日志目录；
  *        保留 v2 的按键监听器（验证左右修饰键与特殊键）；只读展示当前快照 JSON，方便提交问题。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -43,14 +43,19 @@ export function DebugPage() {
 
   const facts: Array<[string, ReactNode]> = [
     [t("debug.engineState"), <Badge tone={STATUS_TONE[kind]} dot>{engine.state}</Badge>],
-    [t("debug.provider"), engine.providerUsed ?? "—"],
+    [
+      t("debug.runMode"),
+      snapshot.activeModel
+        ? `${snapshot.activeModel.variantId} · ${snapshot.activeModel.providerUsed} · ${snapshot.activeModel.runtime}${snapshot.activeModel.fallback ? ` · ${t("debug.fallback")}` : ""}`
+        : "—",
+    ],
     [t("debug.engineVersion"), engine.engineVersion ?? "—"],
     [t("debug.loadProgress"), engine.loadProgress ? `${engine.loadProgress.stage} · ${engine.loadProgress.pct}%` : "—"],
     [t("debug.activeModel"), activeModel ? `${activeModel.name} (${activeModel.id})` : "—"],
     [t("debug.modelsInstalled"), `${models.filter(hasAnyInstalled).length} / ${models.length}`],
     [t("debug.enginePacks"), packs.map((p) => `${p.id}: ${p.install.status}`).join(", ") || "—"],
     [t("debug.dictationPhase"), snapshot.dictation.phase],
-    [t("debug.platform"), `${b.system.platform}-${b.system.arch} · IPC v${b.ipcVersion}`],
+    [t("debug.platform"), `${b.system.platform}-${b.system.arch} · ${b.system.channel} · IPC v${b.ipcVersion}`],
   ];
 
   const copySnapshot = () =>

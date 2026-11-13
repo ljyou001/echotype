@@ -4,7 +4,7 @@
  *          依赖 utils/status 与 utils/format
  * [OUTPUT]: 导出 HomePage 组件
  * [POS]: 主窗口首页。展示引擎状态（光球 + 标题 + 操作提示）、录音中的实时文本与电平、
- *        上一次结果（松键到出字耗时以弱化样式显示），以及模型/热键/麦克风/录音模式四张摘要卡。
+ *        上一次结果（松键到出字耗时以弱化样式显示），以及模型（含运行方式）/热键/麦克风/录音模式四张摘要卡。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { useTranslation } from "react-i18next";
@@ -19,6 +19,8 @@ import { useAudioInputs } from "../hooks/useAudioInputs";
 import { useHotkeyLabel } from "../hooks/useHotkeyLabel";
 import { selectActiveModel, useAppStore, type PageKey } from "../store/appStore";
 import { KEY_TOKEN, formatRelativeTime, formatSeconds } from "../utils/format";
+import { displayName } from "../utils/models";
+import { describeRunMode } from "../utils/runMode";
 import { ORB_STATE, statusOf, type StatusKind } from "../utils/status";
 import "./HomePage.css";
 
@@ -190,8 +192,17 @@ function SummaryGrid() {
   const hotkey = useHotkeyLabel();
   const { current: mic } = useAudioInputs(settings.audio.inputDeviceId);
 
-  const cards: Array<{ label: string; value: string; page: PageKey }> = [
-    { label: t("home.cards.model"), value: activeModel?.name ?? t("home.cards.noModel"), page: "models" },
+  const running = useAppStore((s) => s.snapshot!.activeModel);
+  const runMode = running ? describeRunMode(t, running, activeModel) : null;
+
+  const cards: Array<{ label: string; value: string; detail?: string; warn?: boolean; page: PageKey }> = [
+    {
+      label: t("home.cards.model"),
+      value: activeModel ? displayName(activeModel) : t("home.cards.noModel"),
+      detail: runMode?.mode,
+      warn: runMode?.fallback,
+      page: "models",
+    },
     { label: t("home.cards.hotkey"), value: hotkey, page: "settings" },
     { label: t("home.cards.input"), value: mic?.name ?? t("common.defaultMicrophone"), page: "settings" },
     {
@@ -209,6 +220,7 @@ function SummaryGrid() {
           <span className="summary__value" title={c.value}>
             {c.value}
           </span>
+          {c.detail && <span className={`summary__detail${c.warn ? " summary__detail--warn" : ""}`}>{c.detail}</span>}
           <FiChevronRight className="summary__chevron" />
         </button>
       ))}

@@ -2,7 +2,8 @@
  * [INPUT]: 依赖 ipc-contract 的全部类型；依赖 ./mockModels 的 MockModelRegistry、MockPackRegistry 与预装清单
  * [OUTPUT]: 导出 createMockBridge(scenario)、readMockScenario()、MockScenario
  * [POS]: 浏览器开发用的内存版 EchotypeBridge（ipcVersion 2）。模拟 Core：快照推送、引擎加载、听写、电平、历史、
- *        模型 variant 安装、模型专属设置、GPU 引擎包（装好后重启引擎）。
+ *        模型 variant 安装、模型专属设置、GPU 引擎包（装好后重启引擎）、运行方式（activeModel，含回退）、
+ *        磁盘占用、许可证列表。
  *        由 bridge/index.ts 在 window.echotype 缺失时动态加载。场景用 URL 参数 ?mock= 切换。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -17,14 +18,25 @@ import type {
   Provider,
   Settings,
 } from "../../electron/ipc-contract";
-import { MockModelRegistry, MockPackRegistry, defaultModelId, preinstalledKeys } from "./mockModels";
+import {
+  DISK_TOTAL_BYTES,
+  MockMachine,
+  MockModelRegistry,
+  MockPackRegistry,
+  defaultModelId,
+  gpuCapableModel,
+  preinstalledKeys,
+} from "./mockModels";
+import { MOCK_LICENSES } from "./mockLicenses";
 
 // ready: 已完成引导，默认模型就绪 | fresh: 首次运行，未装模型 | error: 引擎崩溃 | loading: 卡在加载
-export type MockScenario = "ready" | "fresh" | "error" | "loading";
+// fallback: 选了 NVIDIA GPU 版本，但显卡不可用，引擎回退到 CPU
+export type MockScenario = "ready" | "fresh" | "error" | "loading" | "fallback";
+const SCENARIOS: MockScenario[] = ["ready", "fresh", "error", "loading", "fallback"];
 
 export function readMockScenario(): MockScenario {
   const value = new URLSearchParams(window.location.search).get("mock");
-  return value === "fresh" || value === "error" || value === "loading" ? value : "ready";
+  return SCENARIOS.find((s) => s === value) ?? "ready";
 }
 
 // ============================================================
@@ -119,28 +131,40 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
 
   const state: AppSnapshot = {
     engine: { state: "starting", providerUsed: null, engineVersion: null, loadProgress: null, error: null },
+    activeModel: null,
     dictation: { phase: "idle", partialText: "", lastFinal: null },
     settings: initialSettings(scenario),
   };
 
+  const machine = new MockMachine();
   const emitModels = () => modelsChanged.emit(registry.list());
   const registry = new MockModelRegistry(
+    machine,
     scenario === "fresh" ? new Set() : preinstalledKeys(),
     () => state.settings.models.perModel,
     () => state.settings.models.activeId,
     emitModels,
   );
 
-  // 引擎包装好或删掉：本机硬件变化 → 模型的 provider 选项变化 → 重启引擎（与 Core 一致）
-  let packProviders = "";
+  // 回退场景：GPU 版本与引擎包都装好、设置为 CUDA，但显卡不可用
+  const gpu = gpuCapableModel();
+  if (scenario === "fallback" && gpu) {
+    machine.installedPacks.add(gpu.pack);
+    machine.gpuBroken = true;
+    registry.markInstalled(gpu.id, gpu.cpu);
+    registry.markInstalled(gpu.id, gpu.gpu);
+    state.settings.models.activeId = gpu.id;
+    state.settings.models.perModel[gpu.id] = { provider: "cuda" };
+  }
+
+  // 引擎包装好或删掉：本机硬件变化 → 模型可用版本变化 → 重启引擎（与 Core 一致）
   const packs = new MockPackRegistry(
-    () => (state.settings.models.activeId ? registry.providerFor(state.settings.models.activeId) : null),
-    (installed: Provider[]) => {
+    machine,
+    () => (state.activeModel?.providerUsed ?? null) as Provider | null,
+    (installedChanged) => {
       packsChanged.emit(packs.list());
-      const next = installed.join(",");
-      if (next === packProviders) return;
-      packProviders = next;
-      registry.setMachineProviders(["cpu", ...installed]);
+      if (!installedChanged) return;
+      emitModels();
       bootEngine();
     },
   );
@@ -148,6 +172,7 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
   // ---------- 引擎生命周期 ----------
   const bootEngine = () => {
     state.engine = { state: "starting", providerUsed: null, engineVersion: null, loadProgress: null, error: null };
+    state.activeModel = null;
     pushSnapshot();
     window.setTimeout(() => {
       state.engine.engineVersion = "3.0.0-mock";
@@ -164,6 +189,7 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
 
   const loadActiveModel = () => {
     const activeId = state.settings.models.activeId;
+    state.activeModel = null;
     if (!activeId || !registry.isReady(activeId)) {
       state.engine = { ...state.engine, state: "ready", providerUsed: null, loadProgress: null, error: null };
       pushSnapshot();
@@ -179,7 +205,10 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
         window.clearInterval(timer);
         state.engine.state = "ready";
         state.engine.loadProgress = null;
-        state.engine.providerUsed = registry.providerFor(activeId);
+        const mode = registry.runMode(activeId);
+        const view = registry.get(activeId);
+        state.engine.providerUsed = mode?.providerUsed ?? null;
+        state.activeModel = mode && view ? { id: activeId, name: view.name, ...mode } : null;
         packsChanged.emit(packs.list()); // inUse 随实际硬件变化
       }
       pushSnapshot();
@@ -320,6 +349,10 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
         if (id === state.settings.models.activeId && "provider" in patch) loadActiveModel();
         return registry.get(id)!;
       },
+      getStorage: async () => {
+        const usedBytes = registry.usedBytes() + packs.usedBytes();
+        return { dir: String.raw`C:\Users\you\.echotype\models`, usedBytes, freeBytes: DISK_TOTAL_BYTES * 0.41 - usedBytes };
+      },
       onModelsChanged: (cb) => modelsChanged.on(cb),
     },
 
@@ -389,6 +422,11 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
     system: {
       platform: navigator.platform.toUpperCase().includes("MAC") ? "darwin" : "win32",
       arch: "x64",
+      channel: "github",
+      getLicenses: async () => ({
+        ...MOCK_LICENSES,
+        models: registry.list().map((m) => ({ id: m.id, name: m.name, license: m.license })),
+      }),
       restartEngine: async () => bootEngine(),
       openExternal: async (url) => void window.open(url, "_blank", "noopener"),
       openLogsFolder: async () => console.info("[mock] open logs folder"),

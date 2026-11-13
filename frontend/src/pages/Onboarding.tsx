@@ -3,7 +3,8 @@
  *          updateSettings、run；依赖 hooks 的 useAudioInputs、useMicTest；依赖 components 的 LevelMeter、ProgressBar、Badge
  * [OUTPUT]: 导出 Onboarding 组件
  * [POS]: 首次运行引导，三步：权限 → 麦克风 → 下载模型。settings.ui.onboardingCompleted 为 false 时替代主界面。
- *        模型列表来自 Core（不硬编码 id）；装好的第一个语音模型自动启用；完成时写回 onboardingCompleted。
+ *        模型列表来自 Core（不硬编码 id），名称去掉语言括号、语言用标签；版本缺引擎包时一并下载并注明；
+ *        装好的第一个语音模型自动启用；完成时写回 onboardingCompleted。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -13,12 +14,15 @@ import type { EchotypeBridge, ModelView } from "../../electron/ipc-contract";
 import logoUrl from "@assets/icon.png";
 import { bridge } from "../bridge";
 import { Badge, ProgressBar } from "../components/controls";
+import { LanguageTags } from "../components/LanguageTags";
 import { LevelMeter } from "../components/LevelMeter";
 import { useAudioInputs } from "../hooks/useAudioInputs";
 import { useMicTest } from "../hooks/useMicTest";
+import { useVariantInstaller } from "../hooks/useVariantInstaller";
 import { useAppStore } from "../store/appStore";
 import { formatBytes } from "../utils/format";
-import { TIER_ORDER, isBusy, isReady, modelSizeBytes, selectedVariant } from "../utils/models";
+import { TIER_ORDER, displayName, isBusy, isReady, modelSizeBytes, selectedVariant } from "../utils/models";
+import { targetLabel } from "../utils/runMode";
 import "./Onboarding.css";
 
 type Step = 0 | 1 | 2;
@@ -31,10 +35,11 @@ export function Onboarding() {
   const { t } = useTranslation();
   const [step, setStep] = useState<Step>(0);
   const models = useAppStore((s) => s.models);
+  const packs = useAppStore((s) => s.packs);
   const activeId = useAppStore((s) => s.snapshot!.settings.models.activeId);
   const update = useAppStore((s) => s.updateSettings);
   const run = useAppStore((s) => s.run);
-  const hasModel = models.some((m) => m.kind === "asr" && isReady(m));
+  const hasModel = models.some((m) => m.kind === "asr" && isReady(m, packs));
 
   // 第一个装好的语音模型自动启用，用户不必再去模型页。
   // models 推送往往先于 activeId 快照到达：用 activating 记住在途的 id，同一模型只激活一次
@@ -44,11 +49,11 @@ export function Onboarding() {
       activating.current = null;
       return;
     }
-    const first = models.find((m) => m.kind === "asr" && isReady(m));
+    const first = models.find((m) => m.kind === "asr" && isReady(m, packs));
     if (!first || activating.current === first.id) return;
     activating.current = first.id;
     void run(() => bridge().models.activate(first.id));
-  }, [activeId, models, run]);
+  }, [activeId, models, packs, run]);
 
   return (
     <div className="onboarding">
@@ -228,6 +233,7 @@ function ModelStep() {
   const { t, i18n } = useTranslation();
   const models = useAppStore((s) => s.models);
   const run = useAppStore((s) => s.run);
+  const { install, pendingPack } = useVariantInstaller();
 
   // 只列本机能跑的语音模型。推荐的模型置顶；其余按档位从快到准、同档按体积从小到大
   const { speech, recommended } = useMemo(() => {
@@ -248,16 +254,27 @@ function ModelStep() {
       {speech.map((m) => {
         const variant = selectedVariant(m)!;
         const { status, pct, error } = variant.install;
-        const installing = isBusy(status);
+        const pack = pendingPack(variant);
+        // 版本装好但引擎包还在下载时，仍算安装中
+        const installing = isBusy(status) || (status === "installed" && !!pack && isBusy(pack.install.status));
         return (
           <div key={m.id} className="onboarding__row onboarding__row--model">
             <div className="onboarding__row-text">
               <div className="onboarding__row-title">
-                {m.name}
+                {displayName(m)}
                 {m.id === recommended?.id && <Badge tone="brand">{t("onboarding.models.recommended")}</Badge>}
                 <Badge>{t(`models.tiers.${m.tier}`)}</Badge>
               </div>
               <p className="onboarding__row-desc">{m.description}</p>
+              <LanguageTags codes={m.languages} />
+              {pack && !installing && (
+                <p className="onboarding__pack-note">
+                  {t("manager.alsoDownloadsRuntime", {
+                    name: t("manager.runtimeName", { target: targetLabel(t, pack.target) }),
+                    size: formatBytes(pack.sizeBytes, i18n.language),
+                  })}
+                </p>
+              )}
               {installing && (
                 <div className="onboarding__progress">
                   <ProgressBar pct={status === "downloading" ? pct : null} label={t(`models.install.${status}`)} />
@@ -267,7 +284,7 @@ function ModelStep() {
               {status === "error" && error && <p className="field__error">{error.message}</p>}
             </div>
             <div className="onboarding__row-action">
-              {status === "installed" ? (
+              {status === "installed" && !pack ? (
                 <span className="onboarding__installed">
                   <FiCheckCircle /> {t(m.isActive ? "models.status.active" : "onboarding.models.installed")}
                 </span>
@@ -276,7 +293,7 @@ function ModelStep() {
                   {t("common.cancel")}
                 </button>
               ) : (
-                <button type="button" className="btn btn--secondary btn--sm" onClick={() => run(() => bridge().models.install(m.id, variant.id))}>
+                <button type="button" className="btn btn--secondary btn--sm" onClick={() => install(m.id, variant)}>
                   <FiDownload /> {status === "error" ? t("models.actions.retry") : formatBytes(variant.sizeBytes, i18n.language) || t("onboarding.models.download")}
                 </button>
               )}

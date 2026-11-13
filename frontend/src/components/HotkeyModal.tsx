@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 react 的 useState/useEffect/useCallback；依赖 bridge().hotkey.validate；依赖 ./Modal；
- *          依赖 utils/hotkey 的 formatHotkeyLabel；依赖 react-i18next
+ *          依赖 utils/hotkey 的 formatHotkeyLabel；依赖 react-i18next；样式在 ./HotkeyModal.css
  * [OUTPUT]: 导出 HotkeyModal 组件
  * [POS]: 热键设置弹窗。录制按键组合（区分左右修饰键）或从推荐键里选，经 Core 校验后回调 onSave。
  *        只负责"选出一个合法的 accelerator"，持久化由调用方 updateSettings 完成。
@@ -12,6 +12,7 @@ import { FiX } from "react-icons/fi";
 import { bridge } from "../bridge";
 import { formatHotkeyLabel } from "../utils/hotkey";
 import { Modal } from "./Modal";
+import "./HotkeyModal.css";
 
 interface HotkeyModalProps {
   current: string;

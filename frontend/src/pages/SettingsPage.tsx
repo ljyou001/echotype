@@ -1,10 +1,10 @@
 /**
  * [INPUT]: 依赖 store/appStore 的 settings 与 updateSettings；依赖 hooks 的 useAudioInputs、useMicTest、useHotkeyLabel；
  *          依赖 components 的 PageHeader/Section/SettingRow、Switch/Segmented、LevelMeter、HotkeyModal、KeyHint；
- *          依赖 i18n/config 的 SUPPORTED_LANGUAGES
+ *          依赖 i18n/config 的 SUPPORTED_LANGUAGES；依赖 ./settings/AboutSection
  * [OUTPUT]: 导出 SettingsPage 组件
- * [POS]: 全局设置页。四个分节：通用、听写、麦克风、隐私。每项改动立即经 updateSettings 交给 Core 校验与持久化，
- *        没有"保存"按钮。模型相关设置（标点、数字格式化、语言、运行设备）在 Models 页，不在这里。
+ * [POS]: 全局设置页。五个分节：通用、听写、麦克风、隐私、关于。每项改动立即经 updateSettings 交给 Core 校验与持久化，
+ *        没有"保存"按钮。模型相关设置（标点、标点风格、数字格式化、语言、运行设备）在 Models 页，不在这里。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { useState } from "react";
@@ -22,6 +22,7 @@ import { useMicTest } from "../hooks/useMicTest";
 import { SUPPORTED_LANGUAGES } from "../i18n/config";
 import { selectSettings, useAppStore } from "../store/appStore";
 import { KEY_TOKEN } from "../utils/format";
+import { AboutSection } from "./settings/AboutSection";
 import "./SettingsPage.css";
 
 export function SettingsPage() {
@@ -34,6 +35,7 @@ export function SettingsPage() {
       <MicrophoneSection />
       <PrivacySection />
       <p className="settings__footnote">{t("settings.modelSettingsMoved")}</p>
+      <AboutSection />
     </div>
   );
 }

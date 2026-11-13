@@ -1,24 +1,27 @@
 /**
- * [INPUT]: 依赖 store/appStore 的 updateModelSettings 与 run；依赖 bridge().models 的 install/cancelInstall/remove；
- *          依赖 components 的 SettingRow、Switch、ProgressBar、Badge；依赖 utils/models 与 utils/format；react-i18next
+ * [INPUT]: 依赖 store/appStore 的 updateModelSettings、run、packs；依赖 bridge().models.cancelInstall；依赖 hooks/useVariantInstaller；
+ *          依赖 components 的 SettingRow、Switch、ProgressBar；依赖 utils/models、utils/runMode 与 utils/format；react-i18next
  * [OUTPUT]: 导出 ModelSettingsPanel 组件
  * [POS]: 单个模型的设置区，挂在 ModelCard 的展开区里。完全由 ModelView.settings（ModelSettingDef[]）驱动：
  *        select / text / number 进上方字段网格，toggle 进下方开关列表；标签与说明取 i18n
  *        models.settings.<key>.label / .help，未知键退回键名。只经 bridge.models.updateSettings 保存。
- *        选中硬件对应的版本没装时，在"运行设备"下方直接给出下载；多版本模型额外列出各版本。
+ *        选中硬件对应的版本没装时，在"运行设备"下方直接给出下载（缺引擎包时一并下载并注明）。
+ *        按版本管理（逐个下载、删除、体积对比）在模型管理器里。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { useEffect, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { FiDownload, FiTrash2 } from "react-icons/fi";
-import type { ModelSettingDef, ModelView, SettingValue, VariantView } from "../../../electron/ipc-contract";
+import { FiDownload } from "react-icons/fi";
+import type { ModelSettingDef, ModelView, SettingValue } from "../../../electron/ipc-contract";
 import { bridge } from "../../bridge";
-import { Badge, ProgressBar, Switch } from "../../components/controls";
+import { ProgressBar, Switch } from "../../components/controls";
 import { SettingRow } from "../../components/layout";
+import { useVariantInstaller } from "../../hooks/useVariantInstaller";
 import { useAppStore } from "../../store/appStore";
 import { formatBytes, languageName } from "../../utils/format";
-import { isBusy, isGpuVariant, selectedVariant, variantParts } from "../../utils/models";
+import { isBusy, isGpuVariant, selectedVariant } from "../../utils/models";
+import { targetLabel } from "../../utils/runMode";
 
 // ============================================================
 // 文案：标签、说明、选项名
@@ -46,17 +49,15 @@ function helpOf(t: TFunction, def: ModelSettingDef, model: ModelView): string {
   return t(`models.settings.${def.key}.help`, { context, defaultValue: "" });
 }
 
+/** 选项名：设置键自带的 options 文案优先（如 punct_style 的 "Auto (match the language)"），否则用通用文案 */
 function optionLabel(t: TFunction, key: string, option: string, locale: string): string {
-  if (option === "auto") return t(key === "language" ? "models.panel.autoDetect" : "models.panel.auto");
+  if (option === "auto") {
+    const generic = t(key === "language" ? "models.panel.autoDetect" : "models.panel.auto");
+    return t(`models.settings.${key}.options.auto`, { defaultValue: generic });
+  }
   if (key === "provider") return t(`models.providers.${option}`, { defaultValue: option.toUpperCase() });
   if (key === "language") return languageName(option, locale);
   return t(`models.settings.${key}.options.${option}`, { defaultValue: option });
-}
-
-export function variantLabel(t: TFunction, v: VariantView): string {
-  const { target, build } = variantParts(v);
-  const name = t(`models.variants.targets.${target}`, { defaultValue: target.toUpperCase() });
-  return build ? `${name} · ${build}` : name;
 }
 
 // ============================================================
@@ -108,7 +109,6 @@ export function ModelSettingsPanel({ model }: { model: ModelView }) {
         </div>
       )}
 
-      {model.variants.length > 1 && <VariantList model={model} />}
       {model.isActive && <p className="model-settings__note">{t("models.panel.appliesNow")}</p>}
     </div>
   );
@@ -172,6 +172,7 @@ function VariantAction({ model }: { model: ModelView }) {
   const { t, i18n } = useTranslation();
   const run = useAppStore((s) => s.run);
   const packOffered = useAppStore((s) => s.packs.some((p) => p.install.status !== "installed"));
+  const { install, pendingPack } = useVariantInstaller();
   const variant = selectedVariant(model);
 
   if (!variant) {
@@ -195,67 +196,21 @@ function VariantAction({ model }: { model: ModelView }) {
     );
   }
 
+  const pack = pendingPack(variant);
   return (
     <div className="variant-action">
-      <button type="button" className="btn btn--secondary btn--sm" onClick={() => run(() => bridge().models.install(model.id, variant.id))}>
+      <button type="button" className="btn btn--secondary btn--sm" onClick={() => install(model.id, variant)}>
         <FiDownload /> {t(isGpuVariant(variant) ? "models.variants.downloadGpu" : "models.variants.downloadCpu", { size })}
       </button>
+      {pack && (
+        <span className="variant-action__note">
+          {t("manager.alsoDownloadsRuntime", {
+            name: t("manager.runtimeName", { target: targetLabel(t, pack.target) }),
+            size: formatBytes(pack.sizeBytes, i18n.language),
+          })}
+        </span>
+      )}
       {status === "error" && error && <span className="field__error">{error.message}</span>}
-    </div>
-  );
-}
-
-// ============================================================
-// 多版本模型：逐个版本的体积、实测延迟与安装状态
-// ============================================================
-function VariantList({ model }: { model: ModelView }) {
-  const { t, i18n } = useTranslation();
-  const run = useAppStore((s) => s.run);
-  // 本机可用硬件 = provider 设置项的选项（Core 已与本机取交集）
-  const machine = model.settings.find((d) => d.key === "provider")?.options ?? [];
-  const runnable = (v: VariantView) => v.providers.some((p) => machine.includes(p));
-
-  return (
-    <div className="variant-list">
-      <h4 className="variant-list__title">{t("models.variants.title")}</h4>
-      {model.variants.map((v) => {
-        const busy = isBusy(v.install.status);
-        return (
-          <div key={v.id} className="variant-list__row">
-            <div className="variant-list__name">
-              {variantLabel(t, v)}
-              {v.id === model.selectedVariantId && <Badge tone="brand">{t("models.variants.selected")}</Badge>}
-            </div>
-            <span className="variant-list__meta">
-              {formatBytes(v.sizeBytes, i18n.language)}
-              {v.benchP50Ms !== null && ` · ${t("models.info.benchShort", { ms: v.benchP50Ms })}`}
-            </span>
-            <div className="variant-list__action">
-              {v.install.status === "installed" ? (
-                <button
-                  type="button"
-                  className="btn btn--danger-ghost btn--icon btn--sm"
-                  title={t("models.actions.remove")}
-                  aria-label={t("models.actions.remove")}
-                  onClick={() => run(() => bridge().models.remove(model.id, v.id))}
-                >
-                  <FiTrash2 />
-                </button>
-              ) : busy ? (
-                <span className="variant-list__status">
-                  {v.install.status === "downloading" && v.install.pct !== null ? `${v.install.pct}%` : t(`models.install.${v.install.status}`)}
-                </span>
-              ) : !runnable(v) ? (
-                <span className="variant-list__status">{t("models.status.needsGpu")}</span>
-              ) : (
-                <button type="button" className="btn btn--ghost btn--sm" onClick={() => run(() => bridge().models.install(model.id, v.id))}>
-                  <FiDownload /> {t("models.actions.download")}
-                </button>
-              )}
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }

@@ -183,7 +183,8 @@
       "notes": "Notes",
       "languagesMore": "{{list}} +{{count}} more",
       "benchShort": "~{{ms}} ms",
-      "benchHint": "Typical time from releasing the hotkey to text, for 10 seconds of speech"
+      "benchHint": "Typical time from releasing the hotkey to text, for 10 seconds of speech",
+      "moreLanguages": "+{{count}}"
     },
     "types": {
       "asr": "ASR",
@@ -239,6 +240,15 @@
       "num_threads": {
         "label": "CPU threads",
         "help": "0 lets EchoType decide."
+      },
+      "punct_style": {
+        "label": "Punctuation style",
+        "help": "Auto uses Chinese punctuation (，。) in Chinese sentences and English punctuation (, .) in English ones.",
+        "options": {
+          "auto": "Auto (match the language)",
+          "zh": "Chinese (，。)",
+          "en": "English (, .)"
+        }
       }
     },
     "empty": {
@@ -293,41 +303,32 @@
       "appliesNow": "Changes apply to your next dictation. Changing where it runs reloads the model."
     },
     "variants": {
-      "title": "Versions",
-      "selected": "Selected",
       "downloadGpu": "Download GPU version ({{size}})",
       "downloadCpu": "Download CPU version ({{size}})",
       "noneUsable": "No version of this model runs on this computer yet.",
-      "targets": {
-        "cpu": "CPU",
-        "gpu": "GPU",
-        "cuda": "CUDA",
-        "metal": "Metal",
-        "vulkan": "Vulkan"
-      },
-      "noneUsableWithPack": "Needs a GPU. Download GPU acceleration at the top of this page to use it."
+      "noneUsableWithPack": "Needs a GPU. Install the GPU runtime from Manage models to use it."
     },
     "license": {
       "open": "View license",
       "checkCommercial": "Check the license before commercial use."
     },
     "packs": {
-      "title": "GPU acceleration",
-      "description": "Download the {{name}} engine (≈{{size}}) to run supported models on your GPU.",
-      "descriptions": {
-        "cuda": "Download the CUDA engine (≈{{size}}) to run supported models on your NVIDIA GPU.",
-        "vulkan": "Download the Vulkan engine (≈{{size}}) to run supported models on your AMD or Intel GPU."
-      },
-      "names": {
-        "cuda": "CUDA",
-        "vulkan": "Vulkan"
-      },
-      "download": "Download ({{size}})",
-      "installed": "The {{name}} engine is installed. Choose it under “Run on” in a model's settings.",
-      "inUse": "Your active model is running on the GPU.",
-      "badgeInUse": "In use",
       "removeTitle": "Remove the {{name}} engine?",
       "removeMessage": "Models set to run on this GPU switch back to the CPU. Frees up {{size}}."
+    },
+    "targets": {
+      "cpu": "CPU",
+      "nvidia": "NVIDIA GPU",
+      "apple": "Apple Silicon",
+      "vulkan": "Vulkan GPU"
+    },
+    "providerShort": {
+      "cpu": "CPU",
+      "cuda": "CUDA",
+      "metal": "Metal",
+      "coreml": "Core ML",
+      "vulkan": "Vulkan",
+      "directml": "DirectML"
     }
   },
   "integrations": {
@@ -563,11 +564,36 @@
       "general": "General",
       "dictation": "Dictation",
       "microphone": "Microphone",
-      "privacy": "Privacy"
+      "privacy": "Privacy",
+      "about": "About"
     },
     "privacy": {
       "saveRecordings": "Save recordings",
       "saveRecordingsDescription": "Keep the audio of each dictation on this computer. Useful for troubleshooting. Off by default."
+    },
+    "about": {
+      "version": "Version",
+      "channel": "{{channel}} build",
+      "channels": {
+        "github": "GitHub",
+        "steam": "Steam",
+        "msstore": "Microsoft Store"
+      },
+      "licenses": "Licenses",
+      "licensesDescription": "The speech models and open-source components EchoType uses.",
+      "viewLicenses": "View licenses",
+      "licensesTitle": "Licenses",
+      "modelLicenses": "Speech models",
+      "modelLicensesHint": "Each model has its own license. Check it before you use a model commercially.",
+      "componentLicenses": "Open-source components",
+      "commercial": {
+        "yes": "Commercial use OK",
+        "no": "Non-commercial only",
+        "unclear": "Check before commercial use"
+      },
+      "source": "Source code",
+      "sourceDescription": "EchoType is open source.",
+      "reportIssue": "Report an issue"
     }
   },
   "errors": {
@@ -691,6 +717,33 @@
     "snapshotDescription": "The latest snapshot from the app core. Attach it when you report a problem.",
     "showSnapshot": "Show snapshot",
     "snapshotCopied": "Snapshot copied",
-    "enginePacks": "Engine packs"
+    "enginePacks": "Engine packs",
+    "runMode": "Run mode",
+    "fallback": "fell back to CPU"
+  },
+  "manager": {
+    "open": "Manage models",
+    "title": "Manage models",
+    "storage": "{{used}} used · {{free}} free",
+    "runtimes": "GPU runtimes",
+    "runtimesDescription": "GPU versions of models need one. It installs once and every model shares it.",
+    "runtimeName": "{{target}} runtime",
+    "runtimeNote": "Shared by every model that runs on this GPU.",
+    "speechModels": "Speech models",
+    "installedSize": "{{size}} on disk",
+    "inUse": "In use",
+    "alsoDownloadsRuntime": "Also downloads the {{name}} ({{size}}).",
+    "notOnThisComputer": "Not available on this computer",
+    "removeVariantTitle": "Remove {{name}} · {{version}}?",
+    "removeVariantMessage": "Frees up {{size}}. You can download it again any time.",
+    "removeVariantInUse": "This is the version in use. Dictation stops until another version or model is ready. Frees up {{size}}.",
+    "installingRuntime": "Installing the {{name}} · {{pct}}%",
+    "needsRuntime": "Needs the {{name}} ({{size}}) to run.",
+    "installingRuntimeStage": "Installing the {{name}}…"
+  },
+  "statusBar": {
+    "noModel": "No model loaded",
+    "chooseModel": "Choose a model",
+    "fallback": "{{target}} unavailable — running on {{provider}}"
   }
 }
