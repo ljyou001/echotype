@@ -506,7 +506,7 @@
           },
           "requirements": {
             "ram_mb": 1500,
-            "vram_mb": 1500
+            "vram_mb": 2100
           },
           "bench": {
             "release_to_final_ms_p50_10s": 73,
@@ -535,7 +535,7 @@
           },
           "requirements": {
             "ram_mb": 1500,
-            "vram_mb": 1500
+            "vram_mb": 2100
           },
           "bench": {
             "release_to_final_ms_p50_10s": null,
@@ -564,7 +564,7 @@
           },
           "requirements": {
             "ram_mb": 1500,
-            "vram_mb": 1500
+            "vram_mb": 2100
           },
           "bench": {
             "release_to_final_ms_p50_10s": null,
@@ -839,7 +839,7 @@
           },
           "requirements": {
             "ram_mb": 3000,
-            "vram_mb": 3000
+            "vram_mb": 3100
           },
           "bench": {
             "release_to_final_ms_p50_10s": 84,
@@ -868,7 +868,7 @@
           },
           "requirements": {
             "ram_mb": 3000,
-            "vram_mb": 3000
+            "vram_mb": 3100
           },
           "bench": {
             "release_to_final_ms_p50_10s": null,
@@ -897,7 +897,7 @@
           },
           "requirements": {
             "ram_mb": 3000,
-            "vram_mb": 3000
+            "vram_mb": 3100
           },
           "bench": {
             "release_to_final_ms_p50_10s": null,

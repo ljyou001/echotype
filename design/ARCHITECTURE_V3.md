@@ -108,7 +108,7 @@ VAD 边说边解码已闭合的段，松键只解尾段；单飞解码，final �
 | 每个模型三种硬件 | 每个模型都评估 CPU、NVIDIA、Apple Silicon，各自出 variant | 用户要求；只保留实测更快的 |
 | GPU 引擎包 | 整套引擎 + sherpa CUDA + NVIDIA 运行库 + CUDA llama-server，在模型管理器里按需下载 | 体积大但可选，不进基础安装包 |
 | 许可证 | 每个模型标注许可证；设置 → 关于 列出模型与组件许可证并附链接；各商店按 `allow_commercial` 过滤模型 | 尊重作者；商店策略后续再定 |
-| 标点风格 | 新增模型设置 `punct_style`（auto 按句子文字自动选中/英文标点） | CT-Transformer 对英文也只出中文全角标点 |
+| 标点风格 | 新增模型设置 `punct_style`（auto 时每个标点按它前面最近的文字选中/英文标点） | CT-Transformer 对英文也只出中文全角标点 |
 | 状态栏 | 左下角显示"模型 · 硬件 · 运行时"，回退 CPU 时明确标出 | 用户要一眼看出当前怎么运行 |
 | 外壳 | 继续 Electron | 体积问题 95% 来自 Python/torch，换 Tauri 收益不抵重写成本 |
 | 默认模型 | SenseVoice Small int8（2024-07-17 版，228 MB） | 非自回归，自带标点与 ITN；配合 VAD 分段可达毫秒级 |

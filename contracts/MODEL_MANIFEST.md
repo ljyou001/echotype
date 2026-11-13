@@ -66,7 +66,7 @@ Variant selection for the user's `provider` setting:
 
 - `provider` is implicit for every model; Core builds its options from the variants this machine can run.
 - Standard keys: `provider`, `language`, `punctuation`, `punct_style`, `itn`. Other keys are model-specific and passed to the engine untouched.
-- `punct_style`: `auto` = punctuation follows the script of each sentence (CJK → full-width `，。？！：；`, Latin → half-width `, . ? ! : ;` plus a following space); `zh` / `en` force one style. Present on every model whose punctuation can be wrong for English (all `companion` models and native zh/en models that emit full-width marks).
+- `punct_style`: `auto` = each punctuation mark follows the script of the nearest text before it (CJK → full-width `，。？！：；`, Latin → half-width `, . ? ! : ;` plus a following space); `zh` / `en` force one style. Present on every model whose punctuation can be wrong for English (all `companion` models and native zh/en models that emit full-width marks).
 - UI label/help come from i18n keys `models.settings.<key>.label` / `.help`; unknown keys fall back to the key name.
 - Values live in `settings.models.perModel[<model id>][<key>]`. The global Settings page never shows them.
 
