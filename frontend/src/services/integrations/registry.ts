@@ -1,8 +1,13 @@
-// Integration Plugin Registry
-
+/**
+ * [INPUT]: 依赖 ./types 的 IntegrationPlugin；依赖 ./plugins/* 的内置插件类
+ * [OUTPUT]: 导出 integrationRegistry 单例（register / get / getAll / getByCategory）
+ * [POS]: 插件 id → 插件实现的查找表。Integrations 页列出可添加的插件，Quick Action 窗口按实例的 pluginId 执行。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
 import { IntegrationPlugin } from './types';
 import { GoogleSearchPlugin, BingSearchPlugin, BaiduSearchPlugin } from './plugins/search';
-import { ChatGPTPlugin, PerplexityPlugin, ClaudePlugin, QwenPlugin, ErniePlugin, DoubaoPlugin, ClawbotPlugin } from './plugins/ai';
+import { ChatGPTPlugin, PerplexityPlugin, ClaudePlugin, QwenPlugin, ErniePlugin, DoubaoPlugin } from './plugins/ai';
+import { ClawbotPlugin } from './plugins/clawbot';
 import { GoogleTranslatePlugin, DeepLPlugin, YoudaoTranslatePlugin } from './plugins/translation';
 
 class IntegrationRegistry {

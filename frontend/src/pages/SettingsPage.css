@@ -1,0 +1,118 @@
+/*
+ * [INPUT]: 依赖 styles/tokens.css 的变量；行式布局来自 components/components.css 的 .section/.setting-row
+ * [OUTPUT]: 设置页专属样式：.hotkey-control、.device-picker、.settings__footnote，以及关于区与许可证弹窗（.about__*、.licenses__*）
+ * [POS]: pages/SettingsPage.tsx 的专属样式。分节与行由共享组件提供，这里只补页面特有的控件组合。
+ * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+ */
+.hotkey-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  white-space: nowrap;
+}
+
+.hotkey-control__key {
+  min-height: 26px;
+  padding: 0 10px;
+  font-size: var(--text-md);
+}
+
+/* 设备下拉框：独占一行，最长 560px，选中项单行省略 */
+.device-picker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 560px;
+}
+
+.device-picker .select {
+  flex: 1;
+}
+
+.settings__footnote {
+  padding: 0 var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-subtle);
+}
+
+/* ============================================================
+ * 关于
+ * ============================================================ */
+.about__version {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.about__links {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* ============================================================
+ * 许可证弹窗
+ * ============================================================ */
+.licenses__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.licenses__title {
+  font-size: var(--text-md);
+  font-weight: 650;
+}
+
+.licenses__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.licenses__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.licenses__row + .licenses__row {
+  border-top: 1px solid var(--border);
+}
+
+.licenses__name {
+  min-width: 0;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.licenses__version {
+  font-weight: 400;
+  color: var(--text-subtle);
+}
+
+.licenses__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--brand);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.licenses__link:hover {
+  text-decoration: underline;
+}
+
+.licenses__link svg {
+  font-size: 11px;
+}
