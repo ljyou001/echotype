@@ -105,9 +105,18 @@ impl AudioBackend for CpalBackend {
         let config: cpal::StreamConfig = supported.config();
         let fired = Arc::new(AtomicBool::new(false));
         let err_cb = move |e: cpal::Error| {
-            log::warn!(target: "echotype::mic", "input stream error: {e}");
-            if !fired.swap(true, Ordering::AcqRel) {
-                lost(e.to_string());
+            use cpal::ErrorKind as K;
+            match e.kind() {
+                // 设备拔出、被系统作废、默认设备切换：流已失效，交给控制线程重新打开（可能回退到默认设备）
+                K::DeviceNotAvailable | K::StreamInvalidated | K::DeviceChanged => {
+                    log::warn!(target: "echotype::mic", "input stream lost: {e}");
+                    if !fired.swap(true, Ordering::AcqRel) {
+                        lost(e.to_string());
+                    }
+                }
+                // 缓冲区欠载/溢出等：流仍在工作（WASAPI 刚打开时常见），只记日志
+                K::Xrun => log::debug!(target: "echotype::mic", "input xrun: {e}"),
+                _ => log::warn!(target: "echotype::mic", "input stream error (ignored): {e}"),
             }
         };
         use cpal::SampleFormat as F;
