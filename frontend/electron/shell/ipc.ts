@@ -99,6 +99,7 @@ export function registerIpc(ctx: IpcContext): void {
 
   // Quick Action 窗口
   handle(IPC.quickActionGetText, () => quickAction.text());
+  handle(IPC.quickActionOpen, (text) => quickAction.open(str(text), core.integrations.instanceCount()));
   handle(IPC.quickActionClose, () => quickAction.close());
   handle(IPC.quickActionResize, (height) => quickAction.resize(Number(height)));
   on(IPC.quickActionMove, (delta) => quickAction.move(delta));

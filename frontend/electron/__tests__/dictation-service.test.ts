@@ -1,7 +1,8 @@
 /**
  * [INPUT]: 依赖 services/dictation-service、services/settings-schema；依赖 ./helpers 的 FakeEngine；vitest 假时钟
  * [OUTPUT]: DictationService 状态机测试
- * [POS]: 覆盖 push-to-talk 的轻按/按住、toggle 的切换与长按、UI 取消、组合键打断、finalize 超时、听写中途引擎崩溃。
+ * [POS]: 覆盖 push-to-talk 的轻按/按住、toggle 的切换与长按、UI 取消、组合键打断、finalize 超时、听写中途引擎崩溃，
+ *        以及 state().error：哪些是失败（start 被拒、超时、会话错误、断开）、哪些不是（取消、别的会话），下一次开始时清空。
  *        每个手势只产生一个结果：要么转写输出，要么取消并打开 Quick Action，二者绝不同时发生。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -258,5 +259,65 @@ describe("robustness", () => {
     const { engine, svc } = setup({ privacy: { saveRecordings: true } });
     svc.start();
     expect((engine.calls[0].params as { record_to: string }).record_to).toMatch(/^\/rec\/s-.*\.wav$/);
+  });
+});
+
+describe("dictation.error (snapshot slot)", () => {
+  it("records DEVICE_UNAVAILABLE from session.start and clears it on the next start", async () => {
+    const { engine, svc } = setup();
+    engine.handle("session.start", () => {
+      throw new EngineError("DEVICE_UNAVAILABLE", "The microphone was unplugged.");
+    });
+    svc.start();
+    await tick(0);
+    expect(svc.state()).toMatchObject({ phase: "idle", error: { code: "DEVICE_UNAVAILABLE", message: "The microphone was unplugged." } });
+
+    engine.handle("session.start", () => ({ started_at_ms: 1 }));
+    svc.start();
+    expect(svc.state()).toMatchObject({ phase: "recording", error: null });
+  });
+
+  it("records the finalize timeout", async () => {
+    const { svc } = setup();
+    svc.hotkeyDown();
+    await tick(500);
+    svc.hotkeyUp();
+    await tick(1_000);
+    expect(svc.state()).toMatchObject({ phase: "idle", error: { code: "FINALIZE_TIMEOUT" } });
+  });
+
+  it("records a non-fatal engine error for the session, and losing the engine mid-session", async () => {
+    const { engine, svc, sessionIds } = setup();
+    svc.hotkeyDown();
+    await tick(0);
+    engine.emit({ event: "error", data: { code: "DECODE_FAILED", message: "decoder failed", session_id: sessionIds()[0], fatal: false } });
+    expect(svc.state().error).toEqual({ code: "DECODE_FAILED", message: "decoder failed" });
+    svc.hotkeyUp();
+
+    svc.hotkeyDown();
+    expect(svc.state().error).toBeNull();
+    engine.crash();
+    expect(svc.state()).toMatchObject({ phase: "idle", error: { code: "ENGINE_CRASHED" } });
+  });
+
+  it("an engine error for another session, a cancel, or a success leaves it null", async () => {
+    const { engine, svc, final } = setup();
+    svc.hotkeyDown();
+    await tick(100);
+    svc.hotkeyUp(); // 轻按：取消 + Quick Action，不是失败
+    expect(svc.state().error).toBeNull();
+
+    svc.start();
+    await tick(0);
+    engine.emit({ event: "error", data: { code: "DECODE_FAILED", message: "x", session_id: "someone-else", fatal: false } });
+    svc.cancel();
+    expect(svc.state().error).toBeNull();
+
+    svc.start();
+    await tick(0);
+    svc.stop();
+    await tick(0);
+    final("好");
+    expect(svc.state()).toMatchObject({ phase: "idle", error: null, lastFinal: { text: "好" } });
   });
 });

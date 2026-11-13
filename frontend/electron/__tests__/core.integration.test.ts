@@ -12,7 +12,7 @@ import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AppSnapshot } from "../ipc-contract.js";
+import type { AppError, AppSnapshot } from "../ipc-contract.js";
 import { Emitter } from "../core/emitter.js";
 import { Core } from "../core/create-core.js";
 import { createMemoryLogger } from "../core/logger.js";
@@ -55,6 +55,7 @@ interface BootOptions {
   machine?: Partial<MachineProfile>;
   prepare?: (paths: CorePaths) => void;
   engineCommand?: (pack: EnginePackRef | null) => EngineCommand;
+  hotkeyLimitation?: AppError | null;
 }
 
 function bootCore(opts: BootOptions = {}) {
@@ -86,6 +87,7 @@ function bootCore(opts: BootOptions = {}) {
       appVersion: "3.0.0-test",
       logger,
       engineTuning: { backoffMs: [20, 20] },
+      hotkeyLimitation: opts.hotkeyLimitation,
     },
     {
       clipboard: {
@@ -121,6 +123,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const ready = (latest: () => AppSnapshot | undefined) => waitFor(() => latest()?.engine.state === "ready", 15_000, "engine ready");
 
 describe("Core against the mock engine", () => {
+  it("puts the shell's hotkey limitation and a lost session in the snapshot", async () => {
+    const limitation: AppError = { code: "HOTKEY_WAYLAND_LIMITED", message: "Wayland" };
+    const { core, latest, rctrl } = bootCore({ hotkeyLimitation: limitation });
+    core.start();
+    await ready(latest);
+    expect(latest()!.hotkey).toEqual({ error: limitation });
+
+    rctrl(true);
+    await waitFor(() => latest()?.dictation.phase === "recording", 2_000, "recording");
+    process.kill(core.supervisor.status().pid!);
+    await waitFor(() => latest()?.dictation.error !== null && latest()?.dictation.phase === "idle", 5_000, "dictation.error");
+    expect(latest()!.dictation.error?.code).toMatch(/^ENGINE_/);
+    rctrl(false);
+
+    await ready(latest);
+    rctrl(true);
+    await waitFor(() => latest()?.dictation.phase === "recording", 2_000, "recording again");
+    expect(latest()!.dictation.error).toBeNull(); // 下一次开始即清空
+    rctrl(false);
+  });
+
   it("boots, loads the active model exactly once, and dictates end to end", async () => {
     const { core, paths, pastes, latest, loads, rctrl, quickActions } = bootCore();
     core.start();
@@ -134,6 +157,8 @@ describe("Core against the mock engine", () => {
     expect(params.settings.provider).toBe("cpu"); // auto 已解析
     expect(latest()!.engine).toMatchObject({ providerUsed: "cpu", engineVersion: "3.0.0-mock", error: null });
     expect(latest()!.activeModel).toMatchObject({ id: ACTIVE, variantId: "cpu-int8", target: "cpu", runtime: "sherpa-onnx", providerUsed: "cpu", fallback: false });
+    expect(latest()!.hotkey).toEqual({ error: null });
+    expect(latest()!.dictation.error).toBeNull();
 
     rctrl(true);
     await waitFor(() => latest()?.dictation.phase === "recording", 2_000, "recording");
