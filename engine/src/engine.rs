@@ -361,8 +361,9 @@ impl Engine {
         self.open_count.send_replace(self.open.len());
         self.mic.attach(session.clone());
         let rx = self.mic.control(|c| {
+            let r = c.hold("session"); // 先打开流（keep_warm 关闭时），再通知流「新会话开始」（假麦克风据此切到下一个文件）
             c.notify_session_start();
-            c.hold("session")
+            r
         });
         self.later(id, rx, move |e, r| {
             let res = r.map_err(wrap).and_then(|x| x);

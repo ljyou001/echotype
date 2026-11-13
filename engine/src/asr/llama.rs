@@ -119,6 +119,58 @@ fn http(port: u16, method: &str, path: &str, body: Option<&str>, timeout: Durati
     Ok((status, body.to_string()))
 }
 
+/// Windows：把 sidecar 放进「引擎句柄关闭即杀」的 Job Object。引擎即使崩溃，llama-server 也不会残留占着显存。
+#[cfg(windows)]
+fn bind_to_engine_lifetime(child: &Child) {
+    use std::os::windows::io::AsRawHandle;
+    use std::sync::OnceLock;
+    type H = *mut core::ffi::c_void;
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn CreateJobObjectW(attrs: H, name: *const u16) -> H;
+        fn SetInformationJobObject(job: H, class: i32, info: *const core::ffi::c_void, len: u32) -> i32;
+        fn AssignProcessToJobObject(job: H, process: H) -> i32;
+    }
+    #[repr(C)]
+    #[derive(Default)]
+    struct Basic {
+        per_process_user_time: i64,
+        per_job_user_time: i64,
+        limit_flags: u32,
+        min_ws: usize,
+        max_ws: usize,
+        active_process_limit: u32,
+        affinity: usize,
+        priority_class: u32,
+        scheduling_class: u32,
+    }
+    #[repr(C)]
+    #[derive(Default)]
+    struct Extended {
+        basic: Basic,
+        io: [u64; 6],
+        process_memory_limit: usize,
+        job_memory_limit: usize,
+        peak_process_memory: usize,
+        peak_job_memory: usize,
+    }
+    struct Job(usize);
+    static JOB: OnceLock<Job> = OnceLock::new();
+    let job = JOB.get_or_init(|| unsafe {
+        let h = CreateJobObjectW(std::ptr::null_mut(), std::ptr::null());
+        let mut info = Extended::default();
+        info.basic.limit_flags = 0x2000; // JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        SetInformationJobObject(h, 9, &info as *const Extended as *const _, std::mem::size_of::<Extended>() as u32); // JobObjectExtendedLimitInformation
+        Job(h as usize)
+    });
+    if job.0 != 0 && unsafe { AssignProcessToJobObject(job.0 as H, child.as_raw_handle() as H) } == 0 {
+        log::warn!(target: "echotype::llama", "could not bind llama-server to the engine lifetime");
+    }
+}
+
+#[cfg(not(windows))]
+fn bind_to_engine_lifetime(_: &Child) {}
+
 pub struct LlamaSidecar {
     port: u16,
     child: Mutex<Option<Child>>,
@@ -153,7 +205,16 @@ impl LlamaSidecar {
             use std::os::windows::process::CommandExt;
             cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
         }
+        #[cfg(target_os = "linux")]
+        unsafe {
+            use std::os::unix::process::CommandExt;
+            cmd.pre_exec(|| {
+                libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL); // 引擎死了 sidecar 跟着退出
+                Ok(())
+            });
+        }
         let mut child = cmd.spawn().map_err(|e| EngineError::new(code::MODEL_LOAD_FAILED, format!("cannot start llama-server: {e}")))?;
+        bind_to_engine_lifetime(&child);
         if let Some(err) = child.stderr.take() {
             std::thread::Builder::new()
                 .name("llama-log".into())
