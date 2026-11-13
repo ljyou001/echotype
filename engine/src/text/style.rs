@@ -2,7 +2,9 @@
 //! [OUTPUT]: 导出 PunctStyle（auto | zh | en）与 apply_punct_style(text, style)
 //! [POS]: text 管线的「标点样式」步骤（MODEL_MANIFEST §3 的 punct_style），位于标点之后、ITN 与空格之前。
 //!        修复用户报告的问题：CT-Transformer zh-en 标点模型在英文后面也只输出全角标点（"hello world，how are you？"）。
-//!        auto 按句判断：句中有中日韩文字 → 全角「，。？！：；」；纯拉丁句 → 半角「, . ? ! : ;」并在其后补一个空格。
+//!        auto 逐个标点判断：看它前面最近的文字（跳过空格、数字、引号与别的标点）——汉字或假名 → 全角「，。？！：；」，
+//!        拉丁、韩文等 → 半角「, . ? ! : ;」并在其后补一个空格。中英混排句「下午五点，The boy，and」由此得到
+//!        「下午五点，The boy, and」。前面没有文字时按整句有无汉字/假名决定。
 //!        数字与缩写里的点、冒号、逗号（3.5、12:30、1,000、v2.0、e.g）原样保留。
 //! [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 
@@ -24,9 +26,14 @@ impl PunctStyle {
     }
 }
 
-fn is_cjk(c: char) -> bool {
-    matches!(c as u32,
-        0x3040..=0x30ff | 0x3400..=0x4dbf | 0x4e00..=0x9fff | 0xac00..=0xd7af | 0xf900..=0xfaff)
+/// 用全角标点的文字：汉字与假名。韩文用半角标点，不在其中。
+pub(crate) fn is_full_width_script(c: char) -> bool {
+    matches!(c as u32, 0x3040..=0x30ff | 0x3400..=0x4dbf | 0x4e00..=0x9fff | 0xf900..=0xfaff | 0x20000..=0x2ffff)
+}
+
+/// auto：标点跟随它前面最近的文字；前面没有文字时返回 None
+fn follows_full_width(chars: &[char], i: usize) -> Option<bool> {
+    chars[..i].iter().rev().find(|c| c.is_alphabetic()).map(|&c| is_full_width_script(c))
 }
 
 fn half_of(c: char) -> Option<char> {
@@ -97,44 +104,36 @@ fn sentences(chars: &[char]) -> Vec<(usize, usize)> {
     out
 }
 
-fn to_full(chars: &[char]) -> String {
-    let mut out = String::with_capacity(chars.len() * 3);
+/// 逐个标点改写：full_at(i) 为真 → 全角（去掉前后的半角空格），否则 → 半角（去掉前面的空格，后面补一个）。
+fn restyle(chars: &[char], next_after: Option<char>, full_at: impl Fn(usize) -> bool) -> String {
+    let mut out = String::with_capacity(chars.len() * 2);
     let mut i = 0;
     while i < chars.len() {
         let c = chars[i];
-        match full_of(c) {
-            Some(f) if !is_infix(chars, i) => {
-                out.push(f);
-                while i + 1 < chars.len() && chars[i + 1] == ' ' {
-                    i += 1; // 全角标点自带间距，去掉其后的半角空格
+        let is_mark = half_of(c).is_some() || (",.?!:;".contains(c) && !is_infix(chars, i));
+        if !is_mark {
+            out.push(c);
+        } else if full_at(i) {
+            while out.ends_with(' ') {
+                out.pop();
+            }
+            out.push(full_of(c).unwrap_or(c)); // 已是全角（含「、」）原样保留
+            while i + 1 < chars.len() && chars[i + 1] == ' ' {
+                i += 1; // 全角标点自带间距，去掉其后的半角空格
+            }
+        } else {
+            while out.ends_with(' ') {
+                out.pop(); // "hello ，" → "hello,"
+            }
+            out.push(half_of(c).unwrap_or(c));
+            let next = chars.get(i + 1).copied().or(next_after);
+            if let Some(n) = next {
+                if !n.is_whitespace() && half_of(n).is_none() && !",.?!:;\"')”’）".contains(n) {
+                    out.push(' ');
                 }
             }
-            _ => out.push(c),
         }
         i += 1;
-    }
-    out
-}
-
-fn to_half(chars: &[char], next_after: Option<char>) -> String {
-    let mut out = String::with_capacity(chars.len());
-    for (i, &c) in chars.iter().enumerate() {
-        let mark = half_of(c).or(if ",.?!:;".contains(c) && !is_infix(chars, i) { Some(c) } else { None });
-        match mark {
-            Some(h) => {
-                while out.ends_with(' ') {
-                    out.pop(); // "hello ，" → "hello,"
-                }
-                out.push(h);
-                let next = chars.get(i + 1).copied().or(next_after);
-                if let Some(n) = next {
-                    if !n.is_whitespace() && half_of(n).is_none() && !",.?!:;\"')”’）".contains(n) {
-                        out.push(' ');
-                    }
-                }
-            }
-            None => out.push(c),
-        }
     }
     out
 }
@@ -144,16 +143,15 @@ pub fn apply_punct_style(text: &str, style: PunctStyle) -> String {
     let mut out = String::with_capacity(text.len() + 8);
     for (start, end) in sentences(&chars) {
         let sent = &chars[start..end];
-        let full = match style {
-            PunctStyle::Zh => true,
-            PunctStyle::En => false,
-            PunctStyle::Auto => sent.iter().any(|&c| is_cjk(c)),
-        };
-        if full {
-            out.push_str(&to_full(sent));
-        } else {
-            out.push_str(&to_half(sent, chars.get(end).copied()));
-        }
+        let next = chars.get(end).copied();
+        out.push_str(&match style {
+            PunctStyle::Zh => restyle(sent, next, |_| true),
+            PunctStyle::En => restyle(sent, next, |_| false),
+            PunctStyle::Auto => {
+                let sentence_full = sent.iter().any(|&c| is_full_width_script(c));
+                restyle(sent, next, |i| follows_full_width(&chars, start + i).unwrap_or(sentence_full))
+            }
+        });
     }
     out
 }
@@ -181,12 +179,24 @@ mod tests {
     }
 
     #[test]
-    fn mixed_text_is_styled_per_sentence() {
+    fn mixed_text_is_styled_per_mark() {
         assert_eq!(
             auto("今天开会。hello everyone，welcome。明天见！"),
             "今天开会。hello everyone, welcome. 明天见！"
         );
         assert_eq!(auto("我用python写代码，很好。Python is great，right？"), "我用python写代码，很好。Python is great, right?");
+    }
+
+    #[test]
+    fn marks_follow_the_text_before_them() {
+        // CT-Transformer 把英文从句也挂在中文句里：英文后的标点改半角，中文后的保留全角
+        assert_eq!(
+            auto("开放时间早上九点至下午五点，The tribal chieftain called for the boy，and presented him with fifty pieces of gold。"),
+            "开放时间早上九点至下午五点，The tribal chieftain called for the boy, and presented him with fifty pieces of gold."
+        );
+        assert_eq!(auto("总共100，然后走了。"), "总共100，然后走了。");
+        assert_eq!(auto("こんにちは、元気ですか?"), "こんにちは、元気ですか？");
+        assert_eq!(auto("안녕하세요。반갑습니다。"), "안녕하세요. 반갑습니다.");
     }
 
     #[test]

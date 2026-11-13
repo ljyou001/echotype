@@ -472,6 +472,7 @@ fn transcribe(host: &ModelHost, factory: &DetectorFactory, audio: &[f32], langua
     }
     let raw = track.joined(track.segments.len(), None);
     let (text, punct_ms) = host.finish_text(&raw);
+    let text = crate::text::close_dangling(&text);
     Ok(json!({
         "text": text,
         "duration_s": audio.len() as f64 / SAMPLE_RATE as f64,

@@ -1,5 +1,5 @@
 //! [INPUT]: 依赖 asr::host::ModelHost（decode/finish_text/worker）、asr::vad::Detector（主 VAD + 停顿 VAD）、
-//!          dictation::segments、text::merge_continuation、audio::mic::Sink、audio::wav::write_wav_16k、events::Emitter
+//!          dictation::segments、text::{merge_continuation, close_dangling}、audio::mic::Sink、audio::wav::write_wav_16k、events::Emitter
 //! [OUTPUT]: 导出 Detectors、DictationSession（实现 audio::mic::Sink）
 //! [POS]: 一次听写的全部状态与 ENGINE_PROTOCOL §8 的延迟流程。状态机 recording → stopping → done；recording/stopping → cancelled（不发 final）。
 //!        线程：feed/finish 在泵线程；run_* 在模型的 DecodeWorker 线程；cancel 在引擎 actor。共享状态都在 self.st 锁内，解码在锁外。
@@ -23,7 +23,7 @@ use crate::audio::mic::Sink;
 use crate::audio::wav::write_wav_16k;
 use crate::events::Emitter;
 use crate::protocol::code;
-use crate::text::merge_continuation;
+use crate::text::{close_dangling, merge_continuation};
 
 const PARTIAL_MIN_INTERVAL: Duration = Duration::from_millis(300); // §5：partial 至多每 300 ms 一次
 const SPEC_MIN_AUDIO: usize = SAMPLE_RATE * 3 / 10;
@@ -449,6 +449,7 @@ impl DictationSession {
             (st.track.joined(n, None), n, st.buf.len() * 1000 / SAMPLE_RATE, st.t_stop.unwrap_or_else(Instant::now), st.tail_ms as u64, audio)
         };
         let (text, punct_ms) = self.host.finish_text(&raw);
+        let text = close_dangling(&text); // 最后一段常在停顿处被切开，模型以逗号收尾
         let language = self.host.default_language(self.language.as_deref());
         let release_to_final_ms = t_stop.elapsed().as_millis() as u64;
         self.emit.emit(

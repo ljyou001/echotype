@@ -1,5 +1,6 @@
 //! [INPUT]: 依赖 text::itn::chinese_to_num、text::spacing::adjust_space、text::style::apply_punct_style、fancy-regex
-//! [OUTPUT]: 导出 TextOptions、TextPipeline、Companion（外挂标点回调类型）、join_segments、merge_continuation、soften、strip_punctuation
+//! [OUTPUT]: 导出 TextOptions、TextPipeline、Companion（外挂标点回调类型）、join_segments、merge_continuation、soften、
+//!           strip_punctuation、close_dangling（final 末尾的逗号类标点改句号）
 //! [POS]: 识别文本的后处理管线，落实 MODEL_MANIFEST §3：
 //!        标点（native 保留或剥离 / companion 调外挂模型 / none）→ 标点样式（punct_style）→ ITN（rule 时走规则）→ 空格规整。
 //!        asr::host 组装它；dictation::session 与 transcribe.file 都经由 ModelHost::finish_text 调用。
@@ -14,7 +15,7 @@ use fancy_regex::Regex;
 
 use super::itn::chinese_to_num;
 use super::spacing::adjust_space;
-use super::style::{apply_punct_style, PunctStyle};
+use super::style::{apply_punct_style, is_full_width_script, PunctStyle};
 
 /// companion 标点模型：text → 加了标点的 text
 pub type Companion = Arc<dyn Fn(&str) -> String + Send + Sync>;
@@ -147,16 +148,37 @@ pub fn soften(left: &str, right: &str) -> (String, String) {
         if before.is_some_and(|c| c.is_ascii_alphanumeric()) && right.starts_with(|c: char| c.is_ascii_lowercase()) {
             return (format!("{},", &left[..left.len() - 1]), right.to_string()); // 小写开头必是续写（Whisper 常见）
         }
-        if before.is_some_and(|c| c.is_ascii_alphanumeric()) {
-            let first = right.split(' ').next().unwrap_or("");
-            let key = first.to_lowercase();
-            let key = key.trim_matches(|c| c == ',' || c == '.');
-            if first.chars().next().is_some_and(|c| c.is_uppercase()) && CONTINUATIONS.contains(&key) {
-                return (format!("{},", &left[..left.len() - 1]), lower_first(right));
-            }
+        if before.is_some_and(|c| c.is_ascii_alphanumeric()) && starts_with_continuation(right) {
+            return (format!("{},", &left[..left.len() - 1]), lower_first(right));
         }
     }
+    // 模型在停顿处自己打了逗号（Moonshine 常见）："boy," + "And presented" → "boy," + "and presented"
+    let mut lc = left.chars().rev();
+    if lc.next() == Some(',') && lc.next().is_some_and(|c| c.is_ascii_alphanumeric()) && starts_with_continuation(right) {
+        return (left.to_string(), lower_first(right));
+    }
     (left.to_string(), right.to_string())
+}
+
+/// 首词是大写开头的英文续接词（And、But、So…）
+fn starts_with_continuation(right: &str) -> bool {
+    let first = right.split(' ').next().unwrap_or("");
+    let key = first.to_lowercase();
+    let key = key.trim_matches(|c| c == ',' || c == '.');
+    first.chars().next().is_some_and(|c| c.is_uppercase()) && CONTINUATIONS.contains(&key)
+}
+
+/// final 不该停在逗号上：松键前最后一段若在停顿处被切开，模型常以「, ，、；;」收尾（以为还要说）。
+/// 末尾的这类标点改成句号（前面是汉字/假名 → 「。」，否则 → 「.」）。partial 不调用它。
+pub fn close_dangling(text: &str) -> String {
+    let t = text.trim_end();
+    let Some(last) = t.chars().next_back() else { return String::new() };
+    if !matches!(last, ',' | '，' | '、' | ';' | '；') {
+        return t.to_string();
+    }
+    let body = t[..t.len() - last.len_utf8()].trim_end();
+    let full = body.chars().rev().find(|c| c.is_alphabetic()).is_some_and(is_full_width_script);
+    format!("{body}{}", if full { '。' } else { '.' })
 }
 
 /// 全大写的英文句子（≥ 4 个 ≥2 字母的词，且没有小写字母）改成句首大写，例如 FireRedASR 的输出。
@@ -256,6 +278,22 @@ impl TextPipeline {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn comma_before_a_capitalised_continuation() {
+        assert_eq!(soften("for the boy,", "And presented him."), ("for the boy,".to_string(), "and presented him.".to_string()));
+        assert_eq!(soften("We met,", "Paris was nice."), ("We met,".to_string(), "Paris was nice.".to_string()));
+    }
+
+    #[test]
+    fn final_never_ends_on_a_comma() {
+        assert_eq!(close_dangling("The tribal chieftain called for the boy,"), "The tribal chieftain called for the boy.");
+        assert_eq!(close_dangling("我想去公园，"), "我想去公园。");
+        assert_eq!(close_dangling("これは、"), "これは。");
+        assert_eq!(close_dangling("Done."), "Done.");
+        assert_eq!(close_dangling("1,000"), "1,000");
+        assert_eq!(close_dangling(""), "");
+    }
 
     fn pipe(mode: &str, punct: bool, style: Option<PunctStyle>, itn_mode: &str, itn: bool, c: Option<Companion>) -> TextPipeline {
         TextPipeline::new(

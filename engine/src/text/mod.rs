@@ -9,6 +9,6 @@ pub mod spacing;
 pub mod style;
 
 pub use itn::chinese_to_num;
-pub use pipeline::{join_segments, merge_continuation, soften, strip_punctuation, Companion, TextOptions, TextPipeline};
+pub use pipeline::{close_dangling, join_segments, merge_continuation, soften, strip_punctuation, Companion, TextOptions, TextPipeline};
 pub use spacing::adjust_space;
 pub use style::{apply_punct_style, PunctStyle};
