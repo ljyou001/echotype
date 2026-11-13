@@ -126,3 +126,6 @@ export async function connectStore(): Promise<void> {
     models: modelsPushed ? s.models : models,
   }));
 }
+
+// 开发热更新：替换本模块会生成一个没连上 Core 的新 store，宁可整页刷新
+import.meta.hot?.accept(() => window.location.reload());

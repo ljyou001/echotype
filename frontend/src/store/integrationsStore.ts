@@ -112,3 +112,6 @@ export const useIntegrationsStore = create<IntegrationsState>((set, get) => {
     setEnabled: (instanceId, enabled) => get().update(instanceId, { enabled }),
   };
 });
+
+// 开发热更新：替换本模块会丢掉已加载的集成配置，宁可整页刷新
+import.meta.hot?.accept(() => window.location.reload());

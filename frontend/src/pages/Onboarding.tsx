@@ -6,7 +6,7 @@
  *        模型列表来自 Core（不硬编码 id）；装好的第一个语音模型自动启用；完成时写回 onboardingCompleted。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FiCheck, FiCheckCircle, FiDownload, FiExternalLink } from "react-icons/fi";
 import type { EchotypeBridge, ModelView } from "../../electron/ipc-contract";
@@ -36,11 +36,18 @@ export function Onboarding() {
   const run = useAppStore((s) => s.run);
   const hasModel = models.some((m) => m.kind === "asr" && m.install.status === "installed");
 
-  // 第一个装好的语音模型自动启用，用户不必再去模型页
+  // 第一个装好的语音模型自动启用，用户不必再去模型页。
+  // models 推送往往先于 activeId 快照到达：用 activating 记住在途的 id，同一模型只激活一次
+  const activating = useRef<string | null>(null);
   useEffect(() => {
-    if (activeId) return;
+    if (activeId) {
+      activating.current = null;
+      return;
+    }
     const first = models.find((m) => m.kind === "asr" && m.install.status === "installed");
-    if (first) void run(() => bridge().models.activate(first.id));
+    if (!first || activating.current === first.id) return;
+    activating.current = first.id;
+    void run(() => bridge().models.activate(first.id));
   }, [activeId, models, run]);
 
   return (
