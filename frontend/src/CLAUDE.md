@@ -49,7 +49,7 @@ pages/
 HomePage.tsx(.css): 状态光球与提示、录音按钮、实时文本与电平、上一次结果（弱化显示松键到出字耗时）、四张摘要卡
 HistoryPage.tsx(.css): Core 持久化的历史，按天分组；搜索、复制、交给默认集成（回复或回执以提示条显示）、删除、清空
 ModelsPage.tsx(.css): 只负责选模型与设置：语音模型按档位稳定排序；右上角"管理模型"打开模型管理器
-model-catalog/ModelCard.tsx: 单个模型卡片：下载选中版本（缺引擎包时一并下载并注明，版本装好后显示引擎包进度）→ 启用；显示名去掉语言括号、语言标签、体积、~P50、许可证与商用提醒
+model-catalog/ModelCard.tsx: 单个模型卡片：下载选中版本（缺引擎包时一并下载并注明，版本装好后显示引擎包进度）→ 启用；目录原名、语言标签、体积、~P50、许可证与商用提醒
 model-catalog/ModelSettingsPanel.tsx: 由 `ModelView.settings` 驱动的通用设置渲染（select/toggle/text/number，文案取 `models.settings.<key>.label/.help/.options`，未知键退回键名）；所选硬件版本未装时就地下载
 model-catalog/ModelManager.tsx(.css): 模型管理器抽屉：GPU 运行库、每个模型按硬件分组的版本（体积、~P50、下载/取消/删除）、辅助模型、磁盘占用
 SettingsPage.tsx(.css): 通用、听写（热键、录音方式、输出三选一）、麦克风（设备、测试、保持就绪）、隐私、关于
