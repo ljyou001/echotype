@@ -1,20 +1,20 @@
 /**
  * [INPUT]: 依赖 bridge().history（list/remove/clear）与 bridge().output.copy；依赖 store/appStore 的 lastFinal 与 run/showToast；
- *          依赖 store/integrationsStore 的默认集成；依赖 services/integrations 的 integrationRegistry；
+ *          依赖 store/integrationsStore 的默认集成；依赖 hooks/useIntegrationRun 运行默认集成；
  *          依赖 components 的 PageHeader、EmptyState、ConfirmDialog；依赖 utils/format
  * [OUTPUT]: 导出 HistoryPage 组件
  * [POS]: 历史页。Core 持久化听写记录，本页拉取并按天分组展示；新结果到达（lastFinal.at 变化）时自动刷新。
- *        支持本地搜索、复制、用默认集成搜索、删除单条与清空。
+ *        支持本地搜索、复制、把一条交给默认集成（结果或回执以提示条显示）、删除单条与清空。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FiCheck, FiClock, FiCopy, FiSearch, FiTrash2, FiZap } from "react-icons/fi";
-import type { HistoryEntry } from "../../electron/ipc-contract";
+import type { HistoryEntry, IntegrationInstanceView } from "../../electron/ipc-contract";
 import { bridge } from "../bridge";
 import { EmptyState, PageHeader } from "../components/layout";
 import { ConfirmDialog } from "../components/Modal";
-import { integrationRegistry, type IntegrationInstance } from "../services/integrations";
+import { useIntegrationRun } from "../hooks/useIntegrationRun";
 import { useAppStore } from "../store/appStore";
 import { pickDefaultIntegration, useIntegrationsStore } from "../store/integrationsStore";
 import { formatDayLabel, formatSeconds } from "../utils/format";
@@ -30,6 +30,17 @@ export function HistoryPage() {
   const integrationsLoaded = useIntegrationsStore((s) => s.loaded);
   const loadIntegrations = useIntegrationsStore((s) => s.load);
   const defaultIntegration = useIntegrationsStore((s) => pickDefaultIntegration(s.instances));
+  const showToast = useAppStore((s) => s.showToast);
+  const { state: runState, run: runIntegration } = useIntegrationRun();
+
+  // 默认集成的运行结果：有文字回复显示回复，否则显示回执，失败显示原因
+  useEffect(() => {
+    if (runState.status === "done") {
+      showToast(runState.text || t(`integrations.quickAction.notes.${runState.note ?? "sent"}`, { defaultValue: t("integrations.quickAction.notes.sent") }));
+    } else if (runState.status === "error" && runState.error && runState.error.code !== "CANCELLED") {
+      showToast(t(`integrations.errors.${runState.error.code}`, { defaultValue: runState.error.message }), "error");
+    }
+  }, [runState.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!integrationsLoaded) void loadIntegrations();
@@ -108,6 +119,7 @@ export function HistoryPage() {
                 key={entry.id}
                 entry={entry}
                 integration={defaultIntegration}
+                onSend={() => void runIntegration(defaultIntegration!.id, entry.text)}
                 onRemove={() => void remove(entry.id)}
               />
             ))}
@@ -131,11 +143,12 @@ export function HistoryPage() {
 
 interface HistoryRowProps {
   entry: HistoryEntry;
-  integration: IntegrationInstance | undefined;
+  integration: IntegrationInstanceView | undefined;
+  onSend: () => void;
   onRemove: () => void;
 }
 
-function HistoryRow({ entry, integration: defaultIntegration, onRemove }: HistoryRowProps) {
+function HistoryRow({ entry, integration: defaultIntegration, onSend, onRemove }: HistoryRowProps) {
   const { t, i18n } = useTranslation();
   const run = useAppStore((s) => s.run);
   const showToast = useAppStore((s) => s.showToast);
@@ -145,17 +158,6 @@ function HistoryRow({ entry, integration: defaultIntegration, onRemove }: Histor
       await bridge().output.copy(entry.text);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
-    });
-
-  // 用默认集成处理这条文本；有回复的插件（如 OpenClaw）把首条回复显示在提示条里
-  const sendToIntegration = () =>
-    run(async () => {
-      if (!defaultIntegration) return;
-      const plugin = integrationRegistry.get(defaultIntegration.pluginId);
-      if (!plugin) throw new Error(t("integrations.errors.pluginMissing", { id: defaultIntegration.pluginId }));
-      const result = await plugin.execute(entry.text, defaultIntegration.config, defaultIntegration.outputMode ?? "clipboard");
-      const reply = result && (result.messages?.find((m) => m.type === "text")?.content ?? result.replies?.[0] ?? result.reply);
-      if (reply) showToast(reply);
     });
 
   const time = new Intl.DateTimeFormat(i18n.language, { hour: "2-digit", minute: "2-digit" }).format(entry.at);
@@ -181,7 +183,7 @@ function HistoryRow({ entry, integration: defaultIntegration, onRemove }: Histor
           <button
             type="button"
             className="btn btn--ghost btn--icon btn--sm"
-            onClick={sendToIntegration}
+            onClick={onSend}
             title={t("history.actions.sendTo", { name: defaultIntegration.name })}
             aria-label={t("history.actions.sendTo", { name: defaultIntegration.name })}
           >
