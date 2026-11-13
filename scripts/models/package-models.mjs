@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * [INPUT]: 依赖 contracts/models.catalog.json 的 models[].variants[]；依赖系统 curl 与 tar（bsdtar，解 .tar.bz2 并打 zip）；依赖 GitHub/HF 公共 API 校验上游哈希
- * [OUTPUT]: 产出 %USERPROFILE%/.echotype-staging/models-v3/<model>--<variant>.zip，并回写 variants[].download.{url,sha256,size_bytes,upstream_url} 与 variants[].files；导出 SOURCES 表
+ * [OUTPUT]: 产出 %USERPROFILE%/.echotype-staging/models-v3/<model>--<variant>.zip，并回写 variants[].asset.{sha256,size_bytes,upstream_url} 与 variants[].files；导出 SOURCES 表
  * [POS]: 模型打包流水线的唯一入口。上游来源与保留清单只写在本文件的 SOURCES 表，catalog 只接收结果字段。UPLOAD.md 由 write-upload-doc.mjs 读 catalog 生成。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  *
@@ -41,62 +41,62 @@ const keepPair = [['model.int8.onnx', 'model.int8.onnx'], ['tokens.txt', 'tokens
 const same = (names) => names.map((n) => [n, n])
 
 export const SOURCES = {
-  'sensevoice-small/cpu-int8': {
+  'sensevoice-small--cpu-int8': {
     kind: 'tar',
     archive: SHERPA_ASR + 'sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2',
     keep: keepPair,
     files: onnxPair,
   },
-  'paraformer-zh-small/cpu-int8': {
+  'paraformer-zh-small--cpu-int8': {
     kind: 'tar',
     archive: SHERPA_ASR + 'sherpa-onnx-paraformer-zh-small-2024-03-09.tar.bz2',
     keep: keepPair,
     files: onnxPair,
   },
-  'paraformer-zh/cpu-int8': {
+  'paraformer-zh--cpu-int8': {
     kind: 'tar',
     archive: SHERPA_ASR + 'sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2',
     keep: keepPair,
     files: onnxPair,
   },
-  'punct-ct-transformer-zh-en/cpu-int8': {
+  'punct-ct-transformer-zh-en--cpu-int8': {
     kind: 'tar',
     archive: SHERPA_PUNCT + 'sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12-int8.tar.bz2',
     keep: [['model.int8.onnx', 'model.int8.onnx']],
     files: { model: 'model.int8.onnx' },
   },
-  'parakeet-tdt-0.6b-v3/cpu-int8': {
+  'parakeet-tdt-0.6b-v3--cpu-int8': {
     kind: 'tar',
     archive: SHERPA_ASR + 'sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2',
     keep: same(['encoder.int8.onnx', 'decoder.int8.onnx', 'joiner.int8.onnx', 'tokens.txt']),
     files: { encoder: 'encoder.int8.onnx', decoder: 'decoder.int8.onnx', joiner: 'joiner.int8.onnx', tokens: 'tokens.txt' },
   },
-  'whisper-large-v3-turbo/cpu-int8': {
+  'whisper-large-v3-turbo--cpu-int8': {
     kind: 'tar',
     archive: SHERPA_ASR + 'sherpa-onnx-whisper-turbo.tar.bz2',
     keep: same(['turbo-encoder.int8.onnx', 'turbo-decoder.int8.onnx', 'turbo-tokens.txt']),
     files: { encoder: 'turbo-encoder.int8.onnx', decoder: 'turbo-decoder.int8.onnx', tokens: 'turbo-tokens.txt' },
   },
-  'qwen3-asr-0.6b/gpu-gguf-q8': {
+  'qwen3-asr-0.6b--gguf-q8': {
     kind: 'hf',
     repo: 'ggml-org/Qwen3-ASR-0.6B-GGUF',
     items: [['Qwen3-ASR-0.6B-Q8_0.gguf', 'Qwen3-ASR-0.6B-Q8_0.gguf'], ['mmproj-Qwen3-ASR-0.6B-Q8_0.gguf', 'mmproj-Qwen3-ASR-0.6B-Q8_0.gguf']],
     files: { model: 'Qwen3-ASR-0.6B-Q8_0.gguf', mmproj: 'mmproj-Qwen3-ASR-0.6B-Q8_0.gguf' },
   },
-  'qwen3-asr-0.6b/cpu-int8': {
+  'qwen3-asr-0.6b--cpu-int8': {
     kind: 'tar',
     archive: SHERPA_ASR + 'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2',
     keep: same(['conv_frontend.onnx', 'encoder.int8.onnx', 'decoder.int8.onnx', 'tokenizer/merges.txt', 'tokenizer/tokenizer_config.json', 'tokenizer/vocab.json']),
     files: { conv_frontend: 'conv_frontend.onnx', encoder: 'encoder.int8.onnx', decoder: 'decoder.int8.onnx', tokenizer: 'tokenizer' },
   },
-  'fire-red-asr2-aed/cpu-int8': {
+  'fire-red-asr2-aed--cpu-int8': {
     kind: 'tar',
     archive: SHERPA_ASR + 'sherpa-onnx-fire-red-asr2-zh_en-int8-2026-02-26.tar.bz2',
     keep: same(['encoder.int8.onnx', 'decoder.int8.onnx', 'tokens.txt']),
     files: { encoder: 'encoder.int8.onnx', decoder: 'decoder.int8.onnx', tokens: 'tokens.txt' },
   },
   // Moonshine v2(2026-02-27 系列，.ort 格式)。旧的 moonshine-base-en-int8 是 v1，不用。
-  'moonshine-v2-base-en/cpu-int8': {
+  'moonshine-v2-base-en--cpu-int8': {
     kind: 'tar',
     archive: SHERPA_ASR + 'sherpa-onnx-moonshine-base-en-quantized-2026-02-27.tar.bz2',
     keep: same(['encoder_model.ort', 'decoder_model_merged.ort', 'tokens.txt']),
@@ -104,7 +104,7 @@ export const SOURCES = {
   },
   // 1.7B: ggml-org 只发 Q8_0(2.17 GB，加 mmproj 超 2 GiB 上限)与 bf16。
   // 改用 mradermacher 的 Q6_K(1.67 GB) + 同架构 mmproj-Q8_0(356 MB)，合计约 2.03 GB。
-  'qwen3-asr-1.7b/gpu-gguf-q8': {
+  'qwen3-asr-1.7b--gguf-q8': {
     kind: 'hf',
     repo: 'mradermacher/Qwen3-ASR-1.7B-GGUF',
     items: [['Qwen3-ASR-1.7B.Q6_K.gguf', 'Qwen3-ASR-1.7B-Q6_K.gguf'], ['Qwen3-ASR-1.7B.mmproj-Q8_0.gguf', 'mmproj-Qwen3-ASR-1.7B-Q8_0.gguf']],
@@ -195,7 +195,7 @@ function extractTar(archivePath, name) {
 // ───────────────────────── 打包 ─────────────────────────
 // 返回 { stage: 临时目录(含最终文件), upstream_url, files }
 async function prepareStage(key, src) {
-  const stage = join(WORK_DIR, 'stage-' + key.replace('/', '--'))
+  const stage = join(WORK_DIR, 'stage-' + key)
   rmSync(stage, { recursive: true, force: true })
   mkdirSync(stage, { recursive: true })
   const put = (from, rel, move) => {
@@ -233,7 +233,7 @@ function buildZip(stage, zipPath) {
 // 校验: zip 能解开、文件集合与 files 完全一致、大小 < 2 GiB
 function verifyZip(key, zipPath, src) {
   const files = src.files
-  const dir = join(WORK_DIR, 'verify-' + key.replace('/', '--'))
+  const dir = join(WORK_DIR, 'verify-' + key)
   rmSync(dir, { recursive: true, force: true })
   mkdirSync(dir, { recursive: true })
   run(TAR, ['-xf', zipPath, '-C', dir])
@@ -270,7 +270,7 @@ async function main() {
 
   if (listId) {
     for (const [key, url] of Object.entries(Object.fromEntries(Object.entries(SOURCES).filter(([, s]) => s.kind === 'tar').map(([k, s]) => [k, s.archive])))) {
-      if (!key.startsWith(listId + '/')) continue
+      if (!key.startsWith(listId + '--')) continue
       const name = url.split('/').pop()
       const archive = await download(url, name, await expectedForGithub(url))
       const root = extractTar(archive, name)
@@ -281,34 +281,40 @@ async function main() {
   }
 
   const rows = []
+  const built = new Map() // 资产名 → { sha256, size }：GGUF 变体共享一个资产，只打一次
   let skipped = 0
   for (const model of catalog.models) {
     if (only && model.id !== only) continue
     for (const v of model.variants) {
-      const key = `${model.id}/${v.id}`
-      const src = SOURCES[key]
-      if (!src) { log(`跳过 ${key}: SOURCES 里还没有保留清单`); skipped++; continue }
-      log(`\n▶ ${key}`)
-      const zipPath = join(OUT_DIR, `${model.id}--${v.id}.zip`)
-      if (force || !existsSync(zipPath)) {
-        const { stage } = await prepareStage(key, src)
-        buildZip(stage, zipPath)
-        rmSync(stage, { recursive: true, force: true })
-      } else log(`  zip 已存在，跳过构建`)
-      verifyZip(key, zipPath, src)
-      const sha256 = await sha256File(zipPath)
-      const size = statSync(zipPath).size
+      const asset = v.asset.name.replace(/.zip$/, '')
+      const src = SOURCES[asset]
+      if (!src) { log(`跳过 ${model.id}/${v.id}: SOURCES 里没有 ${asset}`); skipped++; continue }
+      if (!built.has(asset)) {
+        log(`
+▶ ${asset}`)
+        const zipPath = join(OUT_DIR, v.asset.name)
+        if (force || !existsSync(zipPath)) {
+          const { stage } = await prepareStage(asset, src)
+          buildZip(stage, zipPath)
+          rmSync(stage, { recursive: true, force: true })
+        } else log('  zip 已存在，跳过构建')
+        verifyZip(asset, zipPath, src)
+        const sha256 = await sha256File(zipPath)
+        const size = statSync(zipPath).size
+        built.set(asset, { sha256, size })
+        rows.push({ asset, size, sha256 })
+        log(`  ✓ ${mb(size)}  ${sha256}`)
+      }
+      const { sha256, size } = built.get(asset)
       v.files = src.files
-      v.download.url = `${catalog.release_base_url}${model.id}--${v.id}.zip`
-      v.download.sha256 = sha256
-      v.download.size_bytes = size
-      v.download.upstream_url = src.kind === 'tar' ? src.archive : `https://huggingface.co/${src.repo}`
-      rows.push({ key, size, sha256 })
-      log(`  ✓ ${mb(size)}  ${sha256}`)
+      v.asset.sha256 = sha256
+      v.asset.size_bytes = size
+      v.asset.upstream_url = src.kind === 'tar' ? src.archive : `https://huggingface.co/${src.repo}`
       writeCatalog(catalog, raw) // 每个变体完成就落盘，中途失败不丢进度
     }
   }
-  log(`\n完成 ${rows.length} 个 zip，跳过 ${skipped} 个。`)
+  log(`
+完成 ${rows.length} 个 zip，跳过 ${skipped} 个变体。`)
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main()

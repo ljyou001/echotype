@@ -80,6 +80,16 @@ export interface AppSnapshot {
     loadProgress: { stage: string; pct: number } | null;
     error: AppError | null;
   };
+  /** 当前运行方式，状态栏一眼可见：例如 "Qwen3 ASR 0.6B · NVIDIA · CUDA · llama.cpp"。未加载模型时为 null */
+  activeModel: {
+    id: string;
+    name: string;
+    variantId: string;
+    target: "cpu" | "nvidia" | "apple" | "vulkan";
+    runtime: "sherpa-onnx" | "llama.cpp" | "whisper.cpp";
+    providerUsed: string; // 引擎实际使用的 provider（可能因回退与所选不同）
+    fallback: boolean; // true = 所选硬件不可用，已回退到 CPU
+  } | null;
   dictation: {
     phase: DictationPhase;
     partialText: string;
@@ -104,9 +114,13 @@ export interface ModelSettingDef {
 }
 
 /** 同一模型针对不同硬件分别优化的版本（MODEL_MANIFEST §2）。 */
+export type HardwareTarget = "cpu" | "nvidia" | "apple" | "vulkan";
+
 export interface VariantView {
-  id: string; // e.g. "cpu-int8", "cuda-gguf-q8"
-  runtime: "sherpa-onnx" | "llama.cpp";
+  id: string; // e.g. "cpu-int8", "cuda-fp16", "apple-metal-gguf-q8"
+  target: HardwareTarget; // UI 分组：CPU / NVIDIA GPU / Apple Silicon / Vulkan
+  runtime: "sherpa-onnx" | "llama.cpp" | "whisper.cpp";
+  requiresPack: string | null; // 需要的引擎包 id（如 "cuda"），未安装时模型管理器一并提供下载
   providers: Provider[];
   sizeBytes: number;
   install: { status: InstallStatus; pct: number | null; error: AppError | null };
@@ -129,13 +143,21 @@ export interface ModelView {
   isActive: boolean;
 }
 
-/** 可选的 GPU 运行时包（MODEL_MANIFEST §5，v3 为 llama.cpp 的 GPU 版）。本平台不提供时不出现在列表里。 */
+/** 可选的 GPU 引擎包：整套引擎 + GPU 运行库（MODEL_MANIFEST §5）。本平台不提供时不出现在列表里。 */
 export interface EnginePackView {
   id: string; // e.g. "cuda"
+  target: HardwareTarget;
   providers: Provider[];
   sizeBytes: number;
   install: { status: InstallStatus; pct: number | null; error: AppError | null };
   inUse: boolean;
+}
+
+/** 设置 → 关于：模型许可证来自 catalog，组件许可证来自打包时生成的 resources/licenses/third-party.json */
+export interface LicensesView {
+  appVersion: string;
+  models: { id: string; name: string; license: { id: string; url: string; commercial: "yes" | "no" | "unclear" } }[];
+  components: { name: string; version: string; license: string; url: string }[];
 }
 
 export interface AudioInput {
@@ -176,12 +198,13 @@ export interface EchotypeBridge {
     remove(id: string, variantId?: string): Promise<void>; // 省略 variantId = 删除全部版本
     activate(id: string): Promise<void>; // 设置 settings.models.activeId 并加载
     updateSettings(id: string, patch: ModelUserSettings): Promise<ModelView>; // 模型专属设置的唯一入口
+    getStorage(): Promise<{ dir: string; usedBytes: number; freeBytes: number }>; // 模型管理器的磁盘占用
     onModelsChanged(cb: (models: ModelView[]) => void): Unsubscribe;
   };
 
   enginePacks: {
     list(): Promise<EnginePackView[]>;
-    install(id: string): Promise<void>; // 安装后 Core 重启引擎，引擎从 --packs-dir 发现它
+    install(id: string): Promise<void>; // 安装后 Core 改从该包目录拉起引擎；协议不符时回退内置引擎
     remove(id: string): Promise<void>;
     onPacksChanged(cb: (packs: EnginePackView[]) => void): Unsubscribe;
   };
@@ -223,6 +246,8 @@ export interface EchotypeBridge {
   };
 
   system: {
+    channel: string; // 发行渠道：github | steam | msstore …（构建时常量，决定模型来源与可用模型）
+    getLicenses(): Promise<LicensesView>; // 设置 → 关于 页的许可证列表
     platform: "win32" | "darwin" | "linux";
     arch: "x64" | "arm64";
     restartEngine(): Promise<void>;
@@ -251,6 +276,7 @@ export const IPC = {
   modelsRemove: "models:remove",
   modelsActivate: "models:activate",
   modelsUpdateSettings: "models:update-settings",
+  modelsStorage: "models:storage",
   modelsPush: "models:push",
   packsList: "packs:list",
   packsInstall: "packs:install",
@@ -277,6 +303,7 @@ export const IPC = {
   systemPermissions: "system:permissions",
   systemOpenPermission: "system:open-permission",
   systemWindow: "system:window",
+  systemLicenses: "system:licenses",
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
