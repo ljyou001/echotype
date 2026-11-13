@@ -47,6 +47,13 @@ export const SOURCES = {
     keep: keepPair,
     files: onnxPair,
   },
+  // CUDA EP 跑 fp32 图比 int8 快（38ms vs 80ms / 10s 音频）。上游归档里的 model.onnx 是 fp32，约 938 MB。
+  'sensevoice-small--cuda-fp32': {
+    kind: 'tar',
+    archive: SHERPA_ASR + 'sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2',
+    keep: [['model.onnx', 'model.onnx'], ['tokens.txt', 'tokens.txt']],
+    files: { model: 'model.onnx', tokens: 'tokens.txt' },
+  },
   'paraformer-zh-small--cpu-int8': {
     kind: 'tar',
     archive: SHERPA_ASR + 'sherpa-onnx-paraformer-zh-small-2024-03-09.tar.bz2',

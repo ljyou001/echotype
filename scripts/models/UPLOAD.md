@@ -6,12 +6,13 @@
 
 ## 1. release `models-v3`（模型）
 
-共 11 个 zip，合计 **5.91 GiB**（6052.6 MiB）。每个都小于 GitHub 单文件 2 GiB 上限。zip 在 `C:\Users\YouYouLab\.echotype-staging\models-v3`。
+共 12 个 zip，合计 **6.72 GiB**（6880.0 MiB）。每个都小于 GitHub 单文件 2 GiB 上限。zip 在 `C:\Users\YouYouLab\.echotype-staging\models-v3`。
 三个 GGUF 变体（cuda / apple-metal / vulkan）共用一个 `*--gguf-q8.zip`，只传一次。
 
 | 文件 | 大小 | sha256 |
 |---|---|---|
 | `sensevoice-small--cpu-int8.zip` | 152.9 MiB | `e9511a923f034b0aecd5fd0632792cb4798fbd5b44b409f44cd7b2c256077b87` |
+| `sensevoice-small--cuda-fp32.zip` | 827.5 MiB | `e4966454d5db4d1743f4479a29838ad25c7e713dac97dd49ddc0ddefc58d47af` |
 | `paraformer-zh-small--cpu-int8.zip` | 70.8 MiB | `c2fca5669ed6bef33015e2f45fc74d341ff8e4592d9fb29cd899e88a8855a140` |
 | `paraformer-zh--cpu-int8.zip` | 198.9 MiB | `ec38d19bffb31b676f37fffd4b5e67e160e45f8a340245ba81174722b2c222a7` |
 | `qwen3-asr-0.6b--cpu-int8.zip` | 805.6 MiB | `587ae33b1413ca6ed6233fe88ce103c6b717e06026992e89259e6821b0ab72f0` |
@@ -28,6 +29,7 @@
 ```bash
 gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes "EchoType v3 model packages. Each zip is one model asset; files sit at the zip root. Checksums are in contracts/models.catalog.json." \
   "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" \
+  "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" \
   "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" \
   "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh--cpu-int8.zip" \
   "C:/Users/YouYouLab/.echotype-staging/models-v3/qwen3-asr-0.6b--cpu-int8.zip" \
@@ -45,6 +47,7 @@ gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes
 ```bash
 gh release upload models-v3 --repo ljyou001/echotype --clobber \
   "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" \
+  "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" \
   "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" \
   "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh--cpu-int8.zip" \
   "C:/Users/YouYouLab/.echotype-staging/models-v3/qwen3-asr-0.6b--cpu-int8.zip" \
@@ -62,6 +65,7 @@ PowerShell 版（反引号续行）:
 ```powershell
 gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes "EchoType v3 model packages." `
   "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cpu-int8.zip" `
+  "C:/Users/YouYouLab/.echotype-staging/models-v3/sensevoice-small--cuda-fp32.zip" `
   "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh-small--cpu-int8.zip" `
   "C:/Users/YouYouLab/.echotype-staging/models-v3/paraformer-zh--cpu-int8.zip" `
   "C:/Users/YouYouLab/.echotype-staging/models-v3/qwen3-asr-0.6b--cpu-int8.zip" `
