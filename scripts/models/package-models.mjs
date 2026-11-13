@@ -112,6 +112,72 @@ export const SOURCES = {
   },
 }
 
+// ───────────────────────── NOTICE ─────────────────────────
+// 每个 zip 带一个 NOTICE.txt：署名、许可证、来源、改动说明、许可证全文（Apache / FunASR / MIT）。
+// text: apache | funasr | mit | link（CC-BY 只需署名并给链接）
+const APACHE_URL = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+const FUNASR_URL = 'https://raw.githubusercontent.com/modelscope/FunASR/main/MODEL_LICENSE'
+const MIT_TEXT = (holder) => `MIT License
+
+Copyright (c) ${holder}
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.`
+const FUNASR = { credit: 'Alibaba Group (FunASR / SenseVoice / Paraformer / CT-Transformer)', id: 'FunASR Model Open Source License v1.1', url: 'https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE', text: 'funasr' }
+const LICENSE_INFO = {
+  'sensevoice-small': FUNASR,
+  'paraformer-zh-small': FUNASR,
+  'paraformer-zh': FUNASR,
+  'punct-ct-transformer-zh-en': FUNASR,
+  'parakeet-tdt-0.6b-v3': { credit: 'NVIDIA Corporation', id: 'CC-BY-4.0', url: 'https://creativecommons.org/licenses/by/4.0/', text: 'link' },
+  'qwen3-asr-0.6b': { credit: 'Alibaba Qwen team (model); ggml-org (GGUF conversion, gguf-q8 package)', id: 'Apache-2.0', url: APACHE_URL, text: 'apache' },
+  'qwen3-asr-1.7b': { credit: 'Alibaba Qwen team (model); mradermacher (GGUF quantization)', id: 'Apache-2.0', url: APACHE_URL, text: 'apache' },
+  'fire-red-asr2-aed': { credit: 'FireRedTeam', id: 'Apache-2.0', url: APACHE_URL, text: 'apache' },
+  'whisper-large-v3-turbo': { credit: 'OpenAI', id: 'MIT', url: 'https://github.com/openai/whisper/blob/main/LICENSE', text: 'mit', holder: '2022 OpenAI' },
+  'moonshine-v2-base-en': { credit: 'Useful Sensors, Inc. (dba Moonshine AI)', id: 'MIT', url: 'https://github.com/moonshine-ai/moonshine/blob/main/LICENSE', text: 'mit', holder: '2025 Useful Sensors, Inc. (dba Moonshine AI)' },
+}
+
+async function licenseText(info) {
+  if (info.text === 'mit') return MIT_TEXT(info.holder)
+  if (info.text === 'apache' || info.text === 'funasr') {
+    const url = info.text === 'apache' ? APACHE_URL : FUNASR_URL
+    const dest = join(UPSTREAM_DIR, 'license-' + info.text + '.txt')
+    if (!existsSync(dest)) { mkdirSync(UPSTREAM_DIR, { recursive: true }); run('curl', ['-fsSL', '-o', dest, url]) }
+    return readFileSync(dest, 'utf8')
+  }
+  return `Full license text: ${info.url}
+Attribution: you must give appropriate credit to the original authors, provide the license link, and indicate if changes were made.`
+}
+
+async function buildNotice(model, src, asset) {
+  const info = LICENSE_INFO[model.id]
+  if (!info) fail(`LICENSE_INFO 缺少 ${model.id}`)
+  const upstream = src.kind === 'tar' ? src.archive : `https://huggingface.co/${src.repo}`
+  const changes = src.kind === 'tar'
+    ? 'Unused files (README, test audio, duplicate fp32 weights) were removed. Model weights are unmodified. ONNX conversion by the sherpa-onnx project (https://github.com/k2-fsa/sherpa-onnx, Apache-2.0).'
+    : 'Weights are the quantized GGUF files from the source repository, repackaged without further modification.'
+  return [
+    `NOTICE - ${model.name}`,
+    '',
+    'This package redistributes third-party model weights for use by EchoType (https://github.com/ljyou001/echotype).',
+    '',
+    `Package:           ${asset}.zip`,
+    `Original authors:  ${info.credit}`,
+    `License:           ${info.id}`,
+    `License URL:       ${info.url}`,
+    `Source:            ${upstream}`,
+    `Changes:           ${changes}`,
+    '',
+    '----------------------------------------------------------------------',
+    '',
+    await licenseText(info),
+    '',
+  ].join('\n')
+}
+
 // ───────────────────────── 工具 ─────────────────────────
 const log = (...a) => console.log(...a)
 const fail = (msg) => { console.error('ERROR: ' + msg); process.exit(1) }
@@ -194,7 +260,7 @@ function extractTar(archivePath, name) {
 
 // ───────────────────────── 打包 ─────────────────────────
 // 返回 { stage: 临时目录(含最终文件), upstream_url, files }
-async function prepareStage(key, src) {
+async function prepareStage(key, src, notice) {
   const stage = join(WORK_DIR, 'stage-' + key)
   rmSync(stage, { recursive: true, force: true })
   mkdirSync(stage, { recursive: true })
@@ -203,6 +269,7 @@ async function prepareStage(key, src) {
     mkdirSync(dirname(to), { recursive: true })
     move ? renameSync(from, to) : copyFileSync(from, to)
   }
+  writeFileSync(join(stage, 'NOTICE.txt'), notice)
   if (src.kind === 'tar') {
     const name = src.archive.split('/').pop()
     const exp = await expectedForGithub(src.archive)
@@ -238,7 +305,7 @@ function verifyZip(key, zipPath, src) {
   mkdirSync(dir, { recursive: true })
   run(TAR, ['-xf', zipPath, '-C', dir])
   const got = listTree(dir).map((f) => f.rel).sort()
-  const want = (src.kind === 'tar' ? src.keep : src.items).map((k) => k[1]).sort()
+  const want = (src.kind === 'tar' ? src.keep : src.items).map((k) => k[1]).concat('NOTICE.txt').sort()
   const dangling = Object.entries(files).filter(([, p]) => !want.some((w) => w === p || w.startsWith(p + '/')))
   if (dangling.length) fail(`${key}: files 指向 zip 里不存在的路径 ${JSON.stringify(dangling)}`)
   rmSync(dir, { recursive: true, force: true })
@@ -294,7 +361,8 @@ async function main() {
 ▶ ${asset}`)
         const zipPath = join(OUT_DIR, v.asset.name)
         if (force || !existsSync(zipPath)) {
-          const { stage } = await prepareStage(asset, src)
+          const notice = await buildNotice(model, src, asset)
+          const { stage } = await prepareStage(asset, src, notice)
           buildZip(stage, zipPath)
           rmSync(stage, { recursive: true, force: true })
         } else log('  zip 已存在，跳过构建')

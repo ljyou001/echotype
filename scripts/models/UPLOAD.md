@@ -6,22 +6,22 @@
 
 ## 1. release `models-v3`（模型）
 
-共 11 个 zip，合计 **5.91 GiB**（6052.5 MiB）。每个都小于 GitHub 单文件 2 GiB 上限。zip 在 `C:\Users\YouYouLab\.echotype-staging\models-v3`。
+共 11 个 zip，合计 **5.91 GiB**（6052.6 MiB）。每个都小于 GitHub 单文件 2 GiB 上限。zip 在 `C:\Users\YouYouLab\.echotype-staging\models-v3`。
 三个 GGUF 变体（cuda / apple-metal / vulkan）共用一个 `*--gguf-q8.zip`，只传一次。
 
 | 文件 | 大小 | sha256 |
 |---|---|---|
-| `sensevoice-small--cpu-int8.zip` | 152.9 MiB | `9bc81196cffc9f6396d57a6c70bcf9c59cb9e4badd7a525c8f160eb29a604b92` |
-| `paraformer-zh-small--cpu-int8.zip` | 70.8 MiB | `a75175fb90bd0991ad45ff6c9bec2f2417abcb58f45aae4f96a04ed193083fe4` |
-| `paraformer-zh--cpu-int8.zip` | 198.8 MiB | `8b5f5d2b8d870f7814738737f426e815ea6812779e33888fca5206fff41b9c41` |
-| `qwen3-asr-0.6b--cpu-int8.zip` | 805.6 MiB | `c8871d07fe788913b499e36eb50984f1ee594ae0549356041d68b77849d5f1f7` |
-| `qwen3-asr-0.6b--gguf-q8.zip` | 924.5 MiB | `cb22bcf79f45c2f49a8cebd28590814af49e83544ccf5d1c21fcebce227cd4fb` |
-| `parakeet-tdt-0.6b-v3--cpu-int8.zip` | 456.0 MiB | `2fa93be8aa15d8c26ea64b866f9b9b9f23a23bab17f7c90ac01f19798b7e8e48` |
-| `qwen3-asr-1.7b--gguf-q8.zip` | 1902.7 MiB | `5650b8b98f10983eea98882edfbad64500f9bd5d684b68aee687fb488b072754` |
-| `fire-red-asr2-aed--cpu-int8.zip` | 797.6 MiB | `ea04026661f5395b293daeb34ab9966bfab2f25e5cfccc66b28fad5f22a42952` |
-| `whisper-large-v3-turbo--cpu-int8.zip` | 583.0 MiB | `ca64420cb4489b66488f6d11cbd9604748332a0cc5d7018a5291d9e8fad5f30d` |
-| `moonshine-v2-base-en--cpu-int8.zip` | 102.1 MiB | `d89c059bdcdd025c6424de660a1cd780b58389a4768e013ee7542ea1a47fc6e6` |
-| `punct-ct-transformer-zh-en--cpu-int8.zip` | 58.4 MiB | `930256dc8bb57bc9e40ae499fe2eb780becffc6bd3f0e771926f972c062dbb2b` |
+| `sensevoice-small--cpu-int8.zip` | 152.9 MiB | `e9511a923f034b0aecd5fd0632792cb4798fbd5b44b409f44cd7b2c256077b87` |
+| `paraformer-zh-small--cpu-int8.zip` | 70.8 MiB | `c2fca5669ed6bef33015e2f45fc74d341ff8e4592d9fb29cd899e88a8855a140` |
+| `paraformer-zh--cpu-int8.zip` | 198.9 MiB | `ec38d19bffb31b676f37fffd4b5e67e160e45f8a340245ba81174722b2c222a7` |
+| `qwen3-asr-0.6b--cpu-int8.zip` | 805.6 MiB | `587ae33b1413ca6ed6233fe88ce103c6b717e06026992e89259e6821b0ab72f0` |
+| `qwen3-asr-0.6b--gguf-q8.zip` | 924.5 MiB | `af9fbece19d60bcdb19464aa76f4ae012dc82bec6d25967336c3e1c65d4344a4` |
+| `parakeet-tdt-0.6b-v3--cpu-int8.zip` | 456.0 MiB | `61dbcee1631dd16fa8fe1b21477ec1ad99dc967fdb4d772e6297c893f76c1a65` |
+| `qwen3-asr-1.7b--gguf-q8.zip` | 1902.7 MiB | `7b844055c170fdd77243e5f0dba6796334e0df48d0f42ee90390ea691dd65518` |
+| `fire-red-asr2-aed--cpu-int8.zip` | 797.6 MiB | `c84982428c19bb648f56a967244d9971f0d7c7b74a252e693020293e16f3c285` |
+| `whisper-large-v3-turbo--cpu-int8.zip` | 583.0 MiB | `f700cd99a35f840480dd56d0984d39ef345263fba667fed6f371809f31cdfa23` |
+| `moonshine-v2-base-en--cpu-int8.zip` | 102.1 MiB | `6bda207e321ea6ab0ec6dc339ecffe88c91364a2ff1faf212830d69a57fb1bd4` |
+| `punct-ct-transformer-zh-en--cpu-int8.zip` | 58.4 MiB | `800578f1f105a176cd5c242971b9c569fadc4c7e1b2e1e896324763ef4741fe8` |
 
 **release 还不存在**（首次）:
 
