@@ -305,7 +305,7 @@ pub fn load_model(p: LoadParams, progress: &dyn Fn(&str, u32), warn: &dyn Fn(&st
     });
     let load_ms = t_start.elapsed().as_millis() as u64;
 
-    // ENGINE_PROTOCOL §8.6：加载后用 1 s 静音预热一次
+    // ENGINE_PROTOCOL §8.8：加载后用 1 s 静音预热一次
     progress("warmup", 0);
     let t_w = Instant::now();
     host.decode(&vec![0.0; SAMPLE_RATE as usize], None)?;
