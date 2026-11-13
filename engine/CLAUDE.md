@@ -47,6 +47,6 @@ scripts/: make-pack、bench、fixture 生成（见 scripts/CLAUDE.md）
 - 测试：`cargo test --release`。真实模型：`ECHOTYPE_TEST_MODELS_DIR=<models> ECHOTYPE_TEST_WAVS=<含 zh.wav en.wav> cargo test --release --test models`。
 - 运行：`ECHOTYPE_ENGINE_TOKEN=<随机串> echotype-engine --port 0 --models-dir <dir> --log-dir <dir>`；调试 `--fake-mic a.wav [--fake-mic b.wav]`、`--no-speculate`。
 - Core 开发态：`ECHOTYPE_ENGINE_PATH=<repo>/engine/target/release/echotype-engine.exe`。
-- GPU 引擎包：`scripts/make-pack.ps1 cuda win32-x64 <out-dir>`（Linux：`make-pack.sh cuda linux-x64 <out-dir>`）。
+- GPU 引擎包：`scripts/make-pack.sh cuda win32-x64 <out-dir>`（Windows 用 Git Bash，需 VS Build Tools 的 lib.exe；Linux：`make-pack.sh cuda linux-x64 <out-dir>`）。
 
 [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md

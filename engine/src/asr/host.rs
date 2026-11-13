@@ -3,7 +3,7 @@
 //! [OUTPUT]: 导出 ModelSettings、Decoded、ModelHost、load_model()
 //! [POS]: 一个已加载模型的全部运行态：识别器（sherpa 或 llama sidecar）+ companion 标点 + 文本管线 + 单飞解码线程。
 //!        engine 用 load_model() 创建、close() 释放；dictation::session 与 transcribe.file 只通过 decode()（解码线程内）
-//!        与 finish_text()（任意线程）使用它。provider 降级在这里发生：请求的 provider 不可用或构建失败 → cpu + PROVIDER_FALLBACK。
+//!        与 finish_text()（任意线程）使用它。provider 降级在这里发生：请求的 provider 不可用、构建失败或 CUDA EP 未真正加载 → cpu + PROVIDER_FALLBACK。
 //!        ENGINE_PROTOCOL §6：dispatch 依据 variant.runtime + variant.arch；model 对象只提供 punctuation/features/languages。
 //! [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 
@@ -15,7 +15,7 @@ use serde_json::{json, Map, Value};
 use sherpa_onnx::OfflineRecognizer;
 
 use super::llama::LlamaSidecar;
-use super::providers::capabilities;
+use super::providers::{capabilities, cuda_ep_loaded};
 use super::recognizers::{build_punctuation, build_sherpa, stream_options, SherpaOpts};
 use crate::dictation::worker::DecodeWorker;
 use crate::platform::default_threads;
@@ -216,6 +216,12 @@ pub fn load_model(p: LoadParams, progress: &dyn Fn(&str, u32), warn: &dyn Fn(&st
                 }
                 Err(e) => return Err(e),
             };
+            if provider == "cuda" && !cuda_ep_loaded() {
+                // sherpa 建会话时 CUDA EP 加载失败只打印 "Fallback to cpu"，识别器已在 CPU 上：如实上报
+                warn(code::PROVIDER_FALLBACK, "the CUDA execution provider failed to load (engine log has the reason); using cpu".into());
+                provider = "cpu".into();
+                opts.provider = provider.clone();
+            }
             progress("model", 100);
             (Backend::Sherpa { rec, arch: arch.clone(), opts }, provider)
         }
