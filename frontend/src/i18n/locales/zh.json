@@ -333,118 +333,118 @@
   },
   "integrations": {
     "title": "集成",
-    "description": "在快捷操作里，把说出的话交给搜索、AI 和翻译工具。",
-    "myIntegrations": "我的集成",
-    "addIntegration": "添加集成",
-    "emptyState": "还没有集成。添加后即可在快捷操作里使用。",
-    "availablePlugins": "可用插件",
-    "comingSoon": "即将推出",
+    "description": "在快捷操作里，把说出的话交给 AI、聊天、笔记等工具。",
+    "myIntegrations": "我的动作",
+    "myIntegrationsDescription": "拖动可调整顺序。在快捷操作里按回车，会运行默认动作。",
+    "addIntegration": "添加动作",
+    "emptyState": "还没有动作。添加后即可在快捷操作里使用。",
+    "default": "默认",
+    "needsSetup": "待设置",
+    "tabs": {
+      "actions": "动作",
+      "dictionary": "词典"
+    },
+    "groups": {
+      "ai": "问 AI",
+      "cleanup": "用 AI 改写",
+      "chat": "Webhook 与对话",
+      "send": "发送到",
+      "agent": "编程助手",
+      "open": "在浏览器中打开"
+    },
     "quickAction": {
       "title": "快捷操作",
       "lastText": "上一次听写",
       "noText": "暂无文本",
       "hint": "按 Enter 使用默认操作",
       "hintNamed": "按回车发送到 {{name}}",
-      "noIntegrations": "没有启用的集成。请到「集成」页开启。",
-      "waiting": "正在等待回复…",
-      "approvalRequired": "需要你的批准",
-      "allow": "允许",
-      "deny": "拒绝"
-    },
-    "outputMode": {
-      "clipboard": "复制文字，再打开服务",
-      "direct": "直接发送文字",
-      "both": "直接发送并复制"
+      "noIntegrations": "没有开启的动作。请到「集成」页开启。",
+      "waiting": "处理中…",
+      "runningNamed": "正在运行「{{name}}」…",
+      "stop": "停止",
+      "replace": "替换原文",
+      "regenerate": "重新生成",
+      "confirmTitle": "要运行「{{name}}」吗？",
+      "confirmMessage": "这会在你的电脑上运行一个程序，并把文字交给它。",
+      "confirmRun": "运行",
+      "notes": {
+        "sent": "已发送 ✓",
+        "opened": "已打开",
+        "copied_and_opened": "已复制并打开"
+      }
     },
     "actions": {
-      "enable": "启用",
-      "disable": "禁用",
+      "enable": "开启",
+      "disable": "关闭",
       "setDefault": "设为默认",
-      "configure": "配置",
+      "configure": "设置",
       "remove": "删除",
-      "enabled": "启用",
+      "enabled": "开启",
       "reorder": "拖动排序"
     },
-    "categories": {
-      "search": "搜索",
-      "ai": "AI 助手",
-      "translation": "翻译",
-      "custom": "自定义"
-    },
     "dialog": {
-      "addTitle": "添加集成",
-      "configureTitle": "配置",
-      "selectPlugin": "选择服务",
+      "addTitle": "添加动作",
       "instanceName": "名称",
       "icon": "图标",
-      "outputMode": "输出方式",
-      "outputModeDescSupported": "选择如何将文本发送到此服务。直接输入使用 URL 参数或 API。",
-      "outputModeDescUnsupported": "此服务不支持直接输入。文本将复制到剪贴板，需要手动粘贴。",
-      "cancel": "取消",
       "add": "添加",
-      "prevPage": "上一页",
-      "nextPage": "下一页",
-      "save": "保存",
-      "confirmRemoveTitle": "移除集成？",
-      "confirmRemove": "确定要移除此集成吗？",
-      "manualPasteRequired": "该服务无法直接接收文字。EchoType 会先复制，你按 Ctrl+V 粘贴即可。",
-      "configureNamed": "配置 {{name}}",
-      "confirmRemoveNamed": "将从快捷操作中移除“{{name}}”。"
+      "back": "返回",
+      "confirmRemoveTitle": "删除这个动作？",
+      "configureNamed": "设置「{{name}}」",
+      "confirmRemoveNamed": "「{{name}}」会从快捷操作中移除。其他动作共用的密钥会保留。"
     },
-    "plugins": {
-      "clawbot": {
-        "config": {
-          "gatewayHint": "可从 OpenClaw 界面「Control → Overview → Gateway Access」获取主机、端口、令牌等信息；或使用 OpenClaw CLI：`openclaw gateway status` 查看网关状态，`openclaw gateway discover` 发现网关及 wsUrl，配置与令牌见 `~/.openclaw/openclaw.json`。",
-          "host": {
-            "label": "主机",
-            "description": "OpenClaw 服务主机地址（默认：localhost）"
-          },
-          "port": {
-            "label": "端口",
-            "description": "OpenClaw 服务端口（默认：18789）"
-          },
-          "apiKey": {
-            "label": "令牌",
-            "description": "您的 OpenClaw 访问令牌"
-          },
-          "session": {
-            "label": "会话 ID",
-            "description": "OpenClaw 会话 ID（默认：agent:main:main）。WebSocket 下用于指定 sessionKey 以控制消息路由，保持默认则自动路由。"
-          },
-          "useHttp": {
-            "label": "使用 HTTP API",
-            "description": "使用 HTTP API 而非 WebSocket（需在 OpenClaw 配置中手动开启）。默认使用 WebSocket（始终可用）。"
-          },
-          "openInterface": {
-            "label": "发送后打开网页界面",
-            "description": "发送消息后自动打开 OpenClaw 网页界面"
-          },
-          "timeout": {
-            "label": "连接超时（毫秒）",
-            "description": "连接超时时间，单位毫秒（默认：15000，仅对 WebSocket 有效）"
-          }
-        }
-      }
+    "form": {
+      "provider": "服务商",
+      "model": "模型",
+      "modelPlaceholder": "模型名称",
+      "modelHint": "点「获取模型」查看你的账号可用的模型，也可以直接输入名称。",
+      "modelsLoaded": "共 {{count}} 个可用模型",
+      "noModels": "服务商没有返回模型，请直接输入模型名称。",
+      "loadModels": "获取模型",
+      "loading": "正在获取…",
+      "test": "测试连接",
+      "testing": "正在测试…",
+      "testOk": "连接成功",
+      "getKey": "获取 API 密钥",
+      "sharedKey": "使用同一服务商的所有动作共用此密钥。",
+      "saved": "已保存",
+      "replace": "更换",
+      "remove": "移除",
+      "willRemove": "保存后将被移除",
+      "undo": "撤销",
+      "directoryPlaceholder": "D:\\项目\\路径",
+      "storageWeak": "你的系统没有安全的密钥环，密钥只能靠文件权限保护。",
+      "storageNone": "此系统不支持安全存储，无法保存密钥。本地服务仍可使用。"
     },
-    "items": {
-      "clawbot": {
-        "name": "OpenClaw / Clawbot",
-        "description": "AI 驱动的搜索和自动化工作流"
-      },
-      "search": {
-        "name": "搜索",
-        "description": "快速网页搜索集成"
-      },
-      "workflow": {
-        "name": "工作流",
-        "description": "自定义自动化工作流"
-      }
+    "privacy": {
+      "agent": "在这台电脑上运行一个程序。文字会交给该程序，它可能会连接自己的服务。",
+      "open": "在浏览器中打开 {{hosts}}，文字会放进网址里。",
+      "theAddress": "你填写的网址",
+      "sendTo": "文字会发送到 {{hosts}}。",
+      "userAddress": "文字会发送到你填写的地址。"
     },
-    "myIntegrationsDescription": "拖动调整顺序。在快捷操作里按回车会执行默认集成。",
-    "availablePluginsDescription": "点击“添加集成”即可添加以下任一服务。",
-    "default": "默认",
+    "dictionary": {
+      "title": "个人词典",
+      "description": "按你的写法拼写的人名和术语。开启词典的 AI 动作会收到这份列表，比如把“echo type”写成“EchoType”。",
+      "add": "添加词条",
+      "empty": "还没有词条",
+      "emptyHint": "添加你常说的人名、产品名和行话。",
+      "term": "词条",
+      "hint": "备注",
+      "termPlaceholder": "EchoType",
+      "hintPlaceholder": "选填：读音是什么样"
+    },
     "errors": {
-      "pluginMissing": "当前版本不提供“{{id}}”插件。"
+      "AUTH_FAILED": "服务拒绝了你的密钥。请检查后重试。",
+      "RATE_LIMITED": "请求太频繁，请稍等一会儿再试。",
+      "NETWORK": "无法连接到服务。请检查网络或服务器地址。",
+      "TIMEOUT": "服务响应超时。",
+      "HOST_BLOCKED": "这个动作不允许访问该地址。",
+      "NOT_CONFIGURED": "请先完成这个动作的设置。",
+      "NOT_INSTALLED": "没有找到这个程序，请确认已安装并加入 PATH。",
+      "CLI_FAILED": "程序运行出错并退出了。",
+      "PROVIDER_ERROR": "服务返回了错误。",
+      "CONFIRM_REQUIRED": "请确认后再运行这个动作。",
+      "INTERNAL": "出了点问题。"
     }
   },
   "settings": {

@@ -69,6 +69,7 @@ module.exports = {
   extraResources: [
     { from: "../engine/dist/${os}-${arch}", to: "engine", filter: ["**/*"] },
     { from: "../contracts/models.catalog.json", to: "contracts/models.catalog.json" },
+    { from: "../contracts/integrations.catalog.json", to: "contracts/integrations.catalog.json" },
     { from: "build/licenses/third-party.json", to: "licenses/third-party.json" },
   ],
 

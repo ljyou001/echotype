@@ -13,7 +13,10 @@ export interface CorePaths {
   home: string;
   settingsFile: string;
   historyFile: string;
-  integrationsFile: string;
+  integrationsFile: string; // v2 遗留，仅用于一次性迁移
+  instancesFile: string; // v3 集成实例（不含密钥）
+  secretsFile: string; // safeStorage 加密的密钥
+  dictionaryFile: string; // 个人词典
   modelsDir: string;
   enginesDir: string; // GPU 引擎包 ~/.echotype/engines/<pack id>/
   catalogCacheFile: string; // 远程目录的缓存
@@ -28,6 +31,9 @@ export function resolveCorePaths(env: NodeJS.ProcessEnv = process.env, homedir: 
     settingsFile: path.join(home, "settings.json"),
     historyFile: path.join(home, "history.jsonl"),
     integrationsFile: path.join(home, "integrations.json"),
+    instancesFile: path.join(home, "integrations.v3.json"),
+    secretsFile: path.join(home, "secrets.bin"),
+    dictionaryFile: path.join(home, "dictionary.json"),
     modelsDir: path.join(home, "models"),
     enginesDir: path.join(home, "engines"),
     catalogCacheFile: path.join(home, "cache", "models.catalog.json"),
