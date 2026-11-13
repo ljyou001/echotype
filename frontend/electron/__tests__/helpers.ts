@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 esbuild（把 mock 引擎打成可执行 ESM）、node:fs/os/path；依赖 engine/engine-command 的 EngineCommand
- * [OUTPUT]: 导出 mockEngineCommand、makeTempDir、waitFor、FakeEngine（内存版 EngineGateway）
+ * [OUTPUT]: 导出 mockEngineCommand、makeZip、makeTempDir、waitFor、FakeEngine（内存版 EngineGateway）
  * [POS]: __tests__ 的共享夹具。mock 引擎产物写进 node_modules/.cache，使 ws 等依赖按常规路径解析。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -8,6 +8,7 @@ import { buildSync } from "esbuild";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
 import type { AppError } from "../ipc-contract.js";
 import { Emitter } from "../core/emitter.js";
@@ -36,7 +37,48 @@ export function mockEngineCommand(env: Record<string, string> = {}): EngineComma
     });
     mockBundle = outfile;
   }
-  return { kind: "mock", command: process.execPath, args: [mockBundle], cwd: frontendRoot, env };
+  return { kind: "mock", packId: null, command: process.execPath, args: [mockBundle], cwd: frontendRoot, env };
+}
+
+/** 最小 zip 写入器（store，不压缩）：文件位于 zip 根，与 models-v3 资产的形状一致。 */
+export function makeZip(entries: Record<string, Buffer | string>): Buffer {
+  const locals: Buffer[] = [];
+  const centrals: Buffer[] = [];
+  let offset = 0;
+  for (const [name, content] of Object.entries(entries)) {
+    const data = Buffer.isBuffer(content) ? content : Buffer.from(content);
+    const nameBuf = Buffer.from(name);
+    const crc = zlib.crc32(data);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0x21, 12); // 1980-01-01
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(data.length, 18);
+    local.writeUInt32LE(data.length, 22);
+    local.writeUInt16LE(nameBuf.length, 26);
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(0x21, 14);
+    central.writeUInt32LE(crc, 16);
+    central.writeUInt32LE(data.length, 20);
+    central.writeUInt32LE(data.length, 24);
+    central.writeUInt16LE(nameBuf.length, 28);
+    central.writeUInt32LE(offset, 42);
+    locals.push(local, nameBuf, data);
+    centrals.push(central, nameBuf);
+    offset += local.length + nameBuf.length + data.length;
+  }
+  const cd = Buffer.concat(centrals);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(Object.keys(entries).length, 8);
+  end.writeUInt16LE(Object.keys(entries).length, 10);
+  end.writeUInt32LE(cd.length, 12);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...locals, cd, end]);
 }
 
 export function makeTempDir(prefix = "echotype-test-"): string {

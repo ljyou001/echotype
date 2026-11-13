@@ -1,22 +1,24 @@
 /**
  * [INPUT]: 依赖 ipc-contract 的 Settings 类型；依赖 ./hotkey-keymap 的 validateAccelerator、defaultAccelerator
- * [OUTPUT]: 导出 createDefaultSettings、mergeSettings、SettingsContext
+ * [OUTPUT]: 导出 createDefaultSettings、mergeSettings、SettingsContext、PER_MODEL_VIA_BRIDGE
  * [POS]: Settings v2 的形状与取值规则的唯一定义。三条路径共用 mergeSettings：
  *        读盘（文件内容合并到默认值）· 迁移（v1 补丁合并到默认值）· updateSettings（UI 补丁合并到当前值）。
  *        非法字段不进入结果，而是收集进 errors：读盘时记日志丢弃，UI 更新时整体拒绝。
+ *        models.perModel 只经 bridge.models.updateSettings 写入：UI 补丁里出现它即拒绝；读盘与迁移时宽松接受
+ *        （只要求值是原始类型），按模型 settings[] 的校验在 model-settings 中进行。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
-import type { ModelUserSettings, Provider, RecordingMode, Settings } from "../ipc-contract.js";
+import type { RecordingMode, SettingValue, Settings } from "../ipc-contract.js";
 import { defaultAccelerator, validateAccelerator } from "./hotkey-keymap.js";
 
 export interface SettingsContext {
   platform: NodeJS.Platform;
   defaultModelId: string | null;
-  modelDefaults: (modelId: string) => ModelUserSettings;
 }
 
+export const PER_MODEL_VIA_BRIDGE = "models.perModel is changed through models.updateSettings";
+
 const MODES: RecordingMode[] = ["push-to-talk", "toggle"];
-const PROVIDERS: Provider[] = ["auto", "cpu", "cuda", "coreml", "directml"];
 export const TAP_THRESHOLD_RANGE = { min: 50, max: 2_000 } as const;
 
 export function createDefaultSettings(ctx: SettingsContext): Settings {
@@ -38,7 +40,12 @@ export function createDefaultSettings(ctx: SettingsContext): Settings {
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
 
-export function mergeSettings(base: Settings, patch: unknown, ctx: SettingsContext): { settings: Settings; errors: string[] } {
+export function mergeSettings(
+  base: Settings,
+  patch: unknown,
+  _ctx: SettingsContext,
+  opts: { allowPerModel?: boolean } = {},
+): { settings: Settings; errors: string[] } {
   const errors: string[] = [];
   const next: Settings = structuredClone(base);
   if (!isObj(patch)) return { settings: next, errors: patch === undefined ? [] : ["settings patch must be an object"] };
@@ -97,11 +104,20 @@ export function mergeSettings(base: Settings, patch: unknown, ctx: SettingsConte
   if (models) {
     take(models, "activeId", "models.activeId", strOrNull, (v) => (next.models.activeId = v), "must be a string or null");
     if (models.perModel !== undefined) {
-      if (!isObj(models.perModel)) errors.push("models.perModel must be an object");
+      if (!opts.allowPerModel) errors.push(PER_MODEL_VIA_BRIDGE);
+      else if (!isObj(models.perModel)) errors.push("models.perModel must be an object");
       else
         for (const [id, value] of Object.entries(models.perModel)) {
-          const merged = mergeModelSettings(next.models.perModel[id] ?? ctx.modelDefaults(id), value, `models.perModel.${id}`, errors);
-          if (merged) next.models.perModel[id] = merged;
+          if (!isObj(value)) {
+            errors.push(`models.perModel.${id} must be an object`);
+            continue;
+          }
+          const values: Record<string, SettingValue> = { ...(next.models.perModel[id] ?? {}) };
+          for (const [key, v] of Object.entries(value)) {
+            if (typeof v === "string" || typeof v === "boolean" || (typeof v === "number" && Number.isFinite(v))) values[key] = v;
+            else errors.push(`models.perModel.${id}.${key} must be text, a number, or true/false`);
+          }
+          next.models.perModel[id] = values;
         }
     }
   }
@@ -118,26 +134,4 @@ export function mergeSettings(base: Settings, patch: unknown, ctx: SettingsConte
 
   next.schemaVersion = 2;
   return { settings: next, errors };
-}
-
-function mergeModelSettings(base: ModelUserSettings, patch: unknown, path: string, errors: string[]): ModelUserSettings | null {
-  if (!isObj(patch)) {
-    errors.push(`${path} must be an object`);
-    return null;
-  }
-  const next = { ...base };
-  if (patch.provider !== undefined) {
-    if (PROVIDERS.includes(patch.provider as Provider)) next.provider = patch.provider as Provider;
-    else errors.push(`${path}.provider must be one of ${PROVIDERS.join(", ")}`);
-  }
-  if (patch.language !== undefined) {
-    if (typeof patch.language === "string" && patch.language) next.language = patch.language;
-    else errors.push(`${path}.language must be a non-empty string`);
-  }
-  for (const key of ["punctuation", "itn"] as const) {
-    if (patch[key] === undefined) continue;
-    if (typeof patch[key] === "boolean") next[key] = patch[key] as boolean;
-    else errors.push(`${path}.${key} must be a boolean`);
-  }
-  return next;
 }

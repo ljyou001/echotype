@@ -10,8 +10,8 @@ import type { DeepPartial, ModelUserSettings, Provider, Settings } from "../ipc-
 
 /** v2 应用的模型文件夹名 → v3 目录 id。未列出的旧 id 迁移后为 null。 */
 export const LEGACY_MODEL_IDS: Readonly<Record<string, string>> = {
-  "paraformer-offline": "paraformer-zh-int8",
-  "Qwen3-ASR-0.6B": "qwen3-asr-0.6b-int8",
+  "paraformer-offline": "paraformer-zh",
+  "Qwen3-ASR-0.6B": "qwen3-asr-0.6b",
 };
 
 const LANGUAGE_NAMES: Readonly<Record<string, string>> = {
@@ -23,7 +23,7 @@ const LANGUAGE_NAMES: Readonly<Record<string, string>> = {
 };
 
 const DEVICE_TO_PROVIDER: Readonly<Record<string, Provider>> = {
-  auto: "auto", cpu: "cpu", cuda: "cuda", gpu: "cuda", mps: "coreml", coreml: "coreml", directml: "directml", dml: "directml",
+  auto: "auto", cpu: "cpu", cuda: "cuda", gpu: "cuda", mps: "metal", metal: "metal", coreml: "coreml", vulkan: "vulkan", directml: "directml", dml: "directml",
 };
 
 interface V1Settings {
@@ -68,7 +68,7 @@ export function migrateV1(v1: V1Settings): DeepPartial<Settings> {
 
   const models: DeepPartial<Settings["models"]> = {};
   if (typeof app.lastActiveModelId === "string") models.activeId = LEGACY_MODEL_IDS[app.lastActiveModelId] ?? null;
-  const perModel: Record<string, Partial<ModelUserSettings>> = {};
+  const perModel: Record<string, ModelUserSettings> = {};
   for (const [key, value] of Object.entries(app)) {
     const m = /^model(Device|Language)_(.+)$/.exec(key);
     const id = m && LEGACY_MODEL_IDS[m[2]];

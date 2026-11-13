@@ -1,185 +1,159 @@
 /**
- * [INPUT]: 依赖 ./model-catalog 的目录、./model-installer 的安装流水线；依赖 core/emitter、core/logger；
- *          依赖 ipc-contract 的 ModelView、InstallStatus、AppError 类型
- * [OUTPUT]: 导出 ModelRegistry（scan / isInstalled / modelDir / views / install / cancelInstall / remove / onChange）
- * [POS]: 模型"磁盘状态"的唯一管理者：哪些已安装、哪些在安装、进度多少。它不和引擎说话——
- *        "当前加载哪个模型"属于 model-runtime。install 先装 requires（如配套标点模型），同一 id 的并发安装合并为一次。
- *        v2 遗留目录（paraformer-offline 等）不在目录中，扫描与列表都不触碰它们。
+ * [INPUT]: 依赖 ./model-catalog 的目录与类型、./asset-installer 的安装流水线与目录维护、./install-jobs 的任务簿；
+ *          依赖 core/emitter、core/logger
+ * [OUTPUT]: 导出 ModelRegistry（scan / isInstalled / installedVariants / variantDir / state / install / cancelInstall / remove / onChange）
+ * [POS]: 模型 variant 的磁盘安装态的唯一管理者：~/.echotype/models/<model id>/<variant id>/。
+ *        它不和引擎说话，也不懂用户设置——"选哪个 variant"由调用方（model-resolver）决定后传入；
+ *        requires（配套标点模型）的 variant 由注入的 pickVariant 选择，并先于本体安装。
+ *        同一资产（如一个 GGUF 包）支撑多个 variant 时，已装好的兄弟 variant 就地复制，不再下载第二遍。
+ *        不在目录里的文件夹（v2 遗留、schema 1 草稿）既不扫描也不删除。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import fs from "node:fs";
 import path from "node:path";
-import type { AppError, InstallStatus, ModelView, Provider } from "../ipc-contract.js";
-import { Emitter, type Unsubscribe } from "../core/emitter.js";
+import type { Unsubscribe } from "../core/emitter.js";
 import type { Logger } from "../core/logger.js";
-import type { CatalogModel, ModelCatalog } from "./model-catalog.js";
-import { cleanupStaging, installModel, InstallError, partialPath, readInstallMarker, removeModelDir } from "./model-installer.js";
-
-export interface InstallState {
-  status: InstallStatus;
-  pct: number | null;
-  error: AppError | null;
-}
-
-const NOT_INSTALLED: InstallState = { status: "not_installed", pct: null, error: null };
-const INSTALLED: InstallState = { status: "installed", pct: 100, error: null };
+import { cleanupStaging, cloneInstalled, installAsset, InstallError, readMarker, removeDir, type AssetLocation } from "./asset-installer.js";
+import { InstallJobs, type InstallState } from "./install-jobs.js";
+import type { AssetRef, CatalogModel, CatalogVariant, ModelCatalog } from "./model-catalog.js";
 
 export interface RegistryOptions {
   catalog: ModelCatalog;
   modelsDir: string;
   logger: Logger;
   fetch: typeof globalThis.fetch;
+  locate: (asset: AssetRef) => AssetLocation[];
+  pickVariant: (model: CatalogModel) => CatalogVariant | null;
 }
 
+const keyOf = (modelId: string, variantId: string) => `${modelId}/${variantId}`;
+
 export class ModelRegistry {
-  private readonly states = new Map<string, InstallState>();
-  private readonly inflight = new Map<string, { promise: Promise<void>; controller: AbortController }>();
-  private readonly emitter: Emitter<{ change: string }>;
+  private readonly jobs: InstallJobs;
   private readonly log: Logger;
 
   constructor(private readonly opts: RegistryOptions) {
     this.log = opts.logger.scope("models");
-    this.emitter = new Emitter((err) => this.log.error("listener failed", err));
+    this.jobs = new InstallJobs(this.log);
   }
 
   get catalog(): ModelCatalog {
     return this.opts.catalog;
   }
 
-  /** 启动时调用一次：清理中断残留，按 .installed.json 判定安装态。 */
+  get modelsDir(): string {
+    return this.opts.modelsDir;
+  }
+
+  /** 启动时调用一次：清理中断残留，按 .installed.json 判定每个 variant 的安装态。 */
   scan(): void {
-    cleanupStaging(this.opts.modelsDir);
     for (const model of this.opts.catalog.all()) {
-      const installed = readInstallMarker(this.opts.modelsDir, model.id) !== null;
-      this.states.set(model.id, installed ? INSTALLED : NOT_INSTALLED);
+      cleanupStaging(path.join(this.opts.modelsDir, model.id));
+      for (const v of model.variants) {
+        const marker = readMarker(this.variantDir(model.id, v.id));
+        this.jobs.setInstalled(keyOf(model.id, v.id), marker?.model === model.id && marker?.variant === v.id);
+      }
     }
-    this.log.info("scan complete", { installed: this.installedIds() });
+    this.log.info("scan complete", { installed: this.opts.catalog.all().flatMap((m) => this.installedVariants(m.id).map((v) => keyOf(m.id, v))) });
   }
 
-  installedIds(): string[] {
-    return [...this.states].filter(([, s]) => s.status === "installed").map(([id]) => id);
+  isInstalled(modelId: string, variantId: string): boolean {
+    return this.jobs.isInstalled(keyOf(modelId, variantId));
   }
 
-  isInstalled(id: string): boolean {
-    return this.states.get(id)?.status === "installed";
+  installedVariants(modelId: string): string[] {
+    return (this.opts.catalog.get(modelId)?.variants ?? []).filter((v) => this.isInstalled(modelId, v.id)).map((v) => v.id);
   }
 
-  modelDir(id: string): string {
-    return path.join(this.opts.modelsDir, id);
+  variantDir(modelId: string, variantId: string): string {
+    return path.join(this.opts.modelsDir, modelId, variantId);
   }
 
-  state(id: string): InstallState {
-    return this.states.get(id) ?? NOT_INSTALLED;
+  state(modelId: string, variantId: string): InstallState {
+    return this.jobs.state(keyOf(modelId, variantId));
   }
 
-  /** UI 列表：隐藏条目不列出；还没有下载地址且未安装的草稿条目不列出。 */
-  views(activeId: string | null, engineProviders: string[] | null): ModelView[] {
-    return this.opts.catalog
-      .all()
-      .filter((m) => m.status !== "hidden" && (m.download.url !== null || this.isInstalled(m.id)))
-      .map((m) => toView(m, this.state(m.id), activeId, engineProviders));
-  }
-
-  onChange(cb: (id: string) => void): Unsubscribe {
-    return this.emitter.on("change", cb);
+  onChange(cb: () => void): Unsubscribe {
+    return this.jobs.onChange(() => cb());
   }
 
   // ============================================================
-  // 安装：requires 优先；同 id 合并；取消保留 .partial
+  // 安装：requires 优先；同 variant 合并；取消保留 .partial
   // ============================================================
-  install(id: string, chain: string[] = []): Promise<void> {
-    const running = this.inflight.get(id);
-    if (running) return running.promise;
+  install(modelId: string, variantId: string, chain: string[] = []): Promise<void> {
     let model: CatalogModel;
+    let variant: CatalogVariant;
     try {
-      model = this.opts.catalog.require(id);
+      model = this.opts.catalog.require(modelId);
+      variant = this.opts.catalog.variant(model, variantId);
     } catch (err) {
       return Promise.reject(err);
     }
-    // 本体已装但依赖缺失（例如用户手动删了标点模型）时，仍然补装依赖
-    if (this.isInstalled(id) && (model.requires ?? []).every((r) => this.isInstalled(r))) return Promise.resolve();
-    if (chain.includes(id)) return Promise.reject(new InstallError("CATALOG_CYCLE", `requires cycle: ${[...chain, id].join(" → ")}`));
+    const key = keyOf(model.id, variant.id);
+    const running = this.jobs.running(key);
+    if (running) return running;
+    const depsReady = model.requires.every((r) => this.installedVariants(r).length > 0);
+    if (this.isInstalled(model.id, variant.id) && depsReady) return Promise.resolve();
+    if (chain.includes(key)) return Promise.reject(new InstallError("CATALOG_CYCLE", `requires cycle: ${[...chain, key].join(" → ")}`));
 
-    const controller = new AbortController();
-    const promise = (async () => {
-      try {
-        this.setState(id, { status: "downloading", pct: 0, error: null });
-        for (const dep of model.requires ?? []) {
-          await this.install(dep, [...chain, id]);
-          if (controller.signal.aborted) throw abortError();
-        }
-        if (!this.isInstalled(id)) {
-          await installModel(model, this.opts.modelsDir, {
-            signal: controller.signal,
-            fetch: this.opts.fetch,
-            logger: this.log,
-            onProgress: (stage, pct) => this.setState(id, { status: stage, pct, error: null }),
-          });
-        }
-        this.setState(id, INSTALLED);
-        this.log.info("installed", { id });
-      } catch (err) {
-        if (controller.signal.aborted) {
-          this.setState(id, NOT_INSTALLED);
-          this.log.info("install cancelled", { id });
-        } else {
-          const error: AppError = err instanceof InstallError ? { code: err.code, message: err.message } : { code: "INSTALL_FAILED", message: (err as Error).message };
-          this.setState(id, { status: "error", pct: null, error });
-          this.log.error("install failed", { id, error });
-        }
-        throw err;
-      } finally {
-        this.inflight.delete(id);
+    return this.jobs.run(key, async (signal, onProgress) => {
+      for (const depId of model.requires) {
+        if (this.installedVariants(depId).length > 0) continue;
+        const dep = this.opts.catalog.require(depId);
+        const depVariant = this.opts.pickVariant(dep);
+        if (!depVariant) throw new InstallError("NO_VARIANT", `${dep.name} has no version for this computer`);
+        await this.install(dep.id, depVariant.id, [...chain, key]);
+        if (signal.aborted) return;
       }
-    })();
-    promise.catch(() => undefined); // 调用方各自处理；这里避免未处理拒绝
-    this.inflight.set(id, { promise, controller });
-    return promise;
+      if (this.isInstalled(model.id, variant.id)) return;
+      const spec = {
+        label: key,
+        asset: variant.asset,
+        locations: this.opts.locate(variant.asset),
+        targetDir: this.variantDir(model.id, variant.id),
+        requiredFiles: Object.values(variant.files),
+        marker: { model: model.id, variant: variant.id },
+      };
+      const sibling = this.installedSibling(model, variant);
+      if (sibling) {
+        onProgress("extracting", null);
+        this.log.info("reusing an installed variant with the same asset", { key, from: sibling.id });
+        await cloneInstalled(this.variantDir(model.id, sibling.id), spec);
+        return;
+      }
+      await installAsset(spec, { signal, onProgress, fetch: this.opts.fetch, logger: this.log });
+    });
   }
 
-  /** 取消本模型及其正在安装的直接依赖。 */
-  async cancelInstall(id: string): Promise<void> {
-    const targets = [id, ...(this.opts.catalog.get(id)?.requires ?? [])];
-    const running = targets.map((t) => this.inflight.get(t)).filter((x): x is NonNullable<typeof x> => !!x);
-    running.forEach((r) => r.controller.abort());
-    await Promise.allSettled(running.map((r) => r.promise));
+  /** 同一模型里已安装、且来自同一资产（release + 文件名）的另一个 variant */
+  private installedSibling(model: CatalogModel, variant: CatalogVariant): CatalogVariant | undefined {
+    return model.variants.find(
+      (v) => v.id !== variant.id && v.asset.name === variant.asset.name && v.asset.release === variant.asset.release && this.isInstalled(model.id, v.id),
+    );
   }
 
-  /** 调用方负责先让引擎释放该模型（model-runtime.release）。 */
-  async remove(id: string): Promise<void> {
-    this.opts.catalog.require(id);
-    await this.cancelInstall(id);
-    await removeModelDir(this.opts.modelsDir, id);
-    fs.rmSync(partialPath(this.opts.modelsDir, id), { force: true });
-    this.setState(id, NOT_INSTALLED);
-    this.log.info("removed", { id });
+  /** 取消该模型（全部或指定 variant）及其直接依赖正在进行的安装。 */
+  async cancelInstall(modelId: string, variantId?: string): Promise<void> {
+    const model = this.opts.catalog.get(modelId);
+    if (!model) return;
+    const own = model.variants.filter((v) => !variantId || v.id === variantId).map((v) => keyOf(model.id, v.id));
+    const deps = model.requires.flatMap((d) => (this.opts.catalog.get(d)?.variants ?? []).map((v) => keyOf(d, v.id)));
+    await this.jobs.cancel([...own, ...deps]);
   }
 
-  private setState(id: string, next: InstallState): void {
-    const prev = this.states.get(id);
-    if (prev && prev.status === next.status && prev.pct === next.pct && prev.error === next.error) return;
-    this.states.set(id, next);
-    this.emitter.emit("change", id);
+  /** 调用方负责先让引擎释放该模型（model-runtime.release）。省略 variantId = 删除全部版本。 */
+  async remove(modelId: string, variantId?: string): Promise<void> {
+    const model = this.opts.catalog.require(modelId);
+    const targets = model.variants.filter((v) => !variantId || v.id === variantId);
+    await this.jobs.cancel(targets.map((v) => keyOf(model.id, v.id)));
+    for (const v of targets) {
+      const dir = this.variantDir(model.id, v.id);
+      await removeDir(dir);
+      fs.rmSync(`${dir}.partial`, { force: true });
+      this.jobs.setInstalled(keyOf(model.id, v.id), false);
+    }
+    const modelDir = path.join(this.opts.modelsDir, model.id);
+    if (fs.existsSync(modelDir) && fs.readdirSync(modelDir).length === 0) fs.rmdirSync(modelDir);
+    this.log.info("removed", { model: model.id, variants: targets.map((v) => v.id) });
   }
-}
-
-function abortError(): Error {
-  return Object.assign(new Error("install cancelled"), { name: "AbortError" });
-}
-
-function toView(m: CatalogModel, install: InstallState, activeId: string | null, engineProviders: string[] | null): ModelView {
-  const providers = engineProviders ? m.providers.filter((p) => engineProviders.includes(p)) : m.providers;
-  return {
-    id: m.id,
-    name: m.name,
-    description: m.description,
-    kind: m.kind,
-    tier: m.tier,
-    languages: m.languages,
-    providers: providers as Provider[],
-    punctuationMode: m.punctuation.mode,
-    sizeBytes: m.download.size_bytes,
-    install: { ...install },
-    isActive: m.id === activeId,
-  };
 }

@@ -22,6 +22,7 @@ const BLUR_GRACE_MS = 1_000;
 
 export interface QuickActionOptions {
   preload: string;
+  preloadArgs: string[];
   renderer: RendererSource;
   logger: Logger;
   trust: (contents: WebContents) => void;
@@ -72,7 +73,14 @@ export class QuickActionWindow {
       minimizable: false,
       maximizable: false,
       show: false,
-      webPreferences: { preload: this.opts.preload, contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false },
+      webPreferences: {
+        preload: this.opts.preload,
+        additionalArguments: this.opts.preloadArgs,
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+        backgroundThrottling: false,
+      },
     });
     this.win = win;
     this.opts.trust(win.webContents);

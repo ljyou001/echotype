@@ -1,46 +1,49 @@
 /**
- * [INPUT]: 依赖 electron 的 clipboard/nativeImage、@hurdlegroup/robotjs 模拟粘贴、uiohook-napi 全局键盘钩子；
+ * [INPUT]: 依赖 electron 的 clipboard/nativeImage、robotjs 模拟粘贴、uiohook-napi 全局键盘钩子（两者均带六目标 N-API 预编译）；
  *          依赖 services/output-service 的 ClipboardPort/KeyboardPort、services/hotkey-service 的 KeySource
- * [OUTPUT]: 导出 electronClipboard、robotKeyboard、uiohookKeySource、nullKeySource
+ * [OUTPUT]: 导出 electronClipboard、electronSecretCrypto、robotKeyboard、uiohookKeySource、nullKeySource
  * [POS]: 原生能力到 Core 端口的适配器。Core 的服务只认端口接口，这里是它们与操作系统之间唯一的接缝，
  *        所以服务可以在 Node 里直接测试，而原生模块只在 Electron 主进程加载。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
-import { clipboard, nativeImage, type SafeStorage } from "electron";
-import robot from "@hurdlegroup/robotjs";
+import { clipboard, ClipboardItem, type SafeStorage } from "electron";
+import robot from "robotjs";
 import { uIOhook, type UiohookKeyboardEvent } from "uiohook-napi";
 import { Emitter } from "../core/emitter.js";
 import type { KeyEvent, KeySource } from "../services/hotkey-service.js";
 import type { ClipboardPort, KeyboardPort } from "../services/output-service.js";
 import type { SecretCrypto } from "../services/integrations/secret-store.js";
 
-interface ClipboardSnapshot {
-  text: string;
-  html: string;
-  rtf: string;
-  image: string | null; // PNG data URL
-}
+/** 剪贴板快照：每个条目的每种 MIME 类型的数据（Electron 45 的 W3C 风格剪贴板 API）。 */
+type ClipboardSnapshot = Array<Record<string, Blob | string | Electron.ClipboardBookmark>>;
 
 export function electronClipboard(): ClipboardPort {
   return {
     readText: () => clipboard.readText(),
     writeText: (text) => clipboard.writeText(text),
-    snapshot: (): ClipboardSnapshot => {
-      const image = clipboard.readImage();
-      return { text: clipboard.readText(), html: clipboard.readHTML(), rtf: clipboard.readRTF(), image: image.isEmpty() ? null : image.toDataURL() };
+    snapshot: async (): Promise<ClipboardSnapshot> => {
+      const items = await clipboard.read();
+      const snapshot: ClipboardSnapshot = [];
+      for (const item of items) {
+        const entry: ClipboardSnapshot[number] = {};
+        for (const type of item.types) {
+          try {
+            entry[type] = await item.getType(type);
+          } catch {
+            // 平台私有格式读不出来时跳过，其余格式照常还原
+          }
+        }
+        if (Object.keys(entry).length) snapshot.push(entry);
+      }
+      return snapshot;
     },
-    restore: (snap) => {
-      const s = snap as ClipboardSnapshot;
-      if (!s.text && !s.html && !s.rtf && !s.image) {
+    restore: async (snap) => {
+      const entries = snap as ClipboardSnapshot;
+      if (entries.length === 0) {
         clipboard.clear();
         return;
       }
-      clipboard.write({
-        text: s.text || undefined,
-        html: s.html || undefined,
-        rtf: s.rtf || undefined,
-        image: s.image ? nativeImage.createFromDataURL(s.image) : undefined,
-      });
+      await clipboard.write(entries.map((entry) => new ClipboardItem(entry)));
     },
   };
 }

@@ -16,12 +16,8 @@ import { SettingsStore, SettingsValidationError } from "../services/settings-sto
 import { makeTempDir } from "./helpers.js";
 
 const catalogFile = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../contracts/models.catalog.json");
-const catalog = loadCatalog(catalogFile, createMemoryLogger());
-const ctx: SettingsContext = {
-  platform: "win32",
-  defaultModelId: catalog.defaultModelId,
-  modelDefaults: (id) => catalog.defaultsFor(id),
-};
+const catalog = loadCatalog({ bundledFile: catalogFile, cacheFile: path.join(makeTempDir(), "none.json"), channel: "github", logger: createMemoryLogger() });
+const ctx: SettingsContext = { platform: "win32", defaultModelId: catalog.defaultModelId };
 
 /** 用户机器上的真实 v1 文件 */
 const REAL_V1 = {
@@ -56,8 +52,9 @@ describe("settings migration v1 → v2", () => {
     expect(s.output).toEqual({ directInput: true, clipboard: false });
     expect(s.audio.inputDeviceId).toBeNull();
     expect(s.ui.onboardingCompleted).toBe(true);
-    expect(s.models.activeId).toBe("paraformer-zh-int8");
-    expect(s.models.perModel["qwen3-asr-0.6b-int8"]).toEqual({ provider: "cuda", language: "zh", punctuation: true, itn: true });
+    expect(s.models.activeId).toBe("paraformer-zh");
+    expect(catalog.get("paraformer-zh")).toBeDefined(); // 迁移目标确实在目录里
+    expect(s.models.perModel["qwen3-asr-0.6b"]).toEqual({ provider: "cuda", language: "zh" });
 
     // 原文件被备份，新文件是 v2
     expect(JSON.parse(fs.readFileSync(`${file}.v1.bak`, "utf-8"))).toEqual(REAL_V1);
@@ -107,9 +104,8 @@ describe("SettingsStore", () => {
     const changes: string[] = [];
     store.onChange(({ next, prev }) => changes.push(`${prev.recording.mode}→${next.recording.mode}`));
 
-    const next = store.update({ recording: { mode: "toggle" }, models: { perModel: { "sensevoice-small-int8": { punctuation: false } } } });
+    const next = store.update({ recording: { mode: "toggle" } });
     expect(next.recording.mode).toBe("toggle");
-    expect(next.models.perModel["sensevoice-small-int8"]).toEqual({ provider: "auto", language: "auto", punctuation: false, itn: true });
     expect(changes).toEqual(["push-to-talk→toggle"]);
     expect(JSON.parse(fs.readFileSync(path.join(dir, "settings.json"), "utf-8")).recording.mode).toBe("toggle");
     expect(fs.readdirSync(dir).filter((f) => f.endsWith(".tmp"))).toEqual([]);
@@ -117,6 +113,15 @@ describe("SettingsStore", () => {
     // 相同值不触发写盘与广播
     store.update({ recording: { mode: "toggle" } });
     expect(changes).toHaveLength(1);
+  });
+
+  it("writes per-model values only through setModelValues", () => {
+    const store = storeIn(makeTempDir());
+    store.load();
+    expect(() => store.update({ models: { perModel: { "sensevoice-small": { punctuation: false } } } })).toThrow(/models\.updateSettings/);
+    store.setModelValues("sensevoice-small", { punctuation: false });
+    const s = store.setModelValues("sensevoice-small", { language: "zh" });
+    expect(s.models.perModel["sensevoice-small"]).toEqual({ punctuation: false, language: "zh" });
   });
 
   it("rejects an invalid patch as a whole", () => {

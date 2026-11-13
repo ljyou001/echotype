@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 ipc-contract 的 AppSnapshot 类型
- * [OUTPUT]: 导出 StatusKind、statusOf()、STATUS_TONE、ORB_STATE、isBusy()
+ * [OUTPUT]: 导出 StatusKind、statusOf()、STATUS_TONE、ORB_STATE、isEngineLoading()
  * [POS]: 把"引擎状态 × 听写阶段 × 是否选了模型"折叠成一个界面状态。
  *        侧栏状态点、首页光球与标题、调试页都从这里取值，三处永不矛盾。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -56,4 +56,4 @@ export const ORB_STATE = {
   stopped: "idle",
 } as const satisfies Record<StatusKind, string>;
 
-export const isBusy = (kind: StatusKind) => kind === "starting" || kind === "loading";
+export const isEngineLoading = (kind: StatusKind) => kind === "starting" || kind === "loading";

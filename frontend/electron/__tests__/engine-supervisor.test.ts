@@ -16,7 +16,7 @@ const supervisors: EngineSupervisor[] = [];
 function makeSupervisor(env: Record<string, string> = {}, extra: Partial<ConstructorParameters<typeof EngineSupervisor>[0]> = {}) {
   const dir = makeTempDir();
   const sup = new EngineSupervisor({
-    command: mockEngineCommand(env),
+    resolveCommand: () => mockEngineCommand(env),
     modelsDir: dir,
     logDir: dir,
     logger: createMemoryLogger(),
@@ -107,7 +107,7 @@ describe("EngineSupervisor", () => {
   it("gives up after the backoff schedule is exhausted", async () => {
     const dir = makeTempDir();
     const sup = new EngineSupervisor({
-      command: { kind: "mock", command: process.execPath, args: ["-e", "process.exit(3)"], cwd: dir, env: {} },
+      resolveCommand: () => ({ kind: "mock", packId: null, command: process.execPath, args: ["-e", "process.exit(3)"], cwd: dir, env: {} }),
       modelsDir: dir,
       logDir: dir,
       logger: createMemoryLogger(),

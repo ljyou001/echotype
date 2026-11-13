@@ -2,7 +2,8 @@
  * [INPUT]: 依赖 electron 的 app、Menu、net；依赖 core/ 的 Core、paths、logger；依赖 engine/engine-command；
  *          依赖 shell/ 的窗口、托盘、IPC、系统能力与平台适配器；依赖 dev/smoke（仅 ECHOTYPE_SMOKE=1）
  * [OUTPUT]: 无导出。Electron 主进程入口
- * [POS]: 纯装配：解析运行时布局 → 创建日志与 Core（注入 Electron 适配器）→ 注册 IPC → 托盘与窗口 → 退出时优雅关停引擎。
+ * [POS]: 纯装配：解析运行时布局 → 探测本机（GPU、渠道、Wayland）→ 创建日志与 Core（注入 Electron 适配器）→ 注册 IPC →
+ *        托盘与窗口 → 退出时优雅关停引擎。
  *        不含业务逻辑；任何"做什么"都在 core/ 与 services/，任何"怎么显示"都在 shell/。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -13,14 +14,15 @@ import { app, Menu, net, safeStorage, shell, type WebContents } from "electron";
 import { IPC } from "./ipc-contract.js";
 import { Core } from "./core/create-core.js";
 import { createFileLogger } from "./core/logger.js";
-import { resolveCatalogPath, resolveCorePaths, type RuntimeLayout } from "./core/paths.js";
+import { resolveCatalogPath, resolveCorePaths, resolveLicensesPath, type RuntimeLayout } from "./core/paths.js";
 import { resolveEngineCommand } from "./engine/engine-command.js";
 import { prepareSmokeHome, runSmoke } from "./dev/smoke.js";
 import { registerIpc } from "./shell/ipc.js";
 import { MainWindow, type RendererSource } from "./shell/main-window.js";
 import { electronClipboard, electronSecretCrypto, nullKeySource, robotKeyboard, uiohookKeySource } from "./shell/platform-adapters.js";
 import { QuickActionWindow } from "./shell/quick-action-window.js";
-import { PowerPolicy, setLaunchAtStartup } from "./shell/system.js";
+import { CHANNEL_ARG, detectHotkeyLimitation, detectMachine, PowerPolicy, resolveChannel, setLaunchAtStartup } from "./shell/system.js";
+import { platformKey } from "./services/variant-selection.js";
 import { TrayController } from "./shell/tray.js";
 
 const distDir = path.dirname(fileURLToPath(import.meta.url));
@@ -54,6 +56,10 @@ async function main(): Promise<void> {
   const logger = createFileLogger({ dir: paths.logsDir, mirrorToConsole: !app.isPackaged });
   await app.whenReady();
   Menu.setApplicationMenu(null);
+  const machine = await detectMachine(logger);
+  const channel = resolveChannel();
+  const hotkeyLimitation = detectHotkeyLimitation();
+  if (hotkeyLimitation) logger.warn(hotkeyLimitation.message, { code: hotkeyLimitation.code });
 
   // ============================================================
   // 窗口：只有本应用创建的 webContents 能调用 IPC
@@ -70,8 +76,9 @@ async function main(): Promise<void> {
   const preload = path.join(distDir, "preload.cjs");
   const renderer: RendererSource = { url: process.env.ELECTRON_RENDERER_URL ?? null, file: path.join(distDir, "..", "dist", "index.html") };
   const icon = path.join(distDir, "..", "assets", "icon.png");
-  const mainWindow = new MainWindow({ preload, renderer, icon, trust });
-  const quickAction = new QuickActionWindow({ preload, renderer, logger, trust });
+  const preloadArgs = [`${CHANNEL_ARG}${channel}`];
+  const mainWindow = new MainWindow({ preload, preloadArgs, renderer, icon, trust });
+  const quickAction = new QuickActionWindow({ preload, preloadArgs, renderer, logger, trust });
   const power = new PowerPolicy(logger);
   let tray: TrayController | null = null;
 
@@ -82,8 +89,12 @@ async function main(): Promise<void> {
     {
       paths,
       catalogFile,
-      engineCommand: resolveEngineCommand({ layout, env: process.env, execPath: process.execPath, platform: process.platform }),
-      platform: process.platform,
+      channel,
+      machine,
+      templateVars: { platform: platformKey(machine), steam_app_dir: channel === "steam" ? path.dirname(process.execPath) : undefined },
+      engineCommand: (pack) => resolveEngineCommand({ layout, env: process.env, execPath: process.execPath, pack }),
+      licensesFile: resolveLicensesPath(layout),
+      appVersion: app.getVersion(),
       logger,
     },
     {
@@ -98,6 +109,7 @@ async function main(): Promise<void> {
         power.update(snapshot.dictation.phase !== "idle" || snapshot.engine.state === "loading", core.supervisor.status().pid);
       },
       publishModels: (models) => broadcast(IPC.modelsPush, models),
+      publishPacks: (packs) => broadcast(IPC.packsPush, packs),
       publishLevel: (level) => broadcast(IPC.levelPush, level),
       applyLaunchAtStartup: (enabled) => setLaunchAtStartup(enabled, logger),
       secretCrypto: electronSecretCrypto(safeStorage),
@@ -130,7 +142,7 @@ async function main(): Promise<void> {
 
   if (SMOKE) {
     setTimeout(() => app.exit(2), 90_000).unref();
-    const code = await runSmoke({ core, preload, trust, logger });
+    const code = await runSmoke({ core, preload, preloadArgs, trust, logger });
     await core.dispose();
     logger.close();
     app.exit(code);

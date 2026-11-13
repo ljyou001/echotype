@@ -2,7 +2,7 @@
  * [INPUT]: 依赖 node:child_process 拉起引擎、node:crypto 生成 token、node:readline 逐行读 stdout/stderr；
  *          依赖 ./engine-client、./protocol、./engine-command、core/emitter、core/logger
  * [OUTPUT]: 导出 EngineSupervisor（实现 EngineGateway）、EngineGateway 接口、SupervisorStatus
- * [POS]: 引擎进程的唯一管理者（ENGINE_PROTOCOL §2）。负责拉起 → 读 ready 行 → 带 token 连接 → hello 握手 →
+ * [POS]: 引擎进程的唯一管理者（ENGINE_PROTOCOL §2）。每次拉起前调用 resolveCommand（内置引擎或 GPU 引擎包）。负责拉起 → 读 ready 行 → 带 token 连接 → hello 握手 →
  *        每 5 s ping → 崩溃或失联时按 1/2/4/8/8 s 退避重启（最多 5 次）→ 退出时杀进程树。
  *        上层服务只依赖 EngineGateway：重启对它们透明，它们只需在 onConnected 时重新下发配置。
  *        generation 计数让旧进程的迟到回调全部失效，杜绝"旧进程退出触发新一轮重启"。
@@ -44,13 +44,15 @@ export type SupervisorState = "idle" | "starting" | "running" | "restarting" | "
 export interface SupervisorStatus {
   state: SupervisorState;
   pid: number | null;
+  packId: string | null; // 引擎来自哪个 GPU 引擎包；null = 内置引擎
   engineVersion: string | null;
   providers: string[];
   error: AppError | null;
 }
 
 export interface SupervisorOptions {
-  command: EngineCommand;
+  /** 每次拉起时调用：装卸引擎包后无需重建 supervisor，restart 即换二进制 */
+  resolveCommand: () => EngineCommand;
   modelsDir: string;
   logDir: string;
   logger: Logger;
@@ -75,7 +77,7 @@ export class EngineSupervisor implements EngineGateway {
   private readonly emitter: Emitter<SupervisorEvents>;
   private readonly log: Logger;
   private readonly engineLog: Logger;
-  private readonly opts: Required<Omit<SupervisorOptions, "logger" | "command" | "modelsDir" | "logDir">>;
+  private readonly opts: Required<Omit<SupervisorOptions, "logger" | "resolveCommand" | "modelsDir" | "logDir">>;
 
   private child: ChildProcessWithoutNullStreams | null = null;
   private client: EngineClient | null = null;
@@ -86,7 +88,7 @@ export class EngineSupervisor implements EngineGateway {
   private pingTimer: NodeJS.Timeout | null = null;
   private stableTimer: NodeJS.Timeout | null = null;
   private restartTimer: NodeJS.Timeout | null = null;
-  private current: SupervisorStatus = { state: "idle", pid: null, engineVersion: null, providers: [], error: null };
+  private current: SupervisorStatus = { state: "idle", pid: null, packId: null, engineVersion: null, providers: [], error: null };
 
   constructor(private readonly options: SupervisorOptions) {
     this.log = options.logger.scope("supervisor");
@@ -179,11 +181,12 @@ export class EngineSupervisor implements EngineGateway {
   // ============================================================
   private async launch(): Promise<void> {
     const gen = ++this.generation;
-    const { command, modelsDir, logDir } = this.options;
+    const { modelsDir, logDir } = this.options;
+    const command = this.options.resolveCommand();
     const token = randomBytes(24).toString("hex");
     const args = [...command.args, "--port", "0", "--models-dir", modelsDir, "--log-dir", logDir];
-    this.setStatus({ state: this.attempts === 0 ? "starting" : "restarting", pid: null });
-    this.log.info("spawning engine", { kind: command.kind, command: command.command, args, attempt: this.attempts });
+    this.setStatus({ state: this.attempts === 0 ? "starting" : "restarting", pid: null, packId: command.packId });
+    this.log.info("spawning engine", { kind: command.kind, pack: command.packId, command: command.command, args, attempt: this.attempts });
 
     let child: ChildProcessWithoutNullStreams;
     try {

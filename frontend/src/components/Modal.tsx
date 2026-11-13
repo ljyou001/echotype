@@ -1,7 +1,8 @@
 /**
  * [INPUT]: 依赖 react 的 useEffect、react-dom 的 createPortal、react-icons 的 FiX、react-i18next；样式在 ./components.css
- * [OUTPUT]: 导出 Modal（门户弹窗：遮罩点击与 Esc 关闭）与 ConfirmDialog（确认/取消二选一）
- * [POS]: 全应用唯一的弹窗实现。热键设置、集成配置、删除确认都基于它，保证遮罩、焦点、键盘行为一致。
+ * [OUTPUT]: 导出 Modal（门户弹窗：遮罩点击与 Esc 关闭）、Drawer（右侧抽屉，长列表用）与 ConfirmDialog（确认/取消二选一）
+ * [POS]: 全应用唯一的弹窗与抽屉实现。热键设置、集成配置、删除确认、模型管理器、许可证列表都基于它，
+ *        保证遮罩、焦点、键盘行为一致。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { useEffect, type ReactNode } from "react";
@@ -45,6 +46,44 @@ export function Modal({ title, onClose, children, footer, size = "md", closeOnEs
         <div className="modal__body">{children}</div>
         {footer && <div className="modal__footer">{footer}</div>}
       </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ============================================================
+// Drawer：右侧抽屉，适合长列表（如模型管理器）
+// ============================================================
+interface DrawerProps {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  onClose: () => void;
+  children: ReactNode;
+}
+
+export function Drawer({ title, subtitle, onClose, children }: DrawerProps) {
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return createPortal(
+    <div className="drawer-overlay" onMouseDown={onClose}>
+      <aside className="drawer" role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="drawer__header">
+          <div className="drawer__heading">
+            <h2 className="modal__title">{title}</h2>
+            {subtitle && <div className="drawer__subtitle">{subtitle}</div>}
+          </div>
+          <button type="button" className="btn btn--ghost btn--icon btn--sm" onClick={onClose} aria-label={t("common.close")}>
+            <FiX />
+          </button>
+        </div>
+        <div className="drawer__body">{children}</div>
+      </aside>
     </div>,
     document.body,
   );

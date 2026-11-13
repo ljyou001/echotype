@@ -107,13 +107,17 @@ describe("HotkeyService", () => {
 function fakeOutput(output: { directInput: boolean; clipboard: boolean }) {
   let board = { text: "user original", extra: "html" };
   const pastes: string[] = [];
-  const settings = createDefaultSettings({ platform: "win32", defaultModelId: null, modelDefaults: () => ({ provider: "auto", language: "auto", punctuation: true, itn: true }) });
+  const settings = createDefaultSettings({ platform: "win32", defaultModelId: null });
   const svc = new OutputService({
     clipboard: {
-      readText: () => board.text,
-      writeText: (t) => (board = { text: t, extra: "" }),
-      snapshot: () => ({ ...board }),
-      restore: (s) => (board = { ...(s as typeof board) }),
+      readText: async () => board.text,
+      writeText: async (t) => {
+        board = { text: t, extra: "" };
+      },
+      snapshot: async () => ({ ...board }),
+      restore: async (s) => {
+        board = { ...(s as typeof board) };
+      },
     },
     keyboard: { paste: () => pastes.push(board.text) },
     settings: () => ({ ...settings, output }),

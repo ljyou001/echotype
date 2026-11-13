@@ -7,7 +7,7 @@
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { ipcMain, shell, type IpcMainEvent, type IpcMainInvokeEvent, type WebContents } from "electron";
-import { IPC, type DeepPartial, type IntegrationInstanceInput, type IpcChannel, type Settings } from "../ipc-contract.js";
+import { IPC, type DeepPartial, type IntegrationInstanceInput, type IpcChannel, type ModelUserSettings, type Settings } from "../ipc-contract.js";
 import type { Core } from "../core/create-core.js";
 import type { Logger } from "../core/logger.js";
 import { validateAccelerator } from "../services/hotkey-keymap.js";
@@ -36,6 +36,7 @@ const str = (v: unknown): string => {
   if (typeof v !== "string") throw new Error("[INVALID_REQUEST] expected a string argument");
   return v;
 };
+const optStr = (v: unknown): string | undefined => (v === undefined || v === null ? undefined : str(v));
 
 export function registerIpc(ctx: IpcContext): void {
   const { core, mainWindow, quickAction } = ctx;
@@ -72,10 +73,17 @@ export function registerIpc(ctx: IpcContext): void {
 
   // 模型
   handle(IPC.modelsList, () => core.models());
-  handle(IPC.modelsInstall, (id) => core.installModel(str(id)));
-  handle(IPC.modelsCancelInstall, (id) => core.registry.cancelInstall(str(id)));
-  handle(IPC.modelsRemove, (id) => core.removeModel(str(id)));
+  handle(IPC.modelsInstall, (id, variantId) => core.installModel(str(id), optStr(variantId)));
+  handle(IPC.modelsCancelInstall, (id, variantId) => core.registry.cancelInstall(str(id), optStr(variantId)));
+  handle(IPC.modelsRemove, (id, variantId) => core.removeModel(str(id), optStr(variantId)));
   handle(IPC.modelsActivate, (id) => core.activateModel(str(id)));
+  handle(IPC.modelsUpdateSettings, (id, patch) => core.updateModelSettings(str(id), patch as ModelUserSettings));
+  handle(IPC.modelsStorage, () => core.modelStorage());
+
+  // GPU 引擎包
+  handle(IPC.packsList, () => core.packViews());
+  handle(IPC.packsInstall, (id) => core.installPack(str(id)));
+  handle(IPC.packsRemove, (id) => core.removePack(str(id)));
 
   // 音频与热键
   handle(IPC.audioListInputs, () => core.audio.listInputs());
@@ -118,5 +126,6 @@ export function registerIpc(ctx: IpcContext): void {
   });
   handle(IPC.systemPermissions, () => getPermissions());
   handle(IPC.systemOpenPermission, (kind) => openPermissionSettings(kind));
+  handle(IPC.systemLicenses, () => core.licenses());
   on(IPC.systemWindow, (action) => mainWindow.apply(action));
 }

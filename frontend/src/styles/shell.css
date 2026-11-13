@@ -189,19 +189,71 @@
   animation: pulse-dot 0.9s ease-in-out infinite;
 }
 
-.sidebar__provider {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  align-self: flex-start;
-  max-width: 100%;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
+/* 状态栏：当前模型 + 运行方式，两行各自省略 */
+.run-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--radius-md);
   background: var(--on-dark-hover);
-  color: var(--sidebar-text);
-  font-size: var(--text-xs);
+  color: var(--text-on-brand);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease);
+}
+
+.run-mode:hover {
+  background: var(--sidebar-active);
+}
+
+.run-mode:focus-visible {
+  box-shadow: 0 0 0 2px var(--on-dark-focus);
+}
+
+.run-mode__name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: var(--text-sm);
   font-weight: 600;
-  letter-spacing: 0.04em;
+}
+
+.run-mode__name svg {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.run-mode__text,
+.run-mode__mode {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.run-mode__mode {
+  font-size: var(--text-xs);
+  color: var(--sidebar-text);
+}
+
+.run-mode--empty .run-mode__name {
+  font-weight: 500;
+  color: var(--sidebar-text);
+}
+
+.run-mode--fallback {
+  background: var(--run-mode-fallback-bg);
+  box-shadow: inset 0 0 0 1px var(--run-mode-fallback-ring);
+}
+
+.run-mode--fallback .run-mode__name svg,
+.run-mode--fallback .run-mode__mode {
+  color: var(--dot-warning);
 }
 
 @keyframes pulse-dot {
