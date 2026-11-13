@@ -24,7 +24,8 @@ ipc-contract.ts: Core ⇄ UI 契约（orchestrator 所有，本层只读）
 - `npm run typecheck:core`：tsconfig.test.json 检查全部 electron/（含 preload 与测试）
 - `npm run test:core`：vitest；`npm run smoke:core`：真实 Electron + mock 引擎端到端
 - `npm run smoke:real`：真实 Electron + Core + 真实 Rust 引擎 + 真实模型下载（开发专用，需要引擎二进制）。
-  `ECHOTYPE_SMOKE_WAVS=<含 zh.wav、en.wav 的目录>` 必需；`ECHOTYPE_SMOKE_ASSETS=<目录>` 用本地 zip 代替 GitHub；`ECHOTYPE_ENGINE_PATH` 指定引擎
+  样例 zh.wav、en.wav 缺省取 `<repo>/engine/target/test-wavs`，先跑一次 `bash engine/scripts/fetch-test-wavs.sh`；缺文件时 smoke 一行报错并给出这条命令。
+  `ECHOTYPE_SMOKE_WAVS=<目录>` 换样例目录；`ECHOTYPE_SMOKE_ASSETS=<目录>` 用本地 zip 代替 GitHub；`ECHOTYPE_ENGINE_PATH` 指定引擎
 - `npm run dev:mock`：开发态整套应用跑在 mock 引擎上；`ECHOTYPE_HOME=<dir>` 把用户数据指向别处
 - 真实引擎：开发态 `<repo>/engine/target/release/echotype-engine(.exe)`，`ECHOTYPE_ENGINE_PATH` 可覆盖；打包态 `resources/engine/`；装了 GPU 引擎包则从 `~/.echotype/engines/<id>/` 拉起
 - 开发态 `ECHOTYPE_ENGINE_ARGS` 追加到引擎命令行（如 `--fake-mic "<wav>"`、`--log-level debug`），打包态忽略
