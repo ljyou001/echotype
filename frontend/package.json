@@ -7,12 +7,18 @@
   "description": "Modern Voice-to-Text Application with AI Integration",
   "author": "ljyou001",
   "scripts": {
-    "dev": "concurrently -k \"vite\" \"tsc -p tsconfig.node.json -w\" \"wait-on tcp:5173 && cross-env ELECTRON_RENDERER_URL=http://localhost:5173 electron .\"",
-    "build": "tsc -p tsconfig.node.json && tsc -p tsconfig.preload.json && node -e \"require('fs').renameSync('dist-electron/preload.js', 'dist-electron/preload.cjs')\" && vite build",
+    "dev": "concurrently -k \"vite\" \"tsc -p tsconfig.node.json -w --preserveWatchOutput\" \"npm:build:preload -- --watch=forever\" \"wait-on tcp:5173 dist-electron/main.js dist-electron/preload.cjs && cross-env ELECTRON_RENDERER_URL=http://localhost:5173 electron .\"",
+    "dev:mock": "cross-env ECHOTYPE_ENGINE=mock npm run dev",
+    "build:core": "tsc -p tsconfig.node.json && npm run build:preload",
+    "build:preload": "esbuild electron/preload.ts --bundle --platform=node --format=cjs --target=node20 --external:electron --sourcemap --outfile=dist-electron/preload.cjs --log-level=warning",
+    "build": "npm run build:core && vite build",
+    "typecheck:core": "tsc -p tsconfig.test.json",
+    "test:core": "vitest run --dir electron",
+    "smoke:core": "npm run build:core && cross-env ECHOTYPE_ENGINE=mock ECHOTYPE_SMOKE=1 electron .",
     "preview": "vite preview",
     "start": "electron .",
-    "package": "npm run build && electron-builder build --config.directories.output=dist-package",
-    "dist": "electron-builder",
+    "package": "npm run build && electron-builder build --config electron-builder.cjs --config.directories.output=dist-package",
+    "dist": "electron-builder --config electron-builder.cjs",
     "postinstall": "node -e \"if(process.platform==='darwin') { require('child_process').execSync('electron-rebuild -f -w uiohook-napi,@hurdlegroup/robotjs', {stdio:'inherit'}) }\""
   },
   "dependencies": {
@@ -20,6 +26,7 @@
     "@dnd-kit/sortable": "^9.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hurdlegroup/robotjs": "^0.12.3",
+    "extract-zip": "^2.0.1",
     "i18next": "^25.8.0",
     "jimp": "^0.22.12",
     "react": "^18.3.1",
@@ -27,79 +34,24 @@
     "react-i18next": "^16.5.4",
     "react-icons": "^5.5.0",
     "uiohook-napi": "^1.5.4",
-    "extract-zip": "^2.0.1",
+    "ws": "^8.23.0",
     "zustand": "^5.0.10"
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
     "@types/node": "^22.10.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@types/ws": "^8.18.2",
     "@vitejs/plugin-react": "^4.4.1",
     "concurrently": "^9.1.0",
     "cross-env": "^7.0.3",
     "electron": "^31.6.0",
     "electron-builder": "^24.13.3",
+    "esbuild": "^0.21.5",
     "typescript": "^5.8.2",
     "vite": "^5.4.11",
-    "wait-on": "^7.2.0",
-    "@electron/rebuild": "^3.6.0"
-  },
-  "build": {
-    "appId": "com.echotype.app",
-    "productName": "EchoType",
-    "copyright": "Copyright © 2026 ljyou001",
-    "directories": {
-      "output": "dist-package"
-    },
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*",
-      "assets/**/*"
-    ],
-    "extraResources": [],
-    "win": {
-      "target": [
-        "zip",
-        "appx"
-      ],
-      "icon": "assets/icon.png",
-      "extraResources": [
-        {
-          "from": "../dist/echotype-backend",
-          "to": "backend"
-        },
-        {
-          "from": "../backend/models_catalog.json",
-          "to": "backend/models_catalog.json"
-        }
-      ]
-    },
-    "appx": {
-      "identityName": "${env.APPX_IDENTITY_NAME}",
-      "publisher": "${env.WINDOWS_PUBLISHER_ID}",
-      "publisherDisplayName": "${env.APPX_PUBLISHER_DISPLAY_NAME}",
-      "applicationId": "EchoType",
-      "displayName": "EchoType",
-      "languages": [
-        "en-US",
-        "zh-CN"
-      ]
-    },
-    "mac": {
-      "target": [
-        "dmg"
-      ],
-      "icon": "assets/icon.png",
-      "extraResources": [
-        {
-          "from": "../dist/echotype-backend",
-          "to": "backend"
-        },
-        {
-          "from": "../backend/models_catalog.json",
-          "to": "backend/models_catalog.json"
-        }
-      ]
-    }
+    "vitest": "^2.1.9",
+    "wait-on": "^7.2.0"
   }
 }
