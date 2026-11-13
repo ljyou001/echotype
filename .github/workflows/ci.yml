@@ -1,9 +1,7 @@
 # ============================================================================
-# [INPUT]: 依赖 scripts/ci/probe.sh（缺件探针）；依赖 frontend 的 tsconfig.json、vite、
-#          npm script typecheck:core / test:core；依赖 engine/Cargo.toml
+# [INPUT]: 依赖 frontend 的 tsconfig.json、vite、npm script typecheck:core / test:core；依赖 engine/ 的 Cargo 工程
 # [OUTPUT]: push main 与 PR 的快速检查：UI 层、Core 层、Engine 层各一个任务
-# [POS]: 合并前的守门检查，不出安装包（安装包见 build.yml）。
-#        各层目录或 script 尚未合入时，任务输出 notice 并干净跳过。
+# [POS]: 合并前的守门检查，不出安装包（安装包见 build.yml）。命令与各层 CLAUDE.md 的"测试"一节一致。
 # [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 # ============================================================================
 name: CI
@@ -33,30 +31,23 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - id: probe
-        run: bash scripts/ci/probe.sh Renderer dir:frontend/src file:frontend/tsconfig.json file:frontend/vite.config.ts
-
       - uses: actions/setup-node@v7
-        if: steps.probe.outputs.run == 'true'
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        if: steps.probe.outputs.run == 'true'
         working-directory: frontend
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
         run: npm ci
 
       - name: Typecheck
-        if: steps.probe.outputs.run == 'true'
         working-directory: frontend
         run: npx tsc -p tsconfig.json --noEmit
 
       - name: Vite build
-        if: steps.probe.outputs.run == 'true'
         working-directory: frontend
         run: npx vite build
 
@@ -68,31 +59,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - id: typecheck
-        run: bash scripts/ci/probe.sh "Core typecheck" "npm:frontend#typecheck:core"
-
-      - id: test
-        run: bash scripts/ci/probe.sh "Core tests" "npm:frontend#test:core"
-
       - uses: actions/setup-node@v7
-        if: steps.typecheck.outputs.run == 'true' || steps.test.outputs.run == 'true'
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        if: steps.typecheck.outputs.run == 'true' || steps.test.outputs.run == 'true'
         working-directory: frontend
         run: npm ci
 
       - name: Typecheck
-        if: steps.typecheck.outputs.run == 'true'
         working-directory: frontend
         run: npm run typecheck:core
 
       - name: Vitest
-        if: steps.test.outputs.run == 'true'
         working-directory: frontend
         run: npm run test:core
 
@@ -108,26 +89,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - id: probe
-        run: bash scripts/ci/probe.sh Engine file:engine/Cargo.toml
-
       - uses: dtolnay/rust-toolchain@stable
-        if: steps.probe.outputs.run == 'true'
 
       - uses: Swatinem/rust-cache@v2
-        if: steps.probe.outputs.run == 'true'
         with:
           workspaces: engine
           key: ci-${{ matrix.os }}
 
       - name: Install Linux build packages
-        if: steps.probe.outputs.run == 'true' && runner.os == 'Linux'
+        if: runner.os == 'Linux'
         run: |
+          # cpal（pulseaudio feature）需要 ALSA 与 PulseAudio 头文件
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libasound2-dev
+          sudo apt-get install -y --no-install-recommends pkg-config libasound2-dev libpulse-dev
 
       - name: cargo test
-        if: steps.probe.outputs.run == 'true'
         working-directory: engine
-        run: |
-          if [ -f Cargo.lock ]; then cargo test --locked; else cargo test; fi
+        run: cargo test --release --locked
