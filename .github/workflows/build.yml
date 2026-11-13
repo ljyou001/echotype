@@ -1,0 +1,293 @@
+# ============================================================================
+# [INPUT]: 依赖 scripts/ci/build-engine.sh（基础引擎与 GPU 引擎包）、frontend/electron-builder.cjs（安装包、
+#          渠道、许可清单）、scripts/ci/release-assets.mjs（校验和、pack 清单与发布）、engine/scripts/bench.sh
+# [OUTPUT]: 每个目标一个 artifact（installer-<target> / engine-pack-<pack>-<target>）；
+#           tag v* 时生成草稿 Release（安装包）并把 GPU 引擎包补传到 engine-packs-v3；手动触发可跑 macOS 基准
+# [POS]: 发布流水线。6 个安装包行 + 6 个 GPU 引擎包行并行，每行在本机原生构建，不交叉编译。
+#        说明见 scripts/ci/CLAUDE.md。
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+# ============================================================================
+name: Build
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      job:
+        description: What to run
+        type: choice
+        options: [build, bench-macos]
+        default: build
+      channel:
+        description: Distribution channel baked into the app (contracts/models.catalog.json channels)
+        type: choice
+        options: [github, steam, msstore]
+        default: github
+      publish_packs:
+        description: Upload GPU engine packs to engine-packs-v3 (adds missing assets, never replaces)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}-${{ inputs.job || 'build' }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  # mac 用 ad-hoc 签名（mac.identity "-"）；Windows 不查找证书
+  CSC_IDENTITY_AUTO_DISCOVERY: "false"
+  # tag 发布时缺少引擎或 make-pack 直接失败；手动触发只告警
+  ECHOTYPE_STRICT: ${{ startsWith(github.ref, 'refs/tags/v') && '1' || '0' }}
+  # 构建时渠道常量：tag 发布固定为 github
+  ECHOTYPE_CHANNEL: ${{ inputs.channel || 'github' }}
+
+jobs:
+  build:
+    name: ${{ matrix.gpu == '' && matrix.target || format('{0} pack · {1}', matrix.gpu, matrix.target) }}
+    if: github.event_name == 'push' || inputs.job == 'build'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # --- 安装包（基础引擎只含 CPU；mac 另含 CoreML + Metal）---
+          - { target: win-x64,     os: windows-2025,     gpu: "" }
+          - { target: win-arm64,   os: windows-11-arm,   gpu: "" }
+          - { target: linux-x64,   os: ubuntu-22.04,     gpu: "" }
+          - { target: linux-arm64, os: ubuntu-22.04-arm, gpu: "" }
+          - { target: mac-arm64,   os: macos-15,         gpu: "" }
+          - { target: mac-x64,     os: macos-15-intel,   gpu: "" }
+          # --- GPU 引擎包：整套引擎 + GPU 运行库（catalog engine_packs）---
+          - { target: win-x64,     os: windows-2025,     gpu: cuda }
+          - { target: linux-x64,   os: ubuntu-22.04,     gpu: cuda }
+          - { target: win-x64,     os: windows-2025,     gpu: vulkan }
+          - { target: win-arm64,   os: windows-11-arm,   gpu: vulkan }
+          - { target: linux-x64,   os: ubuntu-22.04,     gpu: vulkan }
+          - { target: linux-arm64, os: ubuntu-22.04-arm, gpu: vulkan }
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # ---- 工具链 ----------------------------------------------------------
+      - name: Set up Node
+        if: matrix.gpu == ''
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # 安装包行编基础引擎并读 cargo metadata（许可清单）；GPU 行由 make-pack 编整套引擎
+      - name: Set up Rust
+        if: hashFiles('engine/Cargo.toml') != ''
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        if: hashFiles('engine/Cargo.toml') != ''
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: engine
+          key: ${{ matrix.target }}-${{ matrix.gpu || 'cpu' }}
+
+      - name: Set up Python
+        if: matrix.gpu != ''
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install Linux build packages
+        if: runner.os == 'Linux'
+        run: |
+          # ALSA：引擎采集麦克风；X11/XTest：uiohook-napi 与 robotjs 无预编译时的源码构建
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libasound2-dev libx11-dev libxtst-dev libxrandr-dev libxt-dev
+
+      # ---- 引擎 / GPU 引擎包 ------------------------------------------------
+      - name: Build engine
+        env:
+          TARGET: ${{ matrix.target }}
+          GPU: ${{ matrix.gpu }}
+        run: bash scripts/ci/build-engine.sh "$TARGET" "$GPU"
+
+      # ---- 安装包（仅 CPU 行）----------------------------------------------
+      - name: Install frontend dependencies
+        if: matrix.gpu == ''
+        working-directory: frontend
+        env:
+          # electron-builder 自己下载目标平台的 Electron，npm 包里的二进制用不到
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+        run: npm ci
+
+      - name: Build frontend
+        if: matrix.gpu == ''
+        working-directory: frontend
+        run: npm run build
+
+      - name: Package installers
+        if: matrix.gpu == ''
+        working-directory: frontend
+        env:
+          TARGET: ${{ matrix.target }}
+          # 只有 msstore 渠道（AppX）用到；是公开身份信息，放仓库变量
+          APPX_IDENTITY_NAME: ${{ vars.APPX_IDENTITY_NAME }}
+          WINDOWS_PUBLISHER_ID: ${{ vars.WINDOWS_PUBLISHER_ID }}
+          APPX_PUBLISHER_DISPLAY_NAME: ${{ vars.APPX_PUBLISHER_DISPLAY_NAME }}
+        run: |
+          # target-id = <os>-<arch>，正好是 electron-builder 的 --<os> --<arch>
+          args=(--config electron-builder.cjs "--${TARGET%-*}" "--${TARGET#*-}" --publish never)
+          # tag 是版本号的唯一来源：v3.1.0 → 3.1.0
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            args+=("-c.extraMetadata.version=${GITHUB_REF_NAME#v}")
+          fi
+          npx electron-builder "${args[@]}"
+          ls -la dist-package
+
+      # ---- 上传 ------------------------------------------------------------
+      - name: Upload installers
+        if: matrix.gpu == ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: installer-${{ matrix.target }}
+          path: |
+            frontend/dist-package/*.exe
+            frontend/dist-package/*.zip
+            frontend/dist-package/*.dmg
+            frontend/dist-package/*.AppImage
+            frontend/dist-package/*.deb
+            frontend/dist-package/*.appx
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Upload engine pack
+        if: matrix.gpu != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: engine-pack-${{ matrix.gpu }}-${{ matrix.target }}
+          path: engine/dist/packs/*.zip
+          # make-pack 未合入前 build-engine.sh 已给出告警；tag 发布时它会先失败
+          if-no-files-found: warn
+          compression-level: 0
+
+  # ---- tag：安装包进草稿 Release ---------------------------------------------
+  release:
+    name: Draft release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download installers
+        uses: actions/download-artifact@v8
+        with:
+          pattern: installer-*
+          path: release
+          merge-multiple: true
+
+      - name: Write checksums
+        run: |
+          node scripts/ci/release-assets.mjs checksums release
+          ls -la release
+
+      - name: Create or update the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # 重跑：只覆盖草稿的资产，已发布的 Release 一律不碰
+            if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" != "true" ]; then
+              echo "::error title=release::$TAG is already published. Refusing to overwrite its assets."
+              exit 1
+            fi
+            gh release upload "$TAG" release/* --clobber
+          else
+            flags=(--draft --verify-tag --generate-notes --title "EchoType ${TAG#v}")
+            # v3.1.0-beta.1 这类带后缀的 tag 标为预发布
+            if [[ "$TAG" == *-* ]]; then flags+=(--prerelease); fi
+            gh release create "$TAG" release/* "${flags[@]}"
+          fi
+
+  # ---- GPU 引擎包进 engine-packs-v3（所有版本共用，只增不改）---------------------
+  packs:
+    name: Publish engine packs
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.publish_packs
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download engine packs
+        uses: actions/download-artifact@v8
+        with:
+          pattern: engine-pack-*
+          path: packs
+          merge-multiple: true
+
+      - name: Upload missing packs and write the catalog fragment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mkdir -p packs
+          node scripts/ci/release-assets.mjs packs packs --publish
+
+      - name: Upload catalog fragment
+        uses: actions/upload-artifact@v7
+        with:
+          name: engine-packs-catalog-fragment
+          path: packs/engine-packs.json
+
+  # ---- 手动：Apple Silicon 基准（variant 只能在真机上实测）-------------------------
+  bench-macos:
+    name: Bench · macOS arm64
+    if: github.event_name == 'workflow_dispatch' && inputs.job == 'bench-macos'
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: probe
+        run: bash scripts/ci/probe.sh "macOS bench" file:engine/Cargo.toml file:engine/scripts/bench.sh
+
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.probe.outputs.run == 'true'
+
+      - uses: Swatinem/rust-cache@v2
+        if: steps.probe.outputs.run == 'true'
+        with:
+          workspaces: engine
+          key: mac-arm64-cpu
+
+      - name: Build engine
+        if: steps.probe.outputs.run == 'true'
+        run: bash scripts/ci/build-engine.sh mac-arm64
+
+      - name: Run benchmark
+        if: steps.probe.outputs.run == 'true'
+        # 约定：bench.sh <engine-dir> <out-dir>，结果写进 <out-dir>
+        run: bash engine/scripts/bench.sh engine/dist/mac-arm64 bench-results
+
+      - name: Upload results
+        if: steps.probe.outputs.run == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: bench-macos-arm64
+          path: bench-results
+          if-no-files-found: error

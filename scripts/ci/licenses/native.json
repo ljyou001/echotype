@@ -1,0 +1,6 @@
+[
+  { "name": "sherpa-onnx", "version": "2.0.1", "license": "Apache-2.0", "url": "https://github.com/k2-fsa/sherpa-onnx" },
+  { "name": "ONNX Runtime", "version": "1.28.2", "license": "MIT", "url": "https://github.com/microsoft/onnxruntime" },
+  { "name": "llama.cpp", "version": "", "license": "MIT", "url": "https://github.com/ggml-org/llama.cpp" },
+  { "name": "Silero VAD", "version": "", "license": "MIT", "url": "https://github.com/snakers4/silero-vad" }
+]
