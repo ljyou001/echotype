@@ -333,118 +333,118 @@
   },
   "integrations": {
     "title": "Integrations",
-    "description": "Send what you said to search, AI, and translation tools from Quick Action.",
-    "myIntegrations": "My integrations",
-    "addIntegration": "Add integration",
-    "emptyState": "No integrations yet. Add one to use it from Quick Action.",
-    "availablePlugins": "Available plugins",
-    "comingSoon": "Coming soon",
+    "description": "Send what you said to AI, chat, notes, and other tools from Quick Action.",
+    "myIntegrations": "My actions",
+    "myIntegrationsDescription": "Drag to reorder. The default runs when you press Enter in Quick Action.",
+    "addIntegration": "Add action",
+    "emptyState": "No actions yet. Add one to use it from Quick Action.",
+    "default": "Default",
+    "needsSetup": "Needs setup",
+    "tabs": {
+      "actions": "Actions",
+      "dictionary": "Dictionary"
+    },
+    "groups": {
+      "ai": "Ask AI",
+      "cleanup": "Rewrite with AI",
+      "chat": "Webhooks and chat",
+      "send": "Send to",
+      "agent": "Coding agents",
+      "open": "Open in browser"
+    },
     "quickAction": {
       "title": "Quick Action",
       "lastText": "Last dictation",
       "noText": "No text available",
       "hint": "Press Enter for default",
       "hintNamed": "Press Enter to send to {{name}}",
-      "noIntegrations": "No integrations are on. Turn some on in Integrations.",
-      "waiting": "Waiting for a reply…",
-      "approvalRequired": "Approval needed",
-      "allow": "Allow",
-      "deny": "Deny"
-    },
-    "outputMode": {
-      "clipboard": "Copy the text, then open the service",
-      "direct": "Send the text directly",
-      "both": "Send directly and copy"
+      "noIntegrations": "No actions are on. Turn some on in Integrations.",
+      "waiting": "Working…",
+      "runningNamed": "Running {{name}}…",
+      "stop": "Stop",
+      "replace": "Replace",
+      "regenerate": "Try again",
+      "confirmTitle": "Run {{name}}?",
+      "confirmMessage": "This runs a program on your computer with your text.",
+      "confirmRun": "Run",
+      "notes": {
+        "sent": "Sent ✓",
+        "opened": "Opened",
+        "copied_and_opened": "Copied, opened"
+      }
     },
     "actions": {
-      "enable": "Enable",
-      "disable": "Disable",
+      "enable": "Turn on",
+      "disable": "Turn off",
       "setDefault": "Make default",
       "configure": "Configure",
       "remove": "Remove",
       "enabled": "On",
       "reorder": "Drag to reorder"
     },
-    "categories": {
-      "search": "Search",
-      "ai": "AI assistants",
-      "translation": "Translation",
-      "custom": "Custom"
-    },
     "dialog": {
-      "addTitle": "Add integration",
-      "configureTitle": "Configure",
-      "selectPlugin": "Choose a service",
+      "addTitle": "Add action",
       "instanceName": "Name",
       "icon": "Icon",
-      "outputMode": "Output",
-      "outputModeDescSupported": "Choose how to send text to this service. Direct input uses URL parameters or API.",
-      "outputModeDescUnsupported": "This service doesn't support direct input. Text will be copied to clipboard for manual pasting.",
-      "cancel": "Cancel",
       "add": "Add",
-      "prevPage": "Previous",
-      "nextPage": "Next",
-      "save": "Save",
-      "confirmRemoveTitle": "Remove integration?",
-      "confirmRemove": "Are you sure you want to remove this integration?",
-      "manualPasteRequired": "This service can't receive text directly. EchoType copies it so you can paste with Ctrl+V.",
+      "back": "Back",
+      "confirmRemoveTitle": "Remove this action?",
       "configureNamed": "Configure {{name}}",
-      "confirmRemoveNamed": "“{{name}}” will be removed from Quick Action."
+      "confirmRemoveNamed": "“{{name}}” will be removed from Quick Action. Saved keys that other actions share stay."
     },
-    "plugins": {
-      "clawbot": {
-        "config": {
-          "gatewayHint": "Get host, port, token from OpenClaw UI: Control → Overview → Gateway Access; or use OpenClaw CLI: `openclaw gateway status` for gateway status, `openclaw gateway discover` to discover gateways and wsUrl. Config and token are in `~/.openclaw/openclaw.json`.",
-          "host": {
-            "label": "Host",
-            "description": "OpenClaw server host (default: localhost)"
-          },
-          "port": {
-            "label": "Port",
-            "description": "OpenClaw server port (default: 18789)"
-          },
-          "apiKey": {
-            "label": "Token",
-            "description": "Your OpenClaw access token"
-          },
-          "session": {
-            "label": "Session ID",
-            "description": "OpenClaw session ID (default: agent:main:main). For WebSocket: specifies sessionKey for message routing. Leave default for auto-routing."
-          },
-          "useHttp": {
-            "label": "Use HTTP API",
-            "description": "Use HTTP API instead of WebSocket (requires manual enablement in OpenClaw config). Default: WebSocket (always available)."
-          },
-          "openInterface": {
-            "label": "Open web interface after sending",
-            "description": "Automatically open OpenClaw web interface after sending the message"
-          },
-          "timeout": {
-            "label": "Connection Timeout (ms)",
-            "description": "Connection timeout in milliseconds (default: 15000, WebSocket only)"
-          }
-        }
-      }
+    "form": {
+      "provider": "Provider",
+      "model": "Model",
+      "modelPlaceholder": "Model name",
+      "modelHint": "Choose Load models to see what your account can use, or type a name.",
+      "modelsLoaded": "{{count}} models available",
+      "noModels": "The provider returned no models. Type a model name.",
+      "loadModels": "Load models",
+      "loading": "Loading…",
+      "test": "Test connection",
+      "testing": "Testing…",
+      "testOk": "Connected",
+      "getKey": "Get an API key",
+      "sharedKey": "Shared by all actions that use this provider.",
+      "saved": "Saved",
+      "replace": "Replace",
+      "remove": "Remove",
+      "willRemove": "Will be removed when you save",
+      "undo": "Undo",
+      "directoryPlaceholder": "C:\\path\\to\\project",
+      "storageWeak": "Your system has no secure keychain, so keys can only be protected by file permissions.",
+      "storageNone": "Secure storage isn't available on this system, so keys can't be saved. Local servers still work."
     },
-    "items": {
-      "clawbot": {
-        "name": "OpenClaw / Clawbot",
-        "description": "AI-powered search and automation workflows"
-      },
-      "search": {
-        "name": "Search",
-        "description": "Quick web search integration"
-      },
-      "workflow": {
-        "name": "Workflow",
-        "description": "Custom automation workflows"
-      }
+    "privacy": {
+      "agent": "Runs a program on this computer. Your text goes to that program, which may contact its own service.",
+      "open": "Opens {{hosts}} in your browser with your text in the address.",
+      "theAddress": "the address you enter",
+      "sendTo": "Your text is sent to {{hosts}}.",
+      "userAddress": "Your text is sent to the address you enter."
     },
-    "myIntegrationsDescription": "Drag to reorder. The default runs when you press Enter in Quick Action.",
-    "availablePluginsDescription": "Add any of these with “Add integration”.",
-    "default": "Default",
+    "dictionary": {
+      "title": "Personal dictionary",
+      "description": "Names and terms that should be spelled your way. AI actions that use the dictionary get this list, so “echo type” becomes “EchoType”.",
+      "add": "Add term",
+      "empty": "No terms yet",
+      "emptyHint": "Add names, products, and jargon you say often.",
+      "term": "Term",
+      "hint": "Note",
+      "termPlaceholder": "EchoType",
+      "hintPlaceholder": "Optional: how it sounds"
+    },
     "errors": {
-      "pluginMissing": "The “{{id}}” plugin isn't available in this version."
+      "AUTH_FAILED": "The service rejected your key. Check it and try again.",
+      "RATE_LIMITED": "Too many requests. Wait a moment and try again.",
+      "NETWORK": "Couldn't reach the service. Check your connection or server address.",
+      "TIMEOUT": "The service took too long to answer.",
+      "HOST_BLOCKED": "That address isn't allowed for this action.",
+      "NOT_CONFIGURED": "Finish setting up this action first.",
+      "NOT_INSTALLED": "That program isn't installed or isn't on your PATH.",
+      "CLI_FAILED": "The program stopped with an error.",
+      "PROVIDER_ERROR": "The service returned an error.",
+      "CONFIRM_REQUIRED": "Confirm to run this action.",
+      "INTERNAL": "Something went wrong."
     }
   },
   "settings": {

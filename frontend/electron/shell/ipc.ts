@@ -1,17 +1,16 @@
 /**
  * [INPUT]: 依赖 electron 的 ipcMain、shell；依赖 ipc-contract 的 IPC channel 表；依赖 core/create-core 的 Core；
- *          依赖 services/ 的 validateAccelerator、httpRequest；依赖 ./system、./main-window、./quick-action-window
+ *          依赖 services/ 的 validateAccelerator；依赖 ./system、./main-window、./quick-action-window
  * [OUTPUT]: 导出 registerIpc、toIpcError
  * [POS]: EchotypeBridge 在主进程一侧的完整实现：每个 IPC channel 恰好一个处理器，只转调 Core 与窗口，不含业务逻辑。
  *        只接受本应用窗口（trusted webContents）的调用；错误统一成 "[CODE] message"，渲染端可据此分支。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { ipcMain, shell, type IpcMainEvent, type IpcMainInvokeEvent, type WebContents } from "electron";
-import { IPC, type DeepPartial, type IpcChannel, type ModelUserSettings, type Settings } from "../ipc-contract.js";
+import { IPC, type DeepPartial, type IntegrationInstanceInput, type IpcChannel, type ModelUserSettings, type Settings } from "../ipc-contract.js";
 import type { Core } from "../core/create-core.js";
 import type { Logger } from "../core/logger.js";
 import { validateAccelerator } from "../services/hotkey-keymap.js";
-import { httpRequest, type IntegrationsConfig } from "../services/integrations.js";
 import type { MainWindow } from "./main-window.js";
 import type { QuickActionWindow } from "./quick-action-window.js";
 import { getPermissions, openExternalSafe, openPermissionSettings } from "./system.js";
@@ -105,9 +104,19 @@ export function registerIpc(ctx: IpcContext): void {
   on(IPC.quickActionMove, (delta) => quickAction.move(delta));
 
   // 插件
-  handle(IPC.integrationsGet, () => core.integrations.get());
-  handle(IPC.integrationsSave, (config) => core.integrations.save(config as IntegrationsConfig));
-  handle(IPC.integrationsHttp, (url, init) => httpRequest(str(url), init as Parameters<typeof httpRequest>[1]));
+  handle(IPC.integrationsCatalog, () => core.integrations.catalogView());
+  handle(IPC.integrationsList, () => core.integrations.list());
+  handle(IPC.integrationsSave, (input) => core.integrations.save(input as IntegrationInstanceInput));
+  handle(IPC.integrationsRemove, (id) => core.integrations.remove(str(id)));
+  handle(IPC.integrationsSetDefault, (id) => core.integrations.setDefault(str(id)));
+  handle(IPC.integrationsReorder, (ids) => core.integrations.reorder(ids as string[]));
+  handle(IPC.integrationsListModels, (draft) => core.integrations.listModels(draft as IntegrationInstanceInput));
+  handle(IPC.integrationsTest, (draft) => core.integrations.test(draft as IntegrationInstanceInput));
+  handle(IPC.integrationsRun, (req) => core.integrations.run(req as Parameters<typeof core.integrations.run>[0]));
+  handle(IPC.integrationsCancel, (runId) => core.integrations.cancel(str(runId)));
+  handle(IPC.integrationsSecretStorage, () => core.integrations.secretStorage());
+  handle(IPC.dictionaryList, () => core.integrations.dictionaryList());
+  handle(IPC.dictionarySave, (entries) => core.integrations.dictionarySave(entries));
 
   // 系统
   handle(IPC.systemRestartEngine, () => core.supervisor.restart());

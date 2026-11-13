@@ -1,6 +1,6 @@
 /*
  * [INPUT]: 依赖 styles/tokens.css 的变量
- * [OUTPUT]: Quick Action 小窗样式：.qa 根容器、可拖动标题栏、集成图标按钮、回复消息、审批卡片
+ * [OUTPUT]: Quick Action 小窗样式：.qa 根容器、可拖动标题栏、集成图标按钮、结果区与回执
  * [POS]: pages/QuickActionWindow.tsx 的专属样式。小窗无边框，标题栏承担拖动（指针事件 → bridge.quickAction.move）。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -106,22 +106,17 @@
 
 .qa__status {
   display: flex;
+  width: 100%;
   align-items: center;
   gap: var(--space-2);
   font-size: var(--text-sm);
   color: var(--text-muted);
 }
 
-.qa__messages {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+.qa__result {
   max-height: 420px;
-  overflow-y: auto;
-}
-
-.qa__message {
   padding: var(--space-3);
+  overflow-y: auto;
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
   font-size: var(--text-sm);
@@ -129,12 +124,6 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   user-select: text;
-}
-
-.qa__message--status {
-  background: transparent;
-  color: var(--text-muted);
-  padding: 0 var(--space-1);
 }
 
 .qa__cursor {
@@ -147,45 +136,26 @@
   animation: pulse-dot 1s steps(2) infinite;
 }
 
-.qa__approval {
+.qa__result-actions {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--warning-ring);
-  border-radius: var(--radius-md);
-  background: var(--warning-soft);
 }
 
-.qa__approval-title {
+.qa__receipt {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   font-size: var(--text-sm);
-  font-weight: 650;
-  color: var(--warning);
+  color: var(--success);
 }
 
-.qa__security {
+.qa__cancel {
   margin-left: auto;
-  padding: 1px 8px;
-  border-radius: var(--radius-full);
-  background: var(--surface);
-  font-size: var(--text-xs);
 }
 
-.qa__command {
-  display: block;
-  padding: var(--space-2);
-  background: var(--surface);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.qa__approval-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-2);
+.qa__action--unready {
+  border-style: dashed;
 }
 
 .qa__error {

@@ -10,7 +10,7 @@
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { app, Menu, net, type WebContents } from "electron";
+import { app, Menu, net, safeStorage, shell, type WebContents } from "electron";
 import { IPC } from "./ipc-contract.js";
 import { Core } from "./core/create-core.js";
 import { createFileLogger } from "./core/logger.js";
@@ -19,7 +19,7 @@ import { resolveEngineCommand } from "./engine/engine-command.js";
 import { prepareSmokeHome, runSmoke } from "./dev/smoke.js";
 import { registerIpc } from "./shell/ipc.js";
 import { MainWindow, type RendererSource } from "./shell/main-window.js";
-import { electronClipboard, nullKeySource, robotKeyboard, uiohookKeySource } from "./shell/platform-adapters.js";
+import { electronClipboard, electronSecretCrypto, nullKeySource, robotKeyboard, uiohookKeySource } from "./shell/platform-adapters.js";
 import { QuickActionWindow } from "./shell/quick-action-window.js";
 import { CHANNEL_ARG, detectHotkeyLimitation, detectMachine, PowerPolicy, resolveChannel, setLaunchAtStartup } from "./shell/system.js";
 import { platformKey } from "./services/variant-selection.js";
@@ -112,6 +112,9 @@ async function main(): Promise<void> {
       publishPacks: (packs) => broadcast(IPC.packsPush, packs),
       publishLevel: (level) => broadcast(IPC.levelPush, level),
       applyLaunchAtStartup: (enabled) => setLaunchAtStartup(enabled, logger),
+      secretCrypto: electronSecretCrypto(safeStorage),
+      openUri: (uri) => shell.openExternal(uri),
+      publishIntegrationEvent: (event) => broadcast(IPC.integrationsEvent, event),
     },
   );
   registerIpc({ core, mainWindow, quickAction, logsDir: paths.logsDir, logger, isTrusted: (c) => trusted.has(c.id) });
