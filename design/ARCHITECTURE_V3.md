@@ -104,7 +104,12 @@ VAD 边说边解码已闭合的段，松键只解尾段；单飞解码，final �
 | 推理运行时 | sherpa-onnx（C API）为主，llama.cpp（GGUF）用于 GPU 版本 | 全部为 C/C++ 核心，彻底去掉 torch |
 | 按模型分别优化 | 每个模型按硬件拆成多个 variant，各自实测 | int8 ONNX 适合 CPU，GPU 用 fp16 ONNX 或 GGUF；只有实测更快才列出 |
 | GPU 分发 | 基础安装包只含 CPU 引擎（macOS 含 Metal/CoreML）；CUDA 引擎包按需下载 | CUDA 运行库本身数百 MB，不该让所有用户承担 |
-| 模型分发 | 统一重新打包为 zip，托管在本仓库 GitHub Release `models-v3` | 与 v2 一致，Core 只需解 zip |
+| 模型分发 | 统一 zip；资产只记 `{release, asset}`，URL 由 `sources` 模板生成，按渠道（github/steam/msstore）选源，可远程更新目录 | 换托管地址只改 sources，不改模型；Steam 等渠道可直接接入 |
+| 每个模型三种硬件 | 每个模型都评估 CPU、NVIDIA、Apple Silicon，各自出 variant | 用户要求；只保留实测更快的 |
+| GPU 引擎包 | 整套引擎 + sherpa CUDA + NVIDIA 运行库 + CUDA llama-server，在模型管理器里按需下载 | 体积大但可选，不进基础安装包 |
+| 许可证 | 每个模型标注许可证；设置 → 关于 列出模型与组件许可证并附链接；各商店按 `allow_commercial` 过滤模型 | 尊重作者；商店策略后续再定 |
+| 标点风格 | 新增模型设置 `punct_style`（auto 按句子文字自动选中/英文标点） | CT-Transformer 对英文也只出中文全角标点 |
+| 状态栏 | 左下角显示"模型 · 硬件 · 运行时"，回退 CPU 时明确标出 | 用户要一眼看出当前怎么运行 |
 | 外壳 | 继续 Electron | 体积问题 95% 来自 Python/torch，换 Tauri 收益不抵重写成本 |
 | 默认模型 | SenseVoice Small int8（2024-07-17 版，228 MB） | 非自回归，自带标点与 ITN；配合 VAD 分段可达毫秒级 |
 
@@ -115,6 +120,7 @@ VAD 边说边解码已闭合的段，松键只解尾段；单飞解码，final �
 | engine | `engine/**`（新 Rust 工程）· 删除 `backend/**` `launcher.py` `echotype-backend.spec` `requirements-backend.txt` · catalog 的 `arch` `providers` `bench` `settings` 字段 | `frontend/**` · `.github/**` · `scripts/**` |
 | models | `scripts/models/**`（模型重打包与上传清单）· catalog 的 `download` `files` 字段 | 其余所有目录 |
 | core | `frontend/electron/**`（契约文件除外）· `frontend/package.json`（`build` 字段除外）· `frontend/tsconfig.*.json` | `frontend/src/**` · `engine/**` · `frontend/electron-builder.cjs` |
+| integrations | 先只写 `design/INTEGRATIONS_V3.md`（调研与方案），ui 合并后再实现 | 其余所有目录 |
 | ci | `.github/workflows/build.yml` `ci.yml` · `frontend/electron-builder.cjs` · `frontend/package.json` 的 `build` 字段 · `scripts/ci/**` · `scripts/windows/**`（清理旧流水线） | 其余所有目录 |
 | ui | `frontend/src/**` · `frontend/index.html` · `frontend/vite.config.ts` | `frontend/electron/**` · `frontend/package.json` |
 | orchestrator | `contracts/**` 结构 · `frontend/electron/ipc-contract.ts` · `CLAUDE.md` · 本文档 · 最终集成 | — |
