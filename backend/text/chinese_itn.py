@@ -1,3 +1,11 @@
+"""
+[INPUT]: 只依赖标准库 re、string
+[OUTPUT]: 导出 chinese_to_num(text) —— 中文数字规则 ITN（"三百五十" → "350"，"百分之五十" → "50%"，日期/时间/比值）
+[POS]: text 管线的规则 ITN 步骤，供 features.itn == "rule" 的模型（Paraformer）使用；由 pipeline.TextPipeline 调用。
+       原样沿用 v2 的规则表与成语白名单（"一点一滴"、"三十而立" 等不转换）。
+[PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"""
+
 __all__ = ['chinese_to_num']
 
 import re
@@ -223,7 +231,7 @@ def replace(original):
 
         if head:
             final = head + final
-    except:
+    except Exception:  # 规则表覆盖不到的写法：保留原文
         num_type = '未知'
         final = original
     return final
