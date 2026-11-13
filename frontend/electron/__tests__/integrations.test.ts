@@ -30,9 +30,9 @@ const catalogFile = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const logger = createMemoryLogger();
 
 const fakeCrypto: SecretCrypto = {
-  backend: () => "os-keychain",
-  encrypt: (s) => Buffer.from(`enc:${s}`),
-  decrypt: (b) => b.toString().replace(/^enc:/, ""),
+  backend: async () => "os-keychain",
+  encrypt: async (s) => Buffer.from(`enc:${s}`),
+  decrypt: async (b) => ({ plain: b.toString().replace(/^enc:/, ""), reencrypt: false }),
 };
 
 const sse = (...events: string[]) =>
@@ -79,18 +79,37 @@ describe("catalog", () => {
 });
 
 describe("secret store", () => {
-  it("stores ciphertext, returns plaintext only through get()", () => {
+  it("stores ciphertext, returns plaintext only through get()", async () => {
     const file = path.join(makeTempDir(), "secrets.bin");
     const s = new SecretStore(file, fakeCrypto, logger);
-    s.set("instance:a:token", "sk-123");
+    await s.set("instance:a:token", "sk-123");
     expect(fs.readFileSync(file, "utf-8")).not.toContain("sk-123");
-    expect(s.get("instance:a:token")).toBe("sk-123");
+    expect(await s.get("instance:a:token")).toBe("sk-123");
     s.deletePrefix("instance:a:");
     expect(s.has("instance:a:token")).toBe(false);
   });
-  it("refuses to write when encryption is unavailable", () => {
-    const s = new SecretStore(path.join(makeTempDir(), "s.bin"), { ...fakeCrypto, backend: () => "none" }, logger);
-    expect(() => s.set("x", "y")).toThrow(/not available/i);
+  it("refuses to write when encryption is unavailable", async () => {
+    const s = new SecretStore(path.join(makeTempDir(), "s.bin"), { ...fakeCrypto, backend: async () => "none" }, logger);
+    await expect(s.set("x", "y")).rejects.toThrow(/not available/i);
+    expect(await s.status()).toEqual({ available: false, backend: "none" });
+  });
+  it("re-encrypts a secret when decryption asks for it (key rotation)", async () => {
+    const file = path.join(makeTempDir(), "secrets.bin");
+    let key = "k1";
+    const rotating: SecretCrypto = {
+      backend: async () => "os-keychain",
+      encrypt: async (plain) => Buffer.from(`${key}:${plain}`),
+      decrypt: async (b) => {
+        const [k, plain] = b.toString().split(":");
+        return { plain, reencrypt: k !== key };
+      },
+    };
+    const s = new SecretStore(file, rotating, logger);
+    await s.set("provider:x:apiKey", "sk-1");
+    key = "k2";
+    expect(await s.get("provider:x:apiKey")).toBe("sk-1");
+    const stored = JSON.parse(fs.readFileSync(file, "utf-8")) as Record<string, string>;
+    expect(Buffer.from(stored["provider:x:apiKey"], "base64").toString()).toBe("k2:sk-1");
   });
 });
 
@@ -288,7 +307,7 @@ describe("dictionary", () => {
 });
 
 describe("IntegrationService", () => {
-  function build(opts: { fetch?: typeof fetch; legacy?: object } = {}) {
+  async function build(opts: { fetch?: typeof fetch; legacy?: object } = {}) {
     const dir = makeTempDir();
     if (opts.legacy) fs.writeFileSync(path.join(dir, "integrations.json"), JSON.stringify(opts.legacy));
     const events: IntegrationRunEvent[] = [];
@@ -309,37 +328,37 @@ describe("IntegrationService", () => {
         publish: (e) => events.push(e),
       },
     });
-    service.start();
+    await service.start();
     return { service, events, opened, copied, secrets, dir };
   }
   const finished = (events: IntegrationRunEvent[]) => events.find((e) => e.type === "done" || e.type === "error");
 
-  it("seeds three defaults on a fresh install and keeps secrets out of views", () => {
-    const { service } = build();
+  it("seeds three defaults on a fresh install and keeps secrets out of views", async () => {
+    const { service } = await build();
     expect(service.list().map((i) => i.actionId)).toEqual(["open-google", "open-google-translate", "open-perplexity"]);
     expect(service.list()[0].isDefault).toBe(true);
   });
 
-  it("migrates a v2 file once, scrubs the backup", () => {
-    const { service, dir, secrets } = build({
+  it("migrates a v2 file once, scrubs the backup", async () => {
+    const { service, dir, secrets } = await build({
       legacy: { instances: [{ instanceId: "c", pluginId: "clawbot", name: "OpenClaw", order: 0, enabled: true, config: { apiKey: "tok" } }], defaultIntegrationId: null },
     });
     expect(service.list()[0]).toMatchObject({ actionId: "ask-ai", providerId: "custom", secrets: { apiKey: true } });
-    expect(secrets.get("provider:custom:apiKey")).toBe("tok");
+    expect(await secrets.get("provider:custom:apiKey")).toBe("tok");
     expect(fs.existsSync(path.join(dir, "integrations.json"))).toBe(false);
     expect(fs.readFileSync(path.join(dir, "integrations.v2.bak.json"), "utf-8")).not.toContain("tok");
   });
 
-  it("saves a DeepSeek cleanup instance: key is shared per provider and never returned", () => {
-    const { service, secrets } = build();
-    const v = service.save({ actionId: "cleanup", name: "Clean", enabled: true, providerId: "deepseek", model: "deepseek-v4-flash", settings: {}, secrets: { apiKey: "sk-secret" } });
+  it("saves a DeepSeek cleanup instance: key is shared per provider and never returned", async () => {
+    const { service, secrets } = await build();
+    const v = await service.save({ actionId: "cleanup", name: "Clean", enabled: true, providerId: "deepseek", model: "deepseek-v4-flash", settings: {}, secrets: { apiKey: "sk-secret" } });
     expect(v.status).toBe("ok");
     expect(v.secrets).toEqual({ apiKey: true });
     expect(JSON.stringify(service.list())).not.toContain("sk-secret");
-    expect(secrets.get("provider:deepseek:apiKey")).toBe("sk-secret");
-    const second = service.save({ actionId: "translate", name: "T", enabled: true, providerId: "deepseek", model: "m", settings: { target: "日本語" } });
+    expect(await secrets.get("provider:deepseek:apiKey")).toBe("sk-secret");
+    const second = await service.save({ actionId: "translate", name: "T", enabled: true, providerId: "deepseek", model: "m", settings: { target: "日本語" } });
     expect(second.status).toBe("ok"); // 同一 provider 的第二个实例直接复用密钥
-    expect(service.save({ ...{ actionId: "cleanup", name: "x", enabled: true }, providerId: "openai", model: "m", settings: {} }).status).toBe("unconfigured");
+    expect((await service.save({ ...{ actionId: "cleanup", name: "x", enabled: true }, providerId: "openai", model: "m", settings: {} })).status).toBe("unconfigured");
   });
 
   it("runs a transform end to end with dictionary injection and streaming events", async () => {
@@ -348,9 +367,9 @@ describe("IntegrationService", () => {
       body = JSON.parse(String(init.body));
       return sse('data: {"choices":[{"delta":{"content":"Clean "}}]}\n\ndata: {"choices":[{"delta":{"content":"text."}}]}\n\ndata: [DONE]\n\n');
     }) as unknown as typeof fetch;
-    const { service, events } = build({ fetch: fetchImpl });
+    const { service, events } = await build({ fetch: fetchImpl });
     service.dictionarySave([{ term: "EchoType" }]);
-    const inst = service.save({ actionId: "cleanup", name: "Clean", enabled: true, providerId: "deepseek", model: "m", settings: {}, secrets: { apiKey: "k" } });
+    const inst = await service.save({ actionId: "cleanup", name: "Clean", enabled: true, providerId: "deepseek", model: "m", settings: {}, secrets: { apiKey: "k" } });
     const { runId } = service.run({ instanceId: inst.id, text: "um so echo type is great" });
     await waitFor(() => !!finished(events));
     expect(events.map((e) => e.type)).toEqual(["start", "delta", "delta", "done"]);
@@ -364,7 +383,7 @@ describe("IntegrationService", () => {
   it("requires confirmation for CLI agents and runs them with the text on stdin", async () => {
     const stdin: string[] = [];
     const dir = makeTempDir();
-    const { service, events } = build();
+    const { service, events } = await build();
     (service as unknown as { d: { ports: { spawn: unknown } } }).d.ports.spawn = () => {
       const c = new EventEmitter() as EventEmitter & Record<string, unknown>;
       const out = new PassThrough();
@@ -375,7 +394,7 @@ describe("IntegrationService", () => {
       Object.assign(c, { stdout: out, stderr: err, stdin: inp, kill() {}, pid: 1 });
       return c;
     };
-    const inst = service.save({ actionId: "claude-code", name: "CC", enabled: true, settings: { workdir: dir } });
+    const inst = await service.save({ actionId: "claude-code", name: "CC", enabled: true, settings: { workdir: dir } });
     expect(() => service.run({ instanceId: inst.id, text: "fix the bug" })).toThrow(/confirmation/);
     service.run({ instanceId: inst.id, text: "fix the bug", confirmed: true });
     await waitFor(() => !!finished(events));
@@ -385,29 +404,29 @@ describe("IntegrationService", () => {
 
   it("webhook replies show up as the result (use it like a chat)", async () => {
     const f = (async () => Response.json({ answer: "pong" })) as unknown as typeof fetch;
-    const { service, events } = build({ fetch: f });
-    const inst = service.save({ actionId: "webhook", name: "n8n", enabled: true, settings: { body: '{"q": {{text|json}}}', replyPath: "answer" }, secrets: { url: "https://n8n.example.com/webhook/x" } });
+    const { service, events } = await build({ fetch: f });
+    const inst = await service.save({ actionId: "webhook", name: "n8n", enabled: true, settings: { body: '{"q": {{text|json}}}', replyPath: "answer" }, secrets: { url: "https://n8n.example.com/webhook/x" } });
     service.run({ instanceId: inst.id, text: "ping" });
     await waitFor(() => !!finished(events));
     expect(events.at(-1)).toMatchObject({ type: "done", text: "pong", note: "sent" });
   });
 
   it("Obsidian drops empty params; open actions copy first and block non-http links", async () => {
-    const { service, events, opened, copied } = build();
-    const ob = service.save({ actionId: "obsidian-note", name: "Ob", enabled: true, settings: { vault: "", file: "Inbox" } });
+    const { service, events, opened, copied } = await build();
+    const ob = await service.save({ actionId: "obsidian-note", name: "Ob", enabled: true, settings: { vault: "", file: "Inbox" } });
     service.run({ instanceId: ob.id, text: "buy milk & eggs" });
     await waitFor(() => !!finished(events));
     expect(opened[0]).toBe("obsidian://new?file=Inbox&content=buy%20milk%20%26%20eggs&append=true");
 
     events.length = 0;
-    const gem = service.save({ actionId: "open-gemini", name: "G", enabled: true, settings: {} });
+    const gem = await service.save({ actionId: "open-gemini", name: "G", enabled: true, settings: {} });
     service.run({ instanceId: gem.id, text: "hello" });
     await waitFor(() => !!finished(events));
     expect(copied).toEqual(["hello"]);
     expect(events.at(-1)).toMatchObject({ note: "copied_and_opened" });
 
     events.length = 0;
-    const bad = service.save({ actionId: "open-url", name: "U", enabled: true, settings: { url: "file:///C:/Windows/system32/calc.exe" } });
+    const bad = await service.save({ actionId: "open-url", name: "U", enabled: true, settings: { url: "file:///C:/Windows/system32/calc.exe" } });
     service.run({ instanceId: bad.id, text: "x" });
     await waitFor(() => !!finished(events));
     expect(events.at(-1)).toMatchObject({ type: "error", error: { code: "HOST_BLOCKED" } });
@@ -417,8 +436,8 @@ describe("IntegrationService", () => {
   it("cancel aborts a running stream", async () => {
     const hang = (async (_u: string, init: RequestInit) =>
       new Response(new ReadableStream({ start: (c) => init.signal?.addEventListener("abort", () => c.error(new DOMException("aborted", "AbortError"))) }))) as unknown as typeof fetch;
-    const { service, events } = build({ fetch: hang });
-    const inst = service.save({ actionId: "ask-ai", name: "Ask", enabled: true, providerId: "ollama", model: "m", settings: {} });
+    const { service, events } = await build({ fetch: hang });
+    const inst = await service.save({ actionId: "ask-ai", name: "Ask", enabled: true, providerId: "ollama", model: "m", settings: {} });
     const { runId } = service.run({ instanceId: inst.id, text: "q" });
     await waitFor(() => events.some((e) => e.type === "start"));
     service.cancel(runId);
@@ -428,15 +447,15 @@ describe("IntegrationService", () => {
 
   it("test() lists models for providers and reports auth failures", async () => {
     const f = (async () => new Response("nope", { status: 401 })) as unknown as typeof fetch;
-    const { service } = build({ fetch: f });
+    const { service } = await build({ fetch: f });
     const r = await service.test({ actionId: "cleanup", name: "x", enabled: true, providerId: "openai", settings: {}, secrets: { apiKey: "bad" } });
     expect(r).toMatchObject({ ok: false, error: { code: "AUTH_FAILED" } });
   });
 
-  it("removing an instance deletes its own secrets but keeps provider keys", () => {
-    const { service, secrets } = build();
-    const wh = service.save({ actionId: "slack-webhook", name: "S", enabled: true, settings: {}, secrets: { url: "https://hooks.slack.com/services/a" } });
-    const ai = service.save({ actionId: "cleanup", name: "C", enabled: true, providerId: "deepseek", model: "m", settings: {}, secrets: { apiKey: "k" } });
+  it("removing an instance deletes its own secrets but keeps provider keys", async () => {
+    const { service, secrets } = await build();
+    const wh = await service.save({ actionId: "slack-webhook", name: "S", enabled: true, settings: {}, secrets: { url: "https://hooks.slack.com/services/a" } });
+    const ai = await service.save({ actionId: "cleanup", name: "C", enabled: true, providerId: "deepseek", model: "m", settings: {}, secrets: { apiKey: "k" } });
     expect(secrets.has(`instance:${wh.id}:url`)).toBe(true);
     service.remove(wh.id);
     service.remove(ai.id);

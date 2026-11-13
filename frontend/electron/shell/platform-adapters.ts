@@ -48,16 +48,22 @@ export function electronClipboard(): ClipboardPort {
   };
 }
 
-/** safeStorage → SecretCrypto。Linux 无密钥环时 Electron 退到 basic_text（等同明文），如实上报。 */
+/**
+ * safeStorage → SecretCrypto，只用 Electron 45 的异步 API（同步版已弃用）。须在 app ready 之后调用。
+ * Linux 无密钥环时 Electron 退到 basic_text（等同明文），如实上报。
+ */
 export function electronSecretCrypto(storage: SafeStorage): SecretCrypto {
   return {
-    backend: () => {
-      if (!storage.isEncryptionAvailable()) return "none";
+    backend: async () => {
+      if (!(await storage.isAsyncEncryptionAvailable())) return "none";
       if (process.platform === "linux" && storage.getSelectedStorageBackend?.() === "basic_text") return "basic_text";
       return "os-keychain";
     },
-    encrypt: (plain) => storage.encryptString(plain),
-    decrypt: (cipher) => storage.decryptString(cipher),
+    encrypt: (plain) => storage.encryptStringAsync(plain),
+    decrypt: async (cipher) => {
+      const { result, shouldReEncrypt } = await storage.decryptStringAsync(cipher);
+      return { plain: result, reencrypt: shouldReEncrypt };
+    },
   };
 }
 

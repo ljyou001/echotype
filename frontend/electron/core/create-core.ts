@@ -87,11 +87,11 @@ export class CoreError extends Error {
 }
 
 const NO_SECRET_CRYPTO: SecretCrypto = {
-  backend: () => "none",
-  encrypt: () => {
+  backend: async () => "none",
+  encrypt: async () => {
     throw new Error("Secure storage is not available.");
   },
-  decrypt: () => {
+  decrypt: async () => {
     throw new Error("Secure storage is not available.");
   },
 };
@@ -245,7 +245,7 @@ export class Core {
     this.packs.scan();
     this.registry.scan();
     this.history.load();
-    this.integrations.start();
+    void this.integrations.start().catch((err) => this.log.error("integrations failed to start", err)); // 只有 v2 密钥迁移是异步的
     this.hotkey.setAccelerator(this.settings.get().hotkey.accelerator);
     this.hotkey.start();
     this.supervisor.start();

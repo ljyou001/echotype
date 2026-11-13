@@ -31,10 +31,10 @@ audio-service.ts: 麦克风配置。设备列表来自引擎（选中的 id 就�
 history-store.ts: ~/.echotype/history.jsonl，上限 500。追加一行写一行，超出 100 行时整体重写；跳过坏行
 
 ## 集成（integrations/）
-service.ts: IntegrationService 门面。目录视图、实例增删改与排序、listModels/test、run/cancel（IntegrationRunEvent 流式推送）、词典。解析实例 → 取密钥（仅此刻）→ 渲染模板 → 选 Runner；日志只记 {action, provider, ms, status}。run 返回后才发首个事件（setTimeout 0）
+service.ts: IntegrationService 门面。目录视图、实例增删改与排序、listModels/test、run/cancel（IntegrationRunEvent 流式推送）、词典。start 与 save 是异步的（密钥加密）；v2 迁移先存密钥再写实例文件。解析实例 → 取密钥（仅此刻）→ 渲染模板 → 选 Runner；日志只记 {action, provider, ms, status}。run 返回后才发首个事件（setTimeout 0）
 catalog.ts: contracts/integrations.catalog.json 的唯一读取点。校验并投影成 IntegrationCatalogView，执行描述（prompt/http/uri/cli/open）不出 Core
 template.ts: 模板唯一解释器。{{x}} / {{x|url}} / {{x|json}}，替换一次不递归；renderDeep 渲染 JSON 对象字面量；getPath 点路径；parseHeaderLines
-secret-store.ts: ~/.echotype/secrets.bin（引用键 → base64 密文）。加密经 SecretCrypto 端口（Electron 下是 safeStorage）；backend 为 none 时拒绝写入
+secret-store.ts: ~/.echotype/secrets.bin（引用键 → base64 密文）。加密经异步 SecretCrypto 端口（Electron 下是 safeStorage 的 *Async API），get/set/status 返回 Promise；解密要求重新加密时就地重写密文；backend 为 none 时拒绝写入
 instance-store.ts: ~/.echotype/integrations.v3.json。不含密钥；保证至多一个 isDefault、order 连续
 migrate-v2.ts: v2 integrations.json → v3 的一次性迁移。LEGACY_PLUGIN_ACTIONS 是本层唯一允许写死 id 的表；OpenClaw → 自定义 OpenAI 兼容；旧文件备份为 .v2.bak.json 并抹掉密钥；seedDefaults 给全新安装
 dictionary-store.ts: ~/.echotype/dictionary.json，去重、限长、限条数；dictionaryPromptSuffix 把词典追加到提示词。尚未下发引擎做 ASR 热词
