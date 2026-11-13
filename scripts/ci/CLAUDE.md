@@ -100,7 +100,7 @@ engine-packs-v3 被所有已发布版本共用，旧版本的 catalog 钉住旧 
 
 ## 7. 只能在 Actions 上验证的事项
 
-本地已验证（Windows x64）：`--dir` 与完整 nsis+zip 构建；`.cjs` 自动发现；`${os}-${arch}` 展开；资源布局如 §4；版本与渠道注入；渠道产物名；beforePack 生成许可清单；build-engine.sh 的跳过、严格、catalog 资产名、主机校验、完整引擎校验、可复现 zip（模拟仓库）；release-assets.mjs 的清单与三种发布分支（替换 gh 的副本）；third-party-licenses.mjs 的 npm 与 Rust 遍历；probe.sh。
+本地已验证（Windows x64）：actionlint 1.7.12 对 build.yml 与 ci.yml 报 0 个错误（本机未装 shellcheck，`run:` 脚本未经 shellcheck）；`--dir` 与完整 nsis+zip 构建；`.cjs` 自动发现；`${os}-${arch}` 展开；资源布局如 §4；版本与渠道注入；渠道产物名；beforePack 生成许可清单；build-engine.sh 的跳过、严格、catalog 资产名、主机校验、完整引擎校验、可复现 zip（模拟仓库）；release-assets.mjs 的清单与三种发布分支（替换 gh 的副本）；third-party-licenses.mjs 的 npm 与 Rust 遍历；probe.sh。
 
 只能在 Actions 上验证：
 - win-arm64、linux、mac 四类 runner 上的真实安装包构建，包括 linux 两种格式的实际文件名。
