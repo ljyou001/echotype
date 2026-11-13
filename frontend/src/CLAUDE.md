@@ -21,7 +21,7 @@ mockLicenses.ts: mock 的应用版本与开源组件许可证假数据
 
 store/
 appStore.ts: 唯一状态容器。镜像 snapshot、models 与 packs，外加本地 UI 状态（当前页、提示条）；动作全部转发 bridge；模型专属设置只经 `updateModelSettings` → `models.updateSettings`；`connectStore()` 先订阅后拉取；按 `settings.ui.language` 同步 i18n
-integrationsStore.ts: 集成实例缓存。整份经 `bridge().integrations.saveConfig` 写回；首次运行播种三个默认集成；`load()` 并发去重
+integrationsStore.ts: 集成目录与实例的只读镜像。变更先调 `bridge().integrations.*`，再以重新拉取的列表为准（开关与排序先乐观落位）；从不持有密钥，视图里只有“已保存”布尔值；默认集成由 Core 播种；`load()` 并发去重
 themeStore.ts: 皮肤偏好（跟随系统/浅色/深色 × 六种主题色），写到 <html> 的 data-theme / data-accent；监听系统深浅色；两个窗口经 storage 事件同步。暂存本机，契约有 ui.theme 后只换 readPrefs / writePrefs
 
 hooks/

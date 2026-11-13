@@ -24,6 +24,8 @@ export interface AppError {
 // Settings — persisted by Core in ~/.echotype/settings.json (schemaVersion 2)
 // ============================================================
 export type RecordingMode = "push-to-talk" | "toggle";
+export type ThemeMode = "system" | "light" | "dark";
+export type ThemeAccent = "violet" | "indigo" | "ocean" | "teal" | "rose" | "sunset";
 export type Provider = "auto" | "cpu" | "cuda" | "metal" | "coreml" | "vulkan" | "directml";
 export type SettingValue = string | number | boolean;
 
@@ -53,7 +55,12 @@ export interface Settings {
     activeId: string | null;
     perModel: Record<string, ModelUserSettings>; // 只经 bridge.models.updateSettings 写入，不经 updateSettings
   };
-  ui: { language: string; onboardingCompleted: boolean; launchAtStartup: boolean };
+  ui: {
+    language: string;
+    onboardingCompleted: boolean;
+    launchAtStartup: boolean;
+    theme: { mode: ThemeMode; accent: ThemeAccent }; // 默认 { mode: "system", accent: "violet" }；Core 同步 nativeTheme.themeSource
+  };
   privacy: { saveRecordings: boolean }; // default false
 }
 
@@ -174,6 +181,100 @@ export interface HistoryEntry {
 }
 
 // ============================================================
+// Integrations v3 — actions run in Core; secrets never reach the UI (design/INTEGRATIONS_V3.md)
+// ============================================================
+export type LocalizedText = { en: string; zh?: string };
+export type ActionKind = "transform" | "send" | "open";
+export type ActionGroup = "ai" | "cleanup" | "send" | "chat" | "agent" | "open";
+export type IntegrationFieldType = "text" | "secret" | "enum" | "boolean" | "textarea" | "directory";
+
+/** 表单字段。文案已是 LocalizedText；UI 只渲染，不解释。 */
+export interface IntegrationFieldView {
+  key: string;
+  type: IntegrationFieldType;
+  label: LocalizedText;
+  description?: LocalizedText;
+  placeholder?: string;
+  optional?: boolean;
+  default?: SettingValue;
+  options?: { value: string; label: LocalizedText }[];
+}
+
+export interface IntegrationProviderView {
+  id: string;
+  name: LocalizedText;
+  protocol: "openai" | "anthropic";
+  local: boolean; // 本机服务，数据不出机，无需密钥
+  fields: IntegrationFieldView[]; // region、baseUrl（自定义）等；apiKey 是 type=secret 的字段，同一 provider 的实例共用
+  suggestedModel?: string; // 仅作默认值，可能过期；真实列表用 listModels
+  keyUrl?: string; // 申请密钥的页面
+  dataNote: LocalizedText; // 数据会发往哪里
+}
+
+export interface IntegrationActionView {
+  id: string;
+  kind: ActionKind;
+  group: ActionGroup;
+  name: LocalizedText;
+  description: LocalizedText;
+  hint?: LocalizedText; // 配置页的补充提示（如 webhook 可当对话用）
+  icon: string;
+  needsProvider: boolean; // transform：实例必须选 provider 与模型
+  fields: IntegrationFieldView[];
+  egress: { hosts: string[]; local: boolean; context: ("app" | "selection" | "clipboard")[] }; // hosts 为空且 kind=send：用户自填地址
+  confirm: boolean; // 每次运行前需用户确认（CLI 代理）
+  dictionary: boolean; // 运行时注入个人词典
+}
+
+export interface IntegrationCatalogView {
+  providers: IntegrationProviderView[];
+  actions: IntegrationActionView[];
+}
+
+export interface IntegrationInstanceView {
+  id: string;
+  actionId: string;
+  name: string;
+  icon: string;
+  enabled: boolean;
+  isDefault: boolean;
+  order: number;
+  providerId: string | null;
+  model: string | null;
+  settings: Record<string, SettingValue>; // 不含 secret 字段
+  secrets: Record<string, boolean>; // 字段键 → 是否已保存（provider 级密钥与实例级密钥合并展示）
+  status: "ok" | "unconfigured";
+}
+
+export interface IntegrationInstanceInput {
+  id?: string; // 缺省 = 新建
+  actionId: string;
+  name: string;
+  icon?: string;
+  enabled: boolean;
+  providerId?: string | null;
+  model?: string | null;
+  settings: Record<string, SettingValue>;
+  secrets?: Record<string, string | null>; // string = 写入；null = 删除；缺省 = 不变
+}
+
+export interface IntegrationModelOption {
+  id: string;
+  name?: string;
+}
+
+export type IntegrationRunEvent =
+  | { runId: string; type: "start" }
+  | { runId: string; type: "delta"; text: string } // transform / 对话式 webhook 的流式追加
+  | { runId: string; type: "done"; text?: string; note?: string } // text = 完整结果；note = send 的回执
+  | { runId: string; type: "error"; error: AppError }; // code: AUTH_FAILED | RATE_LIMITED | NETWORK | TIMEOUT | HOST_BLOCKED | PROVIDER_ERROR | CONFIRM_REQUIRED | NOT_CONFIGURED | CANCELLED
+
+export interface DictionaryEntry {
+  term: string;
+  hint?: string; // 读音或说明，如 “读作 ‘克劳德’”
+}
+
+// ============================================================
 // Bridge — what preload exposes as window.echotype
 // ============================================================
 export interface EchotypeBridge {
@@ -237,12 +338,23 @@ export interface EchotypeBridge {
   };
 
   integrations: {
-    getConfig(): Promise<{ instances: unknown[]; defaultIntegrationId: string | null }>;
-    saveConfig(config: { instances: unknown[]; defaultIntegrationId: string | null }): Promise<void>;
-    httpRequest(
-      url: string,
-      init: { method: string; headers: Record<string, string>; body?: string },
-    ): Promise<{ ok: boolean; status: number; statusText: string; headers: Record<string, string>; body: string }>;
+    catalog(): Promise<IntegrationCatalogView>;
+    list(): Promise<IntegrationInstanceView[]>;
+    save(input: IntegrationInstanceInput): Promise<IntegrationInstanceView>;
+    remove(instanceId: string): Promise<void>;
+    setDefault(instanceId: string): Promise<void>;
+    reorder(instanceIds: string[]): Promise<void>;
+    listModels(draft: IntegrationInstanceInput): Promise<IntegrationModelOption[]>; // 草稿即可：保存前拉模型；密钥缺省时用已保存的
+    test(draft: IntegrationInstanceInput): Promise<{ ok: boolean; error?: AppError }>;
+    run(req: { instanceId: string; text: string; confirmed?: boolean }): Promise<{ runId: string }>;
+    cancel(runId: string): Promise<void>;
+    onEvent(cb: (event: IntegrationRunEvent) => void): Unsubscribe;
+    secretStorage(): Promise<{ available: boolean; backend: "os-keychain" | "basic_text" | "none" }>;
+  };
+
+  dictionary: {
+    list(): Promise<DictionaryEntry[]>;
+    save(entries: DictionaryEntry[]): Promise<void>;
   };
 
   system: {
@@ -294,9 +406,20 @@ export const IPC = {
   quickActionClose: "quick-action:close",
   quickActionResize: "quick-action:resize",
   quickActionMove: "quick-action:move",
-  integrationsGet: "integrations:get",
+  integrationsCatalog: "integrations:catalog",
+  integrationsList: "integrations:list",
   integrationsSave: "integrations:save",
-  integrationsHttp: "integrations:http",
+  integrationsRemove: "integrations:remove",
+  integrationsSetDefault: "integrations:set-default",
+  integrationsReorder: "integrations:reorder",
+  integrationsListModels: "integrations:list-models",
+  integrationsTest: "integrations:test",
+  integrationsRun: "integrations:run",
+  integrationsCancel: "integrations:cancel",
+  integrationsEvent: "integrations:event",
+  integrationsSecretStorage: "integrations:secret-storage",
+  dictionaryList: "dictionary:list",
+  dictionarySave: "dictionary:save",
   systemRestartEngine: "system:restart-engine",
   systemOpenExternal: "system:open-external",
   systemOpenLogs: "system:open-logs",

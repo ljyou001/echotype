@@ -1,9 +1,9 @@
 /**
- * [INPUT]: 依赖 ipc-contract 的全部类型；依赖 ./mockModels 的 MockModelRegistry、MockPackRegistry 与预装清单
+ * [INPUT]: 依赖 ipc-contract 的全部类型；依赖 ./mockModels 的 MockModelRegistry、MockPackRegistry 与预装清单；依赖 ./mockIntegrations
  * [OUTPUT]: 导出 createMockBridge(scenario)、readMockScenario()、MockScenario
  * [POS]: 浏览器开发用的内存版 EchotypeBridge（ipcVersion 2）。模拟 Core：快照推送、引擎加载、听写、电平、历史、
  *        模型 variant 安装、模型专属设置、GPU 引擎包（装好后重启引擎）、运行方式（activeModel，含回退）、
- *        磁盘占用、许可证列表。
+ *        磁盘占用、许可证列表、集成（委托 ./mockIntegrations）。
  *        由 bridge/index.ts 在 window.echotype 缺失时动态加载。场景用 URL 参数 ?mock= 切换。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -18,6 +18,7 @@ import type {
   Provider,
   Settings,
 } from "../../electron/ipc-contract";
+import { createMockIntegrations } from "./mockIntegrations";
 import {
   DISK_TOTAL_BYTES,
   MockMachine,
@@ -109,10 +110,7 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
   const packsChanged = new Channel<EnginePackView[]>();
 
   let history: HistoryEntry[] = [];
-  let integrations: { instances: unknown[]; defaultIntegrationId: string | null } = {
-    instances: [],
-    defaultIntegrationId: null,
-  };
+  const mockIntegrations = createMockIntegrations();
   let micTest = false;
   let recordingStartedAt = 0;
   let phraseIndex = 0;
@@ -406,18 +404,7 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
       move: () => undefined,
     },
 
-    integrations: {
-      getConfig: () => resolved(structuredClone(integrations)),
-      saveConfig: async (config) => {
-        integrations = structuredClone(config);
-      },
-      httpRequest: async (url, init) => {
-        const res = await fetch(url, init);
-        const headers: Record<string, string> = {};
-        res.headers.forEach((value, key) => (headers[key] = value));
-        return { ok: res.ok, status: res.status, statusText: res.statusText, headers, body: await res.text() };
-      },
-    },
+    ...mockIntegrations,
 
     system: {
       platform: navigator.platform.toUpperCase().includes("MAC") ? "darwin" : "win32",

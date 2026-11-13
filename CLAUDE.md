@@ -12,6 +12,7 @@ scripts/ - 构建、打包、测试脚本 (windows/ 为发布流水线)
 
 <config>
 contracts/models.catalog.json - 全部模型的唯一元数据源，新增模型只加一个对象
+contracts/integrations.catalog.json - 全部 LLM provider 与集成动作的唯一元数据源，新增集成只加一个对象
 frontend/electron/ipc-contract.ts - Core ⇄ UI 的类型契约与 IPC channel 名
 frontend/package.json - 前端依赖与 electron-builder 配置
 .github/workflows/build.yml - 6 个平台目标的打包流水线
