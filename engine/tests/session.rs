@@ -156,7 +156,7 @@ fn final_does_not_wait_for_queued_speculation() {
     r.session.finish(Instant::now());
     let f = r.wait("final", Duration::from_secs(5), |_| true);
     assert_eq!(tokens(f["text"].as_str().unwrap()), freqs.iter().map(|f| format!("w{f}")).collect::<Vec<_>>());
-    // 至多等一个正在运行的推测（150 ms）再解余段（150 ms）；排队的推测被丢弃
+    // 至多等一个正在运行的推测（150 ms）再整段解码（150 ms）；排队的推测被丢弃
     assert!(f["timings"]["release_to_final_ms"].as_u64().unwrap() < 600);
 }
 
