@@ -3,11 +3,14 @@
  * [OUTPUT]: 导出 createMockBridge(scenario)、readMockScenario()、MockScenario
  * [POS]: 浏览器开发用的内存版 EchotypeBridge（ipcVersion 2）。模拟 Core：快照推送、引擎加载、听写、电平、历史、
  *        模型 variant 安装、模型专属设置、GPU 引擎包（装好后重启引擎）、运行方式（activeModel，含回退）、
- *        磁盘占用、许可证列表、集成（委托 ./mockIntegrations）。
- *        由 bridge/index.ts 在 window.echotype 缺失时动态加载。场景用 URL 参数 ?mock= 切换。
+ *        磁盘占用、许可证列表、集成（委托 ./mockIntegrations）、热键与听写失败（hotkey.error / dictation.error）、
+ *        quickAction.open（文本经 localStorage 交给新开的 #/quick-action 窗口，因为每个窗口各有一份 mock）。
+ *        由 bridge/index.ts 在 window.echotype 缺失时动态加载。场景用 URL 参数 ?mock= 切换；
+ *        运行中可在控制台用 window.echotypeMock.setHotkeyError(code|null) / setDictationError(code|null) 切换失败状态。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import type {
+  AppError,
   AppSnapshot,
   AudioInput,
   DeepPartial,
@@ -32,8 +35,9 @@ import { MOCK_LICENSES } from "./mockLicenses";
 
 // ready: 已完成引导，默认模型就绪 | fresh: 首次运行，未装模型 | error: 引擎崩溃 | loading: 卡在加载
 // fallback: 选了 NVIDIA GPU 版本，但显卡不可用，引擎回退到 CPU
-export type MockScenario = "ready" | "fresh" | "error" | "loading" | "fallback";
-const SCENARIOS: MockScenario[] = ["ready", "fresh", "error", "loading", "fallback"];
+// wayland: Linux Wayland 会话，全局热键受限 | nomic: 打不开麦克风，听写失败，直到在设置里换一个麦克风
+export type MockScenario = "ready" | "fresh" | "error" | "loading" | "fallback" | "wayland" | "nomic";
+const SCENARIOS: MockScenario[] = ["ready", "fresh", "error", "loading", "fallback", "wayland", "nomic"];
 
 export function readMockScenario(): MockScenario {
   const value = new URLSearchParams(window.location.search).get("mock");
@@ -55,6 +59,16 @@ const PHRASES = [
   "Remind me to send the release notes after lunch.",
   "我们下周三之前把第三版的接口文档定下来。",
 ];
+
+// 与 Core / 引擎同形的英文错误（界面按 code 取译文，message 只作兜底）
+const MOCK_ERRORS: Record<string, string> = {
+  HOTKEY_WAYLAND_LIMITED: "On Wayland, the global hotkey only works while an X11 (XWayland) app is focused.",
+  DEVICE_UNAVAILABLE: "No audio input device could be opened.",
+  DECODE_FAILED: "The engine could not decode the audio.",
+};
+const mockError = (code: string): AppError => ({ code, message: MOCK_ERRORS[code] ?? `Mock failure (${code}).` });
+
+const QUICK_ACTION_TEXT_KEY = "echotype.mock.quickActionText";
 
 const LEVEL_INTERVAL_MS = 50; // 契约约定 20 Hz
 const PARTIAL_INTERVAL_MS = 320;
@@ -116,6 +130,7 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
   let phraseIndex = 0;
   let partialTimer: number | undefined;
   let levelTimer: number | undefined;
+  let micUnavailable = scenario === "nomic";
 
   let pushQueued = false;
   const pushSnapshot = () => {
@@ -130,7 +145,8 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
   const state: AppSnapshot = {
     engine: { state: "starting", providerUsed: null, engineVersion: null, loadProgress: null, error: null },
     activeModel: null,
-    dictation: { phase: "idle", partialText: "", lastFinal: null },
+    dictation: { phase: "idle", partialText: "", lastFinal: null, error: null },
+    hotkey: { error: scenario === "wayland" ? mockError("HOTKEY_WAYLAND_LIMITED") : null },
     settings: initialSettings(scenario),
   };
 
@@ -234,10 +250,16 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
   // ---------- 听写 ----------
   const startDictation = async () => {
     if (state.dictation.phase !== "idle" || state.engine.state !== "ready") return;
+    // 与 Core 一致：每次 start 先清掉上一次的失败
+    if (micUnavailable) {
+      state.dictation = { ...state.dictation, error: mockError("DEVICE_UNAVAILABLE") };
+      pushSnapshot();
+      return;
+    }
     const phrase = PHRASES[phraseIndex % PHRASES.length].split(" ");
     let words = 0;
     recordingStartedAt = performance.now();
-    state.dictation = { ...state.dictation, phase: "recording", partialText: "" };
+    state.dictation = { ...state.dictation, phase: "recording", partialText: "", error: null };
     partialTimer = window.setInterval(() => {
       words = Math.min(phrase.length, words + 1);
       state.dictation.partialText = phrase.slice(0, words).join(" ");
@@ -271,7 +293,7 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
         at: Date.now(),
       };
       history = [{ id: final.sessionId, text, at: final.at, durationS: final.durationS }, ...history];
-      state.dictation = { phase: "idle", partialText: "", lastFinal: final };
+      state.dictation = { phase: "idle", partialText: "", lastFinal: final, error: null };
       pushSnapshot();
     }, releaseToFinalMs);
   };
@@ -289,7 +311,35 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
 
   window.setTimeout(bootEngine, 0);
 
+  // 开发用：在控制台切换失败状态，不必重载页面
+  Object.assign(window, {
+    echotypeMock: {
+      setHotkeyError: (code: string | null = "HOTKEY_WAYLAND_LIMITED") => {
+        state.hotkey = { error: code ? mockError(code) : null };
+        pushSnapshot();
+      },
+      setDictationError: (code: string | null = "DEVICE_UNAVAILABLE") => {
+        state.dictation = { ...state.dictation, error: code ? mockError(code) : null };
+        pushSnapshot();
+      },
+    },
+  });
+
   const resolved = <T,>(value: T) => Promise.resolve(value);
+  const readHandoff = () => {
+    try {
+      return window.localStorage.getItem(QUICK_ACTION_TEXT_KEY);
+    } catch {
+      return null;
+    }
+  };
+  const writeHandoff = (text: string) => {
+    try {
+      window.localStorage.setItem(QUICK_ACTION_TEXT_KEY, text);
+    } catch {
+      // 存不了就退回上一次听写的文字
+    }
+  };
 
   return {
     ipcVersion: 2,
@@ -301,6 +351,7 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
     // 模型专属设置只走 models.updateSettings：这里丢弃 perModel，模拟 Core 的校验
     updateSettings: async (patch) => {
       const { perModel: _ignored, ...models } = patch.models ?? {};
+      if (patch.audio && "inputDeviceId" in patch.audio) micUnavailable = false; // nomic：换一个麦克风即恢复
       state.settings = deepMerge(state.settings, { ...patch, ...(patch.models ? { models } : {}) });
       pushSnapshot();
       return structuredClone(state.settings);
@@ -398,7 +449,11 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
     },
 
     quickAction: {
-      getText: () => resolved(state.dictation.lastFinal?.text ?? history[0]?.text ?? ""),
+      getText: () => resolved(readHandoff() ?? state.dictation.lastFinal?.text ?? history[0]?.text ?? ""),
+      open: async (text) => {
+        writeHandoff(text);
+        window.open(`${window.location.pathname}${window.location.search}#/quick-action`, "echotype-quick-action", "width=460,height=420");
+      },
       close: async () => console.info("[mock] quick action closed"),
       resize: async (height) => console.info("[mock] quick action resize:", height),
       move: () => undefined,

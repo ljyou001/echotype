@@ -1,11 +1,13 @@
 /**
- * [INPUT]: 依赖 react；样式在 ./components.css
- * [OUTPUT]: 导出 PageHeader、Section、SettingRow、EmptyState 四个版式组件
+ * [INPUT]: 依赖 react；依赖 react-icons/fi 的 FiAlertTriangle；样式在 ./components.css
+ * [OUTPUT]: 导出 PageHeader、Section、SettingRow、EmptyState、Notice 五个版式组件
  * [POS]: components 的版式层。设置类页面统一采用"分节卡片 + 左说明右控件"的行式布局，
  *        取代 v2 的 auto-fit 卡片网格（那套网格导致长下拉框溢出、热键文案折行、语言卡大片留白）。
+ *        Section 的 id 是页内锚点（store 的 PageAnchor）的落点。Notice 是警示条：首页听写失败、热键受限共用。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import type { ReactNode } from "react";
+import { FiAlertTriangle } from "react-icons/fi";
 
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   return (
@@ -20,18 +22,20 @@ export function PageHeader({ title, description, actions }: { title: string; des
 }
 
 export function Section({
+  id,
   title,
   description,
   actions,
   children,
 }: {
+  id?: string;
   title?: string;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className="section">
+    <section className="section" id={id}>
       {(title || actions) && (
         <div className="section__head">
           <div>
@@ -75,6 +79,20 @@ export function SettingRow({
       </div>
       {control && <div className="setting-row__control">{control}</div>}
       {children && <div className="setting-row__extra">{children}</div>}
+    </div>
+  );
+}
+
+/** 警示条：标题说清发生了什么，正文说清能做什么，action 给出下一步 */
+export function Notice({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="notice" role="status">
+      <FiAlertTriangle className="notice__icon" aria-hidden />
+      <div className="notice__body">
+        <p className="notice__title">{title}</p>
+        {children && <p className="notice__text">{children}</p>}
+        {action && <div className="notice__action">{action}</div>}
+      </div>
     </div>
   );
 }

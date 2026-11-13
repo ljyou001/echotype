@@ -1,6 +1,6 @@
 /*
  * [INPUT]: 依赖 ./tokens.css 的变量
- * [OUTPUT]: 全局重置、排版、按钮（.btn 系列）、表单控件（.input / .select / .textarea）、kbd、滚动条
+ * [OUTPUT]: 全局重置、排版、按钮（.btn 系列）、表单控件（.input / .select / .textarea）与字段提示（.field__hint / __error / __warning）、kbd、滚动条
  * [POS]: 样式系统第二层。只定义无业务含义的原子样式，页面与组件 CSS 在其上组合。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -289,6 +289,14 @@ kbd {
 .field__error {
   font-size: var(--text-sm);
   color: var(--danger);
+}
+
+.field__warning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--warning);
 }
 
 .muted {
