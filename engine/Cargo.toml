@@ -15,6 +15,10 @@ path = "src/lib.rs"
 name = "echotype-engine"
 path = "src/main.rs"
 
+[[bin]]
+name = "echotype-bench"
+path = "src/bin/echotype-bench.rs"
+
 [features]
 default = ["static"]
 # CPU 基础引擎：sherpa-onnx 静态库（含 CPU 版 ONNX Runtime）
@@ -32,6 +36,7 @@ serde_json = "1"
 log = { version = "0.4", features = ["std"] }
 hound = "3.5"
 fancy-regex = "0.20"
+tungstenite = "0.28" # echotype-bench 与协议测试的同步客户端
 libc = "0.2"
 libloading = "0.8"
 
@@ -42,7 +47,6 @@ cpal = { version = "=0.18.2", features = ["pulseaudio"] }
 cpal = "=0.18.2"
 
 [dev-dependencies]
-tungstenite = "0.28"
 
 [profile.release]
 opt-level = 3
