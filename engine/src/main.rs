@@ -58,6 +58,7 @@ fn parse_args() -> Result<Args, String> {
 }
 
 fn main() {
+    platform::ensure_library_path();
     let args = match parse_args() {
         Ok(a) => a,
         Err(e) => {

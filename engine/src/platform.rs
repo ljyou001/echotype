@@ -1,5 +1,5 @@
 //! [INPUT]: Windows 下直接声明 kernel32 的 SetProcessInformation / GetCurrentProcess（不引入 windows-sys）
-//! [OUTPUT]: 导出 disable_power_throttling()、default_threads()、platform_name()、arch_name()
+//! [OUTPUT]: 导出 disable_power_throttling()、ensure_library_path()、default_threads()、platform_name()、arch_name()
 //! [POS]: engine 的平台适配。main.rs 启动时调用 disable_power_throttling()。
 //!        实测（design/ENGINE_NOTES.md §1）：Windows 11 会给无窗口的后台进程打 EcoQoS，ORT 解码慢 2.2 倍且忽快忽慢。
 //! [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -39,6 +39,28 @@ pub fn disable_power_throttling() {
         } else {
             log::info!("power throttling (EcoQoS) disabled for this process");
         }
+    }
+}
+
+/// Linux 引擎包：ONNX Runtime 的 CUDA EP 用 dlopen 按默认路径找 libcudnn 等库，exe 旁的库不在其中。
+/// 包内带 GPU 库且 LD_LIBRARY_PATH 不含 exe 目录时，设置后 exec 自身（同一 pid，stdio 不变）。其它平台无操作。
+pub fn ensure_library_path() {
+    #[cfg(target_os = "linux")]
+    {
+        use std::os::unix::process::CommandExt;
+        let Ok(exe) = std::env::current_exe() else { return };
+        let Some(dir) = exe.parent() else { return };
+        if !dir.join("libonnxruntime_providers_cuda.so").exists() {
+            return;
+        }
+        let cur = std::env::var("LD_LIBRARY_PATH").unwrap_or_default();
+        let d = dir.to_string_lossy().to_string();
+        if cur.split(':').any(|p| p == d) {
+            return;
+        }
+        let val = if cur.is_empty() { d } else { format!("{d}:{cur}") };
+        let err = std::process::Command::new(&exe).args(std::env::args_os().skip(1)).env("LD_LIBRARY_PATH", val).exec();
+        log::warn!("re-exec with LD_LIBRARY_PATH failed: {err}");
     }
 }
 

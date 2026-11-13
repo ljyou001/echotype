@@ -137,6 +137,14 @@ impl LlamaSidecar {
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::piped());
+        if let Some(dir) = server.parent() {
+            // Linux/macOS 的 llama 库与 llama-server 同目录；Windows 按应用目录查找，无需设置
+            let key = if cfg!(target_os = "macos") { "DYLD_LIBRARY_PATH" } else { "LD_LIBRARY_PATH" };
+            if !cfg!(windows) {
+                let cur = std::env::var(key).unwrap_or_default();
+                cmd.env(key, if cur.is_empty() { dir.display().to_string() } else { format!("{}:{cur}", dir.display()) });
+            }
+        }
         if provider == "vulkan" {
             cmd.args(["--device", "Vulkan0"]);
         }
