@@ -6,12 +6,13 @@
  *        所以服务可以在 Node 里直接测试，而原生模块只在 Electron 主进程加载。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
-import { clipboard, nativeImage } from "electron";
+import { clipboard, nativeImage, type SafeStorage } from "electron";
 import robot from "@hurdlegroup/robotjs";
 import { uIOhook, type UiohookKeyboardEvent } from "uiohook-napi";
 import { Emitter } from "../core/emitter.js";
 import type { KeyEvent, KeySource } from "../services/hotkey-service.js";
 import type { ClipboardPort, KeyboardPort } from "../services/output-service.js";
+import type { SecretCrypto } from "../services/integrations/secret-store.js";
 
 interface ClipboardSnapshot {
   text: string;
@@ -41,6 +42,19 @@ export function electronClipboard(): ClipboardPort {
         image: s.image ? nativeImage.createFromDataURL(s.image) : undefined,
       });
     },
+  };
+}
+
+/** safeStorage → SecretCrypto。Linux 无密钥环时 Electron 退到 basic_text（等同明文），如实上报。 */
+export function electronSecretCrypto(storage: SafeStorage): SecretCrypto {
+  return {
+    backend: () => {
+      if (!storage.isEncryptionAvailable()) return "none";
+      if (process.platform === "linux" && storage.getSelectedStorageBackend?.() === "basic_text") return "basic_text";
+      return "os-keychain";
+    },
+    encrypt: (plain) => storage.encryptString(plain),
+    decrypt: (cipher) => storage.decryptString(cipher),
   };
 }
 

@@ -9,14 +9,18 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import type { AppError, AppSnapshot, DeepPartial, ModelView, Settings } from "../ipc-contract.js";
+import type { AppError, AppSnapshot, DeepPartial, IntegrationRunEvent, ModelView, Settings } from "../ipc-contract.js";
 import { EngineSupervisor } from "../engine/engine-supervisor.js";
 import type { EngineCommand } from "../engine/engine-command.js";
 import { AudioService } from "../services/audio-service.js";
 import { DictationService } from "../services/dictation-service.js";
 import { HistoryStore } from "../services/history-store.js";
 import { HotkeyService, type KeySource } from "../services/hotkey-service.js";
-import { IntegrationsStore } from "../services/integrations.js";
+import { loadIntegrationCatalog } from "../services/integrations/catalog.js";
+import { DictionaryStore } from "../services/integrations/dictionary-store.js";
+import { InstanceStore } from "../services/integrations/instance-store.js";
+import { SecretStore, type SecretCrypto } from "../services/integrations/secret-store.js";
+import { IntegrationService } from "../services/integrations/service.js";
 import { loadCatalog } from "../services/model-catalog.js";
 import { ModelRegistry } from "../services/model-registry.js";
 import { ModelRuntime } from "../services/model-runtime.js";
@@ -44,6 +48,9 @@ export interface CoreAdapters {
   publishModels: (models: ModelView[]) => void;
   publishLevel: (level: { rmsDbfs: number; peakDbfs: number }) => void;
   applyLaunchAtStartup?: (enabled: boolean) => void;
+  secretCrypto?: SecretCrypto; // Electron safeStorage；缺省 = 不可用，密钥写入会报错
+  openUri?: (uri: string) => Promise<void>; // shell.openExternal（Core 已按清单校验协议）
+  publishIntegrationEvent?: (event: IntegrationRunEvent) => void;
 }
 
 /** 跨 IPC 携带错误码：渲染进程收到的 message 形如 "[MODEL_NOT_INSTALLED] …"。 */
@@ -53,6 +60,16 @@ export class CoreError extends Error {
   }
 }
 
+const NO_SECRET_CRYPTO: SecretCrypto = {
+  backend: () => "none",
+  encrypt: () => {
+    throw new Error("Secure storage is not available.");
+  },
+  decrypt: () => {
+    throw new Error("Secure storage is not available.");
+  },
+};
+
 export class Core {
   readonly settings: SettingsStore;
   readonly registry: ModelRegistry;
@@ -61,7 +78,7 @@ export class Core {
   readonly audio: AudioService;
   readonly output: OutputService;
   readonly history: HistoryStore;
-  readonly integrations: IntegrationsStore;
+  readonly integrations: IntegrationService;
   readonly dictation: DictationService;
   readonly hotkey: HotkeyService;
   private readonly snapshotPush: Coalescer;
@@ -94,7 +111,20 @@ export class Core {
     this.audio = new AudioService(this.supervisor, settings, logger);
     this.output = new OutputService({ clipboard: adapters.clipboard, keyboard: adapters.keyboard, settings, logger });
     this.history = new HistoryStore(paths.historyFile, logger);
-    this.integrations = new IntegrationsStore(paths.integrationsFile, logger);
+    this.integrations = new IntegrationService({
+      catalog: loadIntegrationCatalog(path.join(path.dirname(config.catalogFile), "integrations.catalog.json"), logger),
+      instances: new InstanceStore(paths.instancesFile),
+      secrets: new SecretStore(paths.secretsFile, adapters.secretCrypto ?? NO_SECRET_CRYPTO, logger),
+      dictionary: new DictionaryStore(paths.dictionaryFile),
+      legacyFile: paths.integrationsFile,
+      logger,
+      ports: {
+        fetch: adapters.fetch,
+        openUri: adapters.openUri ?? (async () => {}),
+        copyText: async (text) => this.output.copy(text),
+        publish: (event) => adapters.publishIntegrationEvent?.(event),
+      },
+    });
     this.dictation = new DictationService({
       engine: this.supervisor,
       settings,
@@ -140,6 +170,7 @@ export class Core {
     this.settings.load();
     this.registry.scan();
     this.history.load();
+    this.integrations.start();
     this.hotkey.setAccelerator(this.settings.get().hotkey.accelerator);
     this.hotkey.start();
     this.supervisor.start();
@@ -149,6 +180,7 @@ export class Core {
 
   async dispose(): Promise<void> {
     this.hotkey.stop();
+    this.integrations.dispose();
     this.snapshotPush.dispose();
     this.modelsPush.dispose();
     await this.supervisor.stop();

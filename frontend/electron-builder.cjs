@@ -44,6 +44,10 @@ module.exports = {
         {
             from: "../contracts/models.catalog.json",
             to: "contracts/models.catalog.json"
+        },
+        {
+            from: "../contracts/integrations.catalog.json",
+            to: "contracts/integrations.catalog.json"
         }
     ],
     win: {

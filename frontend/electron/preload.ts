@@ -71,9 +71,23 @@ const bridge: EchotypeBridge = {
   },
 
   integrations: {
-    getConfig: () => invoke(IPC.integrationsGet),
-    saveConfig: (config) => invoke(IPC.integrationsSave, config),
-    httpRequest: (url, init) => invoke(IPC.integrationsHttp, url, init),
+    catalog: () => invoke(IPC.integrationsCatalog),
+    list: () => invoke(IPC.integrationsList),
+    save: (input) => invoke(IPC.integrationsSave, input),
+    remove: (id) => invoke(IPC.integrationsRemove, id),
+    setDefault: (id) => invoke(IPC.integrationsSetDefault, id),
+    reorder: (ids) => invoke(IPC.integrationsReorder, ids),
+    listModels: (draft) => invoke(IPC.integrationsListModels, draft),
+    test: (draft) => invoke(IPC.integrationsTest, draft),
+    run: (req) => invoke(IPC.integrationsRun, req),
+    cancel: (runId) => invoke(IPC.integrationsCancel, runId),
+    onEvent: (cb) => subscribe(IPC.integrationsEvent, cb),
+    secretStorage: () => invoke(IPC.integrationsSecretStorage),
+  },
+
+  dictionary: {
+    list: () => invoke(IPC.dictionaryList),
+    save: (entries) => invoke(IPC.dictionarySave, entries),
   },
 
   system: {

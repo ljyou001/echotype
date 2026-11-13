@@ -1,0 +1,1422 @@
+{
+  "$comment": "Single source of metadata for integrations. Spec: contracts/INTEGRATIONS_MANIFEST.md. Model names are suggestions only; Core lists real models from each provider at runtime.",
+  "schemaVersion": 1,
+  "providers": [
+    {
+      "id": "openai",
+      "name": {
+        "en": "OpenAI"
+      },
+      "protocol": "openai",
+      "baseUrl": "https://api.openai.com/v1",
+      "fields": [
+        {
+          "key": "apiKey",
+          "type": "secret",
+          "label": {
+            "en": "API key",
+            "zh": "API 密钥"
+          }
+        }
+      ],
+      "suggestedModel": "gpt-5-mini",
+      "keyUrl": "https://platform.openai.com/api-keys",
+      "dataNote": {
+        "en": "Text is sent to api.openai.com.",
+        "zh": "文本会发送到 api.openai.com。"
+      }
+    },
+    {
+      "id": "anthropic",
+      "name": {
+        "en": "Anthropic Claude",
+        "zh": "Anthropic Claude"
+      },
+      "protocol": "anthropic",
+      "baseUrl": "https://api.anthropic.com",
+      "fields": [
+        {
+          "key": "apiKey",
+          "type": "secret",
+          "label": {
+            "en": "API key",
+            "zh": "API 密钥"
+          }
+        }
+      ],
+      "suggestedModel": "claude-haiku-4-5",
+      "keyUrl": "https://console.anthropic.com/settings/keys",
+      "dataNote": {
+        "en": "Text is sent to api.anthropic.com.",
+        "zh": "文本会发送到 api.anthropic.com。"
+      }
+    },
+    {
+      "id": "gemini",
+      "name": {
+        "en": "Google Gemini"
+      },
+      "protocol": "openai",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "fields": [
+        {
+          "key": "apiKey",
+          "type": "secret",
+          "label": {
+            "en": "API key",
+            "zh": "API 密钥"
+          }
+        }
+      ],
+      "suggestedModel": "gemini-flash-latest",
+      "keyUrl": "https://aistudio.google.com/apikey",
+      "dataNote": {
+        "en": "Text is sent to generativelanguage.googleapis.com.",
+        "zh": "文本会发送到 generativelanguage.googleapis.com。"
+      }
+    },
+    {
+      "id": "deepseek",
+      "name": {
+        "en": "DeepSeek",
+        "zh": "DeepSeek"
+      },
+      "protocol": "openai",
+      "baseUrl": "https://api.deepseek.com",
+      "fields": [
+        {
+          "key": "apiKey",
+          "type": "secret",
+          "label": {
+            "en": "API key",
+            "zh": "API 密钥"
+          }
+        }
+      ],
+      "suggestedModel": "deepseek-v4-flash",
+      "keyUrl": "https://platform.deepseek.com/api_keys",
+      "dataNote": {
+        "en": "Text is sent to api.deepseek.com (China).",
+        "zh": "文本会发送到 api.deepseek.com（中国）。"
+      }
+    },
+    {
+      "id": "qwen",
+      "name": {
+        "en": "Qwen (Alibaba Cloud)",
+        "zh": "通义千问（阿里云百炼）"
+      },
+      "protocol": "openai",
+      "baseUrlFrom": "region",
+      "fields": [
+        {
+          "key": "region",
+          "type": "enum",
+          "label": {
+            "en": "Region",
+            "zh": "地区"
+          },
+          "default": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+          "options": [
+            {
+              "value": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+              "label": {
+                "en": "Mainland China (Beijing)",
+                "zh": "中国大陆（北京）"
+              }
+            },
+            {
+              "value": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+              "label": {
+                "en": "International (Singapore)",
+                "zh": "国际（新加坡）"
+              }
+            },
+            {
+              "value": "https://dashscope-us.aliyuncs.com/compatible-mode/v1",
+              "label": {
+                "en": "United States (Virginia)",
+                "zh": "美国（弗吉尼亚）"
+              }
+            }
+          ]
+        },
+        {
+          "key": "apiKey",
+          "type": "secret",
+          "label": {
+            "en": "API key",
+            "zh": "API 密钥"
+          }
+        }
+      ],
+      "suggestedModel": "qwen-flash",
+      "keyUrl": "https://bailian.console.aliyun.com/",
+      "dataNote": {
+        "en": "Text is sent to Alibaba Cloud. API keys are region-specific.",
+        "zh": "文本会发送到阿里云。密钥按地区区分，不能混用。"
+      }
+    },
+    {
+      "id": "kimi",
+      "name": {
+        "en": "Kimi (Moonshot)",
+        "zh": "Kimi（月之暗面）"
+      },
+      "protocol": "openai",
+      "baseUrlFrom": "region",
+      "fields": [
+        {
+          "key": "region",
+          "type": "enum",
+          "label": {
+            "en": "Region",
+            "zh": "地区"
+          },
+          "default": "https://api.moonshot.cn/v1",
+          "options": [
+            {
+              "value": "https://api.moonshot.cn/v1",
+              "label": {
+                "en": "Mainland China",
+                "zh": "中国大陆"
+              }
+            },
+            {
+              "value": "https://api.moonshot.ai/v1",
+              "label": {
+                "en": "International",
+                "zh": "国际"
+              }
+            }
+          ]
+        },
+        {
+          "key": "apiKey",
+          "type": "secret",
+          "label": {
+            "en": "API key",
+            "zh": "API 密钥"
+          }
+        }
+      ],
+      "keyUrl": "https://platform.moonshot.cn/console/api-keys",
+      "dataNote": {
+        "en": "Text is sent to Moonshot AI. API keys are region-specific.",
+        "zh": "文本会发送到月之暗面。密钥按平台区分，不能混用。"
+      }
+    },
+    {
+      "id": "zhipu",
+      "name": {
+        "en": "Zhipu GLM",
+        "zh": "智谱 GLM"
+      },
+      "protocol": "openai",
+      "baseUrlFrom": "region",
+      "fields": [
+        {
+          "key": "region",
+          "type": "enum",
+          "label": {
+            "en": "Region",
+            "zh": "地区"
+          },
+          "default": "https://open.bigmodel.cn/api/paas/v4",
+          "options": [
+            {
+              "value": "https://open.bigmodel.cn/api/paas/v4",
+              "label": {
+                "en": "Mainland China (BigModel)",
+                "zh": "中国大陆（BigModel）"
+              }
+            },
+            {
+              "value": "https://api.z.ai/api/paas/v4",
+              "label": {
+                "en": "International (Z.ai)",
+                "zh": "国际（Z.ai）"
+              }
+            }
+          ]
+        },
+        {
+          "key": "apiKey",
+          "type": "secret",
+          "label": {
+            "en": "API key",
+            "zh": "API 密钥"
+          }
+        }
+      ],
+      "keyUrl": "https://open.bigmodel.cn/usercenter/apikeys",
+      "dataNote": {
+        "en": "Text is sent to Zhipu AI.",
+        "zh": "文本会发送到智谱。"
+      }
+    },
+    {
+      "id": "openrouter",
+      "name": {
+        "en": "OpenRouter"
+      },
+      "protocol": "openai",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "fields": [
+        {
+          "key": "apiKey",
+          "type": "secret",
+          "label": {
+            "en": "API key",
+            "zh": "API 密钥"
+          }
+        }
+      ],
+      "keyUrl": "https://openrouter.ai/keys",
+      "dataNote": {
+        "en": "Text is sent to openrouter.ai and the model provider it routes to.",
+        "zh": "文本会发送到 openrouter.ai 及其转发的模型服务商。"
+      }
+    },
+    {
+      "id": "ollama",
+      "name": {
+        "en": "Ollama (local)",
+        "zh": "Ollama（本机）"
+      },
+      "protocol": "openai",
+      "local": true,
+      "baseUrl": "http://localhost:11434/v1",
+      "fields": [
+        {
+          "key": "baseUrl",
+          "type": "text",
+          "label": {
+            "en": "Server address",
+            "zh": "服务地址"
+          },
+          "default": "http://localhost:11434/v1"
+        }
+      ],
+      "dataNote": {
+        "en": "Stays on this computer.",
+        "zh": "数据不会离开这台电脑。"
+      }
+    },
+    {
+      "id": "lmstudio",
+      "name": {
+        "en": "LM Studio (local)",
+        "zh": "LM Studio（本机）"
+      },
+      "protocol": "openai",
+      "local": true,
+      "baseUrl": "http://localhost:1234/v1",
+      "fields": [
+        {
+          "key": "baseUrl",
+          "type": "text",
+          "label": {
+            "en": "Server address",
+            "zh": "服务地址"
+          },
+          "default": "http://localhost:1234/v1"
+        }
+      ],
+      "dataNote": {
+        "en": "Stays on this computer.",
+        "zh": "数据不会离开这台电脑。"
+      }
+    },
+    {
+      "id": "llamacpp",
+      "name": {
+        "en": "llama.cpp server (local)",
+        "zh": "llama.cpp server（本机）"
+      },
+      "protocol": "openai",
+      "local": true,
+      "baseUrl": "http://localhost:8080/v1",
+      "fields": [
+        {
+          "key": "baseUrl",
+          "type": "text",
+          "label": {
+            "en": "Server address",
+            "zh": "服务地址"
+          },
+          "default": "http://localhost:8080/v1"
+        }
+      ],
+      "dataNote": {
+        "en": "Stays on this computer.",
+        "zh": "数据不会离开这台电脑。"
+      }
+    },
+    {
+      "id": "custom",
+      "name": {
+        "en": "Custom (OpenAI-compatible)",
+        "zh": "自定义（OpenAI 兼容）"
+      },
+      "protocol": "openai",
+      "baseUrlFrom": "baseUrl",
+      "fields": [
+        {
+          "key": "baseUrl",
+          "type": "text",
+          "label": {
+            "en": "Base URL",
+            "zh": "接口地址"
+          },
+          "placeholder": "https://example.com/v1",
+          "description": {
+            "en": "Any server that implements /chat/completions: vLLM, a gateway, OpenClaw, and so on.",
+            "zh": "任何实现了 /chat/completions 的服务，如 vLLM、网关、OpenClaw 等。"
+          }
+        },
+        {
+          "key": "apiKey",
+          "type": "secret",
+          "label": {
+            "en": "API key (optional)",
+            "zh": "API 密钥（可选）"
+          },
+          "optional": true
+        }
+      ],
+      "dataNote": {
+        "en": "Text is sent to the address you enter.",
+        "zh": "文本会发送到你填写的地址。"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "cleanup",
+      "kind": "transform",
+      "group": "cleanup",
+      "name": {
+        "en": "Clean up",
+        "zh": "整理润色"
+      },
+      "description": {
+        "en": "Remove filler words and repeats, fix punctuation.",
+        "zh": "去掉口头禅和重复，修正标点。"
+      },
+      "icon": "✨",
+      "needsProvider": true,
+      "fields": [],
+      "dictionary": true,
+      "prompt": {
+        "system": "You clean up dictated speech. Remove filler words, repeated words and false starts, resolve self-corrections (keep the final version), and fix punctuation and capitalization. Keep the original language, meaning and voice. Do not add information. Output only the result, with no preamble or quotes.",
+        "user": "{{text}}",
+        "maxTokens": 2048
+      },
+      "confirm": false
+    },
+    {
+      "id": "translate",
+      "kind": "transform",
+      "group": "cleanup",
+      "name": {
+        "en": "Translate",
+        "zh": "翻译"
+      },
+      "description": {
+        "en": "Translate into a language you choose.",
+        "zh": "翻译成你指定的语言。"
+      },
+      "icon": "🌐",
+      "needsProvider": true,
+      "fields": [
+        {
+          "key": "target",
+          "type": "text",
+          "label": {
+            "en": "Target language",
+            "zh": "目标语言"
+          },
+          "default": "English",
+          "description": {
+            "en": "For example: English, 简体中文, 日本語.",
+            "zh": "例如：English、简体中文、日本語。"
+          }
+        }
+      ],
+      "dictionary": true,
+      "prompt": {
+        "system": "Translate the user's text into {{target}}. Keep names, numbers and technical terms accurate. Output only the translation.",
+        "user": "{{text}}",
+        "maxTokens": 2048
+      },
+      "confirm": false
+    },
+    {
+      "id": "email",
+      "kind": "transform",
+      "group": "cleanup",
+      "name": {
+        "en": "Rewrite as email",
+        "zh": "改写成邮件"
+      },
+      "description": {
+        "en": "Turn dictation into a clear, polite email.",
+        "zh": "把口述内容改成清晰得体的邮件。"
+      },
+      "icon": "✉️",
+      "needsProvider": true,
+      "fields": [],
+      "dictionary": true,
+      "prompt": {
+        "system": "Rewrite the dictated text as a clear, polite, well-structured email body. Add a short greeting and sign-off only if the text implies a recipient. Keep the original language, meaning and voice. Do not add information. Output only the result, with no preamble or quotes.",
+        "user": "{{text}}",
+        "maxTokens": 2048
+      },
+      "confirm": false
+    },
+    {
+      "id": "im-short",
+      "kind": "transform",
+      "group": "cleanup",
+      "name": {
+        "en": "Rewrite as chat message",
+        "zh": "改写成聊天消息"
+      },
+      "description": {
+        "en": "Short and casual, for Slack, WeChat and the like.",
+        "zh": "简短自然，适合 Slack、微信等。"
+      },
+      "icon": "💬",
+      "needsProvider": true,
+      "fields": [],
+      "dictionary": true,
+      "prompt": {
+        "system": "Rewrite the dictated text as a short, natural chat message. Remove filler and keep it to the point. Keep the original language, meaning and voice. Do not add information. Output only the result, with no preamble or quotes.",
+        "user": "{{text}}",
+        "maxTokens": 2048
+      },
+      "confirm": false
+    },
+    {
+      "id": "bullet-list",
+      "kind": "transform",
+      "group": "cleanup",
+      "name": {
+        "en": "Make a bullet list",
+        "zh": "整理成要点"
+      },
+      "description": {
+        "en": "Turn rambling speech into bullet points.",
+        "zh": "把一大段口述整理成要点列表。"
+      },
+      "icon": "📝",
+      "needsProvider": true,
+      "fields": [],
+      "dictionary": true,
+      "prompt": {
+        "system": "Turn the dictated text into a concise bullet list using '- ' markers. One idea per bullet. Keep the original language, meaning and voice. Do not add information. Output only the result, with no preamble or quotes.",
+        "user": "{{text}}",
+        "maxTokens": 2048
+      },
+      "confirm": false
+    },
+    {
+      "id": "custom-prompt",
+      "kind": "transform",
+      "group": "cleanup",
+      "name": {
+        "en": "Custom instruction",
+        "zh": "自定义指令"
+      },
+      "description": {
+        "en": "Apply your own instruction to the text.",
+        "zh": "用你自己的指令处理文本。"
+      },
+      "icon": "🛠️",
+      "needsProvider": true,
+      "fields": [
+        {
+          "key": "instruction",
+          "type": "textarea",
+          "label": {
+            "en": "Instruction",
+            "zh": "指令"
+          },
+          "description": {
+            "en": "Tell the model what to do with the text. Example: “Rewrite as a polite reply in Japanese.”",
+            "zh": "告诉模型要怎么处理这段文字。例如：“改写成礼貌的日语回复。”"
+          }
+        }
+      ],
+      "dictionary": true,
+      "prompt": {
+        "system": "{{instruction}}",
+        "user": "{{text}}",
+        "maxTokens": 2048
+      },
+      "confirm": false
+    },
+    {
+      "id": "ask-ai",
+      "kind": "transform",
+      "group": "ai",
+      "name": {
+        "en": "Ask AI",
+        "zh": "问 AI"
+      },
+      "description": {
+        "en": "Send your text to a model and read the answer here.",
+        "zh": "把文字发给模型，在这里看回答。"
+      },
+      "icon": "🤖",
+      "needsProvider": true,
+      "fields": [],
+      "dictionary": false,
+      "prompt": {
+        "system": "You are a helpful assistant. Answer concisely and directly, in the language of the question.",
+        "user": "{{text}}",
+        "maxTokens": 2048
+      },
+      "confirm": false
+    },
+    {
+      "id": "webhook",
+      "kind": "send",
+      "group": "chat",
+      "name": {
+        "en": "Webhook",
+        "zh": "Webhook"
+      },
+      "description": {
+        "en": "POST your text to any URL and show the reply.",
+        "zh": "把文字 POST 到任意地址，并显示返回内容。"
+      },
+      "icon": "🪝",
+      "needsProvider": false,
+      "fields": [
+        {
+          "key": "url",
+          "type": "secret",
+          "label": {
+            "en": "Webhook URL",
+            "zh": "Webhook 地址"
+          },
+          "placeholder": "https://…"
+        },
+        {
+          "key": "headers",
+          "type": "secret",
+          "label": {
+            "en": "Headers (optional)",
+            "zh": "请求头（可选）"
+          },
+          "optional": true,
+          "placeholder": "Authorization: Bearer …",
+          "description": {
+            "en": "One per line, like “Authorization: Bearer …”.",
+            "zh": "每行一个，如 “Authorization: Bearer …”。"
+          }
+        },
+        {
+          "key": "body",
+          "type": "textarea",
+          "label": {
+            "en": "Body template",
+            "zh": "请求体模板"
+          },
+          "default": "{\"text\": {{text|json}}}",
+          "description": {
+            "en": "{{text|json}} inserts your text as a safe JSON string.",
+            "zh": "{{text|json}} 会把文字作为安全的 JSON 字符串插入。"
+          }
+        },
+        {
+          "key": "replyPath",
+          "type": "text",
+          "label": {
+            "en": "Reply field (optional)",
+            "zh": "回复字段（可选）"
+          },
+          "optional": true,
+          "placeholder": "data.answer",
+          "description": {
+            "en": "Dot path in the JSON response. Leave empty to detect automatically.",
+            "zh": "返回 JSON 里的点路径。留空则自动识别。"
+          }
+        }
+      ],
+      "http": {
+        "method": "POST",
+        "url": "{{url}}",
+        "allowHosts": [
+          "*"
+        ],
+        "headersField": "headers",
+        "bodyField": "body",
+        "replyField": "replyPath"
+      },
+      "hint": {
+        "en": "Works with any service that supports webhooks: n8n, Zapier, Make, Dify, Coze, Feishu, DingTalk, WeCom bots and more. If the webhook replies with text, the reply appears here, so you can use it like a chat.",
+        "zh": "任何支持 webhook 的服务都能用：n8n、Zapier、Make、Dify、Coze，飞书、钉钉、企业微信机器人等。如果 webhook 返回文字，回复会显示在这里，可以当对话用。"
+      },
+      "egress": {
+        "hosts": [],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "feishu-bot",
+      "kind": "send",
+      "group": "send",
+      "name": {
+        "en": "Feishu / Lark bot",
+        "zh": "飞书 / Lark 机器人"
+      },
+      "description": {
+        "en": "Post to a group via a custom bot.",
+        "zh": "通过自定义机器人发到群里。"
+      },
+      "icon": "🐦",
+      "needsProvider": false,
+      "fields": [
+        {
+          "key": "url",
+          "type": "secret",
+          "label": {
+            "en": "Webhook URL",
+            "zh": "Webhook 地址"
+          },
+          "placeholder": "https://open.feishu.cn/open-apis/bot/v2/hook/…"
+        }
+      ],
+      "http": {
+        "method": "POST",
+        "url": "{{url}}",
+        "allowHosts": [
+          "open.feishu.cn",
+          "open.larksuite.com"
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "msg_type": "text",
+          "content": {
+            "text": "{{text}}"
+          }
+        },
+        "successWhen": {
+          "path": "code",
+          "equals": 0
+        }
+      },
+      "hint": {
+        "en": "Turn off “Signature verification” on the bot, or use keyword mode with a keyword that appears in your text.",
+        "zh": "机器人安全设置里请关闭“签名校验”，或使用“关键词”并确保文本里包含它。"
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "slack-webhook",
+      "kind": "send",
+      "group": "send",
+      "name": {
+        "en": "Slack",
+        "zh": "Slack"
+      },
+      "description": {
+        "en": "Post to a channel via an incoming webhook.",
+        "zh": "通过 Incoming Webhook 发到频道。"
+      },
+      "icon": "#️⃣",
+      "needsProvider": false,
+      "fields": [
+        {
+          "key": "url",
+          "type": "secret",
+          "label": {
+            "en": "Webhook URL",
+            "zh": "Webhook 地址"
+          },
+          "placeholder": "https://hooks.slack.com/services/…"
+        }
+      ],
+      "http": {
+        "method": "POST",
+        "url": "{{url}}",
+        "allowHosts": [
+          "hooks.slack.com"
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "text": "{{text}}"
+        }
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "discord-webhook",
+      "kind": "send",
+      "group": "send",
+      "name": {
+        "en": "Discord",
+        "zh": "Discord"
+      },
+      "description": {
+        "en": "Post to a channel via a webhook.",
+        "zh": "通过 Webhook 发到频道。"
+      },
+      "icon": "🎮",
+      "needsProvider": false,
+      "fields": [
+        {
+          "key": "url",
+          "type": "secret",
+          "label": {
+            "en": "Webhook URL",
+            "zh": "Webhook 地址"
+          },
+          "placeholder": "https://discord.com/api/webhooks/…"
+        }
+      ],
+      "http": {
+        "method": "POST",
+        "url": "{{url}}",
+        "allowHosts": [
+          "discord.com",
+          "discordapp.com"
+        ],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "content": "{{text}}"
+        }
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "todoist-quick-add",
+      "kind": "send",
+      "group": "send",
+      "name": {
+        "en": "Todoist",
+        "zh": "Todoist"
+      },
+      "description": {
+        "en": "Quick Add: dates, #projects and @labels are parsed for you.",
+        "zh": "Quick Add：自动解析日期、#项目 和 @标签。"
+      },
+      "icon": "✅",
+      "needsProvider": false,
+      "fields": [
+        {
+          "key": "token",
+          "type": "secret",
+          "label": {
+            "en": "API token",
+            "zh": "API 令牌"
+          }
+        }
+      ],
+      "http": {
+        "method": "POST",
+        "url": "https://api.todoist.com/api/v1/tasks/quick",
+        "allowHosts": [
+          "api.todoist.com"
+        ],
+        "headers": {
+          "Authorization": "Bearer {{token}}",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "text": "{{text}}"
+        }
+      },
+      "hint": {
+        "en": "Say “Call Sam tomorrow 3pm #Work p1” and Todoist fills in the date, project and priority.",
+        "zh": "说“明天下午三点给 Sam 打电话 #工作 p1”，Todoist 会自动填好日期、项目和优先级。"
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "obsidian-note",
+      "kind": "send",
+      "group": "send",
+      "name": {
+        "en": "Obsidian",
+        "zh": "Obsidian"
+      },
+      "description": {
+        "en": "Append to a note in your vault.",
+        "zh": "追加到你的 Obsidian 笔记里。"
+      },
+      "icon": "💎",
+      "needsProvider": false,
+      "fields": [
+        {
+          "key": "vault",
+          "type": "text",
+          "label": {
+            "en": "Vault name",
+            "zh": "仓库名称"
+          },
+          "optional": true,
+          "description": {
+            "en": "Leave empty to use the last opened vault.",
+            "zh": "留空则使用最近打开的仓库。"
+          }
+        },
+        {
+          "key": "file",
+          "type": "text",
+          "label": {
+            "en": "Note",
+            "zh": "笔记"
+          },
+          "default": "EchoType Inbox"
+        }
+      ],
+      "uri": {
+        "template": "obsidian://new?vault={{vault|url}}&file={{file|url}}&content={{text|url}}&append=true",
+        "scheme": "obsidian"
+      },
+      "hint": {
+        "en": "Opens Obsidian to write the note. Very long text may be cut off by the operating system.",
+        "zh": "会唤起 Obsidian 写入笔记。过长的文字可能被系统截断。"
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "claude-code",
+      "kind": "send",
+      "group": "agent",
+      "name": {
+        "en": "Claude Code",
+        "zh": "Claude Code"
+      },
+      "description": {
+        "en": "Run your text as a prompt with the claude CLI.",
+        "zh": "把文字作为提示词交给 claude 命令行。"
+      },
+      "icon": "🧑‍💻",
+      "needsProvider": false,
+      "fields": [
+        {
+          "key": "workdir",
+          "type": "directory",
+          "label": {
+            "en": "Project folder",
+            "zh": "项目目录"
+          }
+        }
+      ],
+      "cli": {
+        "command": "claude",
+        "args": [
+          "-p"
+        ],
+        "cwdField": "workdir"
+      },
+      "confirm": true,
+      "hint": {
+        "en": "Needs the claude CLI installed and signed in. It can read and edit files in the folder, so you confirm every run.",
+        "zh": "需要已安装并登录 claude 命令行。它能读写该目录里的文件，所以每次运行都会请你确认。"
+      },
+      "dictionary": false
+    },
+    {
+      "id": "codex-exec",
+      "kind": "send",
+      "group": "agent",
+      "name": {
+        "en": "Codex CLI",
+        "zh": "Codex CLI"
+      },
+      "description": {
+        "en": "Run your text as a prompt with codex exec.",
+        "zh": "把文字作为提示词交给 codex exec。"
+      },
+      "icon": "🧑‍💻",
+      "needsProvider": false,
+      "fields": [
+        {
+          "key": "workdir",
+          "type": "directory",
+          "label": {
+            "en": "Project folder",
+            "zh": "项目目录"
+          }
+        }
+      ],
+      "cli": {
+        "command": "codex",
+        "args": [
+          "exec",
+          "-"
+        ],
+        "cwdField": "workdir"
+      },
+      "confirm": true,
+      "hint": {
+        "en": "Needs the codex CLI installed and signed in. It can read and edit files in the folder, so you confirm every run.",
+        "zh": "需要已安装并登录 codex 命令行。它能读写该目录里的文件，所以每次运行都会请你确认。"
+      },
+      "dictionary": false
+    },
+    {
+      "id": "open-google",
+      "kind": "open",
+      "group": "open",
+      "name": {
+        "en": "Google Search",
+        "zh": "Google 搜索"
+      },
+      "description": {
+        "en": "Open in your browser.",
+        "zh": "在浏览器中打开。"
+      },
+      "icon": "🔍",
+      "needsProvider": false,
+      "fields": [],
+      "open": {
+        "uri": "https://www.google.com/search?q={{text|url}}",
+        "copy": false
+      },
+      "egress": {
+        "hosts": [
+          "www.google.com"
+        ],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "open-bing",
+      "kind": "open",
+      "group": "open",
+      "name": {
+        "en": "Bing Search",
+        "zh": "必应搜索"
+      },
+      "description": {
+        "en": "Open in your browser.",
+        "zh": "在浏览器中打开。"
+      },
+      "icon": "🔎",
+      "needsProvider": false,
+      "fields": [],
+      "open": {
+        "uri": "https://www.bing.com/search?q={{text|url}}",
+        "copy": false
+      },
+      "egress": {
+        "hosts": [
+          "www.bing.com"
+        ],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "open-baidu",
+      "kind": "open",
+      "group": "open",
+      "name": {
+        "en": "Baidu Search",
+        "zh": "百度搜索"
+      },
+      "description": {
+        "en": "Open in your browser.",
+        "zh": "在浏览器中打开。"
+      },
+      "icon": "🐾",
+      "needsProvider": false,
+      "fields": [],
+      "open": {
+        "uri": "https://www.baidu.com/s?wd={{text|url}}",
+        "copy": false
+      },
+      "egress": {
+        "hosts": [
+          "www.baidu.com"
+        ],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "open-chatgpt",
+      "kind": "open",
+      "group": "open",
+      "name": {
+        "en": "ChatGPT",
+        "zh": "ChatGPT"
+      },
+      "description": {
+        "en": "Open in your browser.",
+        "zh": "在浏览器中打开。"
+      },
+      "icon": "💬",
+      "needsProvider": false,
+      "fields": [],
+      "open": {
+        "uri": "https://chatgpt.com/?q={{text|url}}",
+        "copy": false
+      },
+      "egress": {
+        "hosts": [
+          "chatgpt.com"
+        ],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "open-claude",
+      "kind": "open",
+      "group": "open",
+      "name": {
+        "en": "Claude",
+        "zh": "Claude"
+      },
+      "description": {
+        "en": "Open in your browser.",
+        "zh": "在浏览器中打开。"
+      },
+      "icon": "🟠",
+      "needsProvider": false,
+      "fields": [],
+      "open": {
+        "uri": "https://claude.ai/new?q={{text|url}}",
+        "copy": false
+      },
+      "egress": {
+        "hosts": [
+          "claude.ai"
+        ],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "open-perplexity",
+      "kind": "open",
+      "group": "open",
+      "name": {
+        "en": "Perplexity",
+        "zh": "Perplexity"
+      },
+      "description": {
+        "en": "Open in your browser.",
+        "zh": "在浏览器中打开。"
+      },
+      "icon": "🔮",
+      "needsProvider": false,
+      "fields": [],
+      "open": {
+        "uri": "https://www.perplexity.ai/?q={{text|url}}",
+        "copy": false
+      },
+      "egress": {
+        "hosts": [
+          "www.perplexity.ai"
+        ],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "open-gemini",
+      "kind": "open",
+      "group": "open",
+      "name": {
+        "en": "Gemini",
+        "zh": "Gemini"
+      },
+      "description": {
+        "en": "Copies your text, then opens Gemini.",
+        "zh": "先复制文字，再打开 Gemini。"
+      },
+      "icon": "♊",
+      "needsProvider": false,
+      "fields": [],
+      "open": {
+        "uri": "https://gemini.google.com/app",
+        "copy": true
+      },
+      "egress": {
+        "hosts": [
+          "gemini.google.com"
+        ],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "open-qwen",
+      "kind": "open",
+      "group": "open",
+      "name": {
+        "en": "Qwen",
+        "zh": "通义千问"
+      },
+      "description": {
+        "en": "Copies your text, then opens Qwen.",
+        "zh": "先复制文字，再打开通义千问。"
+      },
+      "icon": "☁️",
+      "needsProvider": false,
+      "fields": [],
+      "open": {
+        "uri": "https://tongyi.aliyun.com/qianwen/",
+        "copy": true
+      },
+      "egress": {
+        "hosts": [
+          "tongyi.aliyun.com"
+        ],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "open-doubao",
+      "kind": "open",
+      "group": "open",
+      "name": {
+        "en": "Doubao",
+        "zh": "豆包"
+      },
+      "description": {
+        "en": "Copies your text, then opens Doubao.",
+        "zh": "先复制文字，再打开豆包。"
+      },
+      "icon": "🫘",
+      "needsProvider": false,
+      "fields": [],
+      "open": {
+        "uri": "https://www.doubao.com/chat/",
+        "copy": true
+      },
+      "egress": {
+        "hosts": [
+          "www.doubao.com"
+        ],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "open-ernie",
+      "kind": "open",
+      "group": "open",
+      "name": {
+        "en": "ERNIE Bot",
+        "zh": "文心一言"
+      },
+      "description": {
+        "en": "Copies your text, then opens ERNIE Bot.",
+        "zh": "先复制文字，再打开文心一言。"
+      },
+      "icon": "🐻",
+      "needsProvider": false,
+      "fields": [],
+      "open": {
+        "uri": "https://yiyan.baidu.com/",
+        "copy": true
+      },
+      "egress": {
+        "hosts": [
+          "yiyan.baidu.com"
+        ],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "open-google-translate",
+      "kind": "open",
+      "group": "open",
+      "name": {
+        "en": "Google Translate",
+        "zh": "谷歌翻译"
+      },
+      "description": {
+        "en": "Open in your browser.",
+        "zh": "在浏览器中打开。"
+      },
+      "icon": "🌍",
+      "needsProvider": false,
+      "fields": [
+        {
+          "key": "sourceLang",
+          "type": "text",
+          "label": {
+            "en": "From",
+            "zh": "源语言"
+          },
+          "default": "auto"
+        },
+        {
+          "key": "targetLang",
+          "type": "text",
+          "label": {
+            "en": "To",
+            "zh": "目标语言"
+          },
+          "default": "en"
+        }
+      ],
+      "open": {
+        "uri": "https://translate.google.com/?sl={{sourceLang|url}}&tl={{targetLang|url}}&text={{text|url}}&op=translate",
+        "copy": false
+      },
+      "egress": {
+        "hosts": [
+          "translate.google.com"
+        ],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "open-deepl",
+      "kind": "open",
+      "group": "open",
+      "name": {
+        "en": "DeepL",
+        "zh": "DeepL"
+      },
+      "description": {
+        "en": "Open in your browser.",
+        "zh": "在浏览器中打开。"
+      },
+      "icon": "🅳",
+      "needsProvider": false,
+      "fields": [
+        {
+          "key": "targetLang",
+          "type": "text",
+          "label": {
+            "en": "To",
+            "zh": "目标语言"
+          },
+          "default": "en"
+        }
+      ],
+      "open": {
+        "uri": "https://www.deepl.com/translator#auto/{{targetLang|url}}/{{text|url}}",
+        "copy": false
+      },
+      "egress": {
+        "hosts": [
+          "www.deepl.com"
+        ],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "open-youdao",
+      "kind": "open",
+      "group": "open",
+      "name": {
+        "en": "Youdao Translate",
+        "zh": "有道翻译"
+      },
+      "description": {
+        "en": "Open in your browser.",
+        "zh": "在浏览器中打开。"
+      },
+      "icon": "📖",
+      "needsProvider": false,
+      "fields": [],
+      "open": {
+        "uri": "https://fanyi.youdao.com/#/TextTranslate?text={{text|url}}",
+        "copy": false
+      },
+      "egress": {
+        "hosts": [
+          "fanyi.youdao.com"
+        ],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    },
+    {
+      "id": "open-url",
+      "kind": "open",
+      "group": "open",
+      "name": {
+        "en": "Open a web page",
+        "zh": "打开网页"
+      },
+      "description": {
+        "en": "Open any address, with your text filled in.",
+        "zh": "打开任意网址，并带上你的文字。"
+      },
+      "icon": "🔗",
+      "needsProvider": false,
+      "fields": [
+        {
+          "key": "url",
+          "type": "text",
+          "label": {
+            "en": "Address",
+            "zh": "网址"
+          },
+          "placeholder": "https://example.com/search?q={{text|url}}"
+        }
+      ],
+      "open": {
+        "uriField": "url",
+        "copy": false
+      },
+      "egress": {
+        "hosts": [],
+        "local": false,
+        "context": []
+      },
+      "confirm": false,
+      "dictionary": false
+    }
+  ]
+}
