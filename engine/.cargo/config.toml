@@ -1,0 +1,5 @@
+# sherpa-onnx 的 Windows 预编译静态库使用 /MT（静态 CRT）；Rust 默认 /MD，混用会在链接时报 LNK2038。
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+[target.aarch64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

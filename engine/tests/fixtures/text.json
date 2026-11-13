@@ -1,0 +1,946 @@
+{
+ "_source": "Python reference (backend/text, backend/dictation/segments.soften) before deletion",
+ "cases": [
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "今天是二零二四年三月五号"
+   ],
+   "output": "今天是2024年3月5号"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "价格是三百五十块"
+   ],
+   "output": "价格是350块"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "百分之五十"
+   ],
+   "output": "50%"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "百分之三点五"
+   ],
+   "output": "3.5%"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "百分之百"
+   ],
+   "output": "百分之百"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "三分之一"
+   ],
+   "output": "1/3"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "二分之一"
+   ],
+   "output": "1/2"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "十分之一"
+   ],
+   "output": "1/10"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "一比二"
+   ],
+   "output": "1:2"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "三比零"
+   ],
+   "output": "3:0"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "十二点三十分"
+   ],
+   "output": "12:30"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "下午三点十五分三十秒"
+   ],
+   "output": "下午3:15:30"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "早上九点至下午五点"
+   ],
+   "output": "早上九点至下午五点"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "开放时间早上九点至下午五点"
+   ],
+   "output": "开放时间早上九点至下午五点"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "一点一滴"
+   ],
+   "output": "一点一滴"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "三十而立"
+   ],
+   "output": "三十而立"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "五十步笑百步"
+   ],
+   "output": "五十步笑百步"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "十有八九"
+   ],
+   "output": "十有八九"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "乱七八糟"
+   ],
+   "output": "乱七八糟"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "第一个"
+   ],
+   "output": "第一个"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "一个人"
+   ],
+   "output": "一个人"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "两个苹果"
+   ],
+   "output": "两个苹果"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "我有一万两千三百块"
+   ],
+   "output": "我有12300块"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "零点五"
+   ],
+   "output": "0.5"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "三点一四一五"
+   ],
+   "output": "3.1415"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "幺三八零零一三八零零零"
+   ],
+   "output": "13800138000"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "二十一世纪"
+   ],
+   "output": "21世纪"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "十万八千里"
+   ],
+   "output": "108000里"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "一百零一"
+   ],
+   "output": "101"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "一千零一夜"
+   ],
+   "output": "1001夜"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "三点五个"
+   ],
+   "output": "3.5个"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "九九归一"
+   ],
+   "output": "九九归一"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "七八个人"
+   ],
+   "output": "78个人"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "一二三四五"
+   ],
+   "output": "12345"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "他说一"
+   ],
+   "output": "他说一"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "一"
+   ],
+   "output": "一"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "十"
+   ],
+   "output": "十"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "二十"
+   ],
+   "output": "20"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "一百二十三点四五"
+   ],
+   "output": "123.45"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "两千"
+   ],
+   "output": "2000"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "三千万"
+   ],
+   "output": "3000万"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "五亿"
+   ],
+   "output": "5亿"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "十点钟"
+   ],
+   "output": "十点钟"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "二零二四年十二月三十一日"
+   ],
+   "output": "2024年12月31日"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "十月一号"
+   ],
+   "output": "10月1号"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "星期一"
+   ],
+   "output": "星期一"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "第三章"
+   ],
+   "output": "第三章"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "三 g"
+   ],
+   "output": "3 g"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "五 k"
+   ],
+   "output": "5 k"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "一 a"
+   ],
+   "output": "一 a"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "iphone 十五 pro"
+   ],
+   "output": "iphone 15 pro"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "打七折"
+   ],
+   "output": "打七折"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "我用python三点一零"
+   ],
+   "output": "我用python3.10"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "gpt 四"
+   ],
+   "output": "gpt 4"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "一共二十个人参加"
+   ],
+   "output": "一共20个人参加"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "温度是零下五度"
+   ],
+   "output": "温度是零下五度"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "四十五分钟"
+   ],
+   "output": "45分钟"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "两点半"
+   ],
+   "output": "两点半"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "三十六计"
+   ],
+   "output": "三十六计"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "路易十六"
+   ],
+   "output": "路易十六"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "五四运动"
+   ],
+   "output": "五四运动"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "这个一般般"
+   ],
+   "output": "这个一般般"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "一会儿"
+   ],
+   "output": "一会儿"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "一起去"
+   ],
+   "output": "一起去"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "十一点"
+   ],
+   "output": "十一点"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "二十五号"
+   ],
+   "output": "二十五号"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "三月"
+   ],
+   "output": "三月"
+  },
+  {
+   "fn": "chinese_to_num",
+   "input": [
+    "一九九八年"
+   ],
+   "output": "一九九八年"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "我们用python写代码"
+   ],
+   "output": "我们用 python 写代码"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "hello world 你好世界"
+   ],
+   "output": "hello world 你好世界"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "Hello, world. This is a test."
+   ],
+   "output": "Hello, world. This is a test."
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "I have 3 apples"
+   ],
+   "output": "I have 3 apples"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "我用 GPT 4 写代码"
+   ],
+   "output": "我用 GPT 4 写代码"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "the API v2 版本"
+   ],
+   "output": "the API v2 版本"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "今天天气不错。The weather is nice."
+   ],
+   "output": "今天天气不错。The weather is nice."
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "我们用g p t写代码"
+   ],
+   "output": "我们用 gpt 写代码"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "第3章"
+   ],
+   "output": "第3章"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "共 3 个"
+   ],
+   "output": "共 3 个"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "It costs 3.5 dollars and 5 g"
+   ],
+   "output": "It costs 3.5 dollars and 5g"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "a b c 测试"
+   ],
+   "output": "a bc 测试"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "用 iPhone 15 Pro 拍照"
+   ],
+   "output": "用 iPhone 15 Pro 拍照"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "版本2.0发布"
+   ],
+   "output": "版本2.0发布"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "我买了3个iPhone"
+   ],
+   "output": "我买了3个 iPhone"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "OK好的"
+   ],
+   "output": "OK 好的"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "好的OK"
+   ],
+   "output": "好的 OK"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "x86架构"
+   ],
+   "output": "x86架构"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "下载 100 MB 文件"
+   ],
+   "output": "下载 100MB 文件"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "yesterday was星期一，today is Tuesday"
+   ],
+   "output": "yesterday was 星期一，today is Tuesday"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "开放时间早上9点至下午5点。"
+   ],
+   "output": "开放时间早上9点至下午5点。"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "The tribal chieftain called for the boy."
+   ],
+   "output": "The tribal chieftain called for the boy."
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "用 c++ 写"
+   ],
+   "output": "用 c++  写"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "价格 3.5 元"
+   ],
+   "output": "价格 3.5 元"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "A B 测试"
+   ],
+   "output": "A B 测试"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "Wi-Fi 密码"
+   ],
+   "output": "Wi-Fi 密码"
+  },
+  {
+   "fn": "adjust_space",
+   "input": [
+    "e-mail地址"
+   ],
+   "output": "e-mail 地址"
+  },
+  {
+   "fn": "strip_punctuation",
+   "input": [
+    "今天天气不错，我们去公园。Hello, world. It costs 3.5 dollars."
+   ],
+   "output": "今天天气不错我们去公园Hello world It costs 3.5 dollars"
+  },
+  {
+   "fn": "strip_punctuation",
+   "input": [
+    "U.S. e-mail don't 3.5，好。"
+   ],
+   "output": "U.S e-mail don't 3.5好"
+  },
+  {
+   "fn": "strip_punctuation",
+   "input": [
+    "hello，world"
+   ],
+   "output": "hello world"
+  },
+  {
+   "fn": "strip_punctuation",
+   "input": [
+    "你好！你好吗？"
+   ],
+   "output": "你好你好吗"
+  },
+  {
+   "fn": "strip_punctuation",
+   "input": [
+    "Yes. No! Maybe?"
+   ],
+   "output": "Yes No Maybe"
+  },
+  {
+   "fn": "strip_punctuation",
+   "input": [
+    "版本 2.0。"
+   ],
+   "output": "版本 2.0"
+  },
+  {
+   "fn": "strip_punctuation",
+   "input": [
+    "（括号）《书名》"
+   ],
+   "output": "括号书名"
+  },
+  {
+   "fn": "strip_punctuation",
+   "input": [
+    "a,b"
+   ],
+   "output": "a,b"
+  },
+  {
+   "fn": "strip_punctuation",
+   "input": [
+    "Wait..."
+   ],
+   "output": "Wait"
+  },
+  {
+   "fn": "join_segments",
+   "input": [
+    "今天天气不错。",
+    "The weather is nice.",
+    "明天见。"
+   ],
+   "output": "今天天气不错。The weather is nice.明天见。"
+  },
+  {
+   "fn": "join_segments",
+   "input": [
+    "Hello.",
+    "World."
+   ],
+   "output": "Hello. World."
+  },
+  {
+   "fn": "join_segments",
+   "input": [
+    "",
+    " a ",
+    ""
+   ],
+   "output": "a"
+  },
+  {
+   "fn": "join_segments",
+   "input": [
+    "我想，",
+    "去公园。"
+   ],
+   "output": "我想，去公园。"
+  },
+  {
+   "fn": "join_segments",
+   "input": [
+    "boy.",
+    "然后"
+   ],
+   "output": "boy.然后"
+  },
+  {
+   "fn": "join_segments",
+   "input": [
+    "3.5",
+    "dollars"
+   ],
+   "output": "3.5 dollars"
+  },
+  {
+   "fn": "merge_continuation",
+   "input": [
+    "开饭时间早上9点至下午。",
+    "5点。"
+   ],
+   "output": "开饭时间早上9点至下午5点。"
+  },
+  {
+   "fn": "merge_continuation",
+   "input": [
+    "He called for the boy.",
+    "And presented him."
+   ],
+   "output": "He called for the boy and presented him."
+  },
+  {
+   "fn": "merge_continuation",
+   "input": [
+    "So what?",
+    "I think so."
+   ],
+   "output": "So what? I think so."
+  },
+  {
+   "fn": "merge_continuation",
+   "input": [
+    "We met in.",
+    "Paris last year."
+   ],
+   "output": "We met in paris last year."
+  },
+  {
+   "fn": "merge_continuation",
+   "input": [
+    "我想，",
+    "去公园。"
+   ],
+   "output": "我想去公园。"
+  },
+  {
+   "fn": "merge_continuation",
+   "input": [
+    "",
+    "abc"
+   ],
+   "output": "abc"
+  },
+  {
+   "fn": "merge_continuation",
+   "input": [
+    "The end.",
+    "I'm here."
+   ],
+   "output": "The end I'm here."
+  },
+  {
+   "fn": "merge_continuation",
+   "input": [
+    "对。",
+    "OK."
+   ],
+   "output": "对OK."
+  },
+  {
+   "fn": "soften",
+   "input": [
+    "我想。",
+    "去公园。"
+   ],
+   "output": [
+    "我想，",
+    "去公园。"
+   ]
+  },
+  {
+   "fn": "soften",
+   "input": [
+    "これは。",
+    "テストです。"
+   ],
+   "output": [
+    "これは、",
+    "テストです。"
+   ]
+  },
+  {
+   "fn": "soften",
+   "input": [
+    "Called for the boy.",
+    "And presented him."
+   ],
+   "output": [
+    "Called for the boy,",
+    "and presented him."
+   ]
+  },
+  {
+   "fn": "soften",
+   "input": [
+    "We met.",
+    "Paris was nice."
+   ],
+   "output": [
+    "We met.",
+    "Paris was nice."
+   ]
+  },
+  {
+   "fn": "soften",
+   "input": [
+    "Wait...",
+    "And then."
+   ],
+   "output": [
+    "Wait...",
+    "And then."
+   ]
+  },
+  {
+   "fn": "soften",
+   "input": [
+    "我想。",
+    "Python is fun."
+   ],
+   "output": [
+    "我想。",
+    "Python is fun."
+   ]
+  },
+  {
+   "fn": "soften",
+   "input": [
+    "Done.",
+    "Next."
+   ],
+   "output": [
+    "Done.",
+    "Next."
+   ]
+  },
+  {
+   "fn": "soften",
+   "input": [
+    "数字是3.",
+    "And more."
+   ],
+   "output": [
+    "数字是3,",
+    "and more."
+   ]
+  },
+  {
+   "fn": "soften",
+   "input": [
+    "好。",
+    "5点。"
+   ],
+   "output": [
+    "好。",
+    "5点。"
+   ]
+  }
+ ]
+}

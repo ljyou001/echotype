@@ -74,10 +74,11 @@ Variant selection for the user's `provider` setting:
 
 | runtime | arch | notes |
 |---|---|---|
-| sherpa-onnx | `paraformer`, `sense_voice`, `whisper`, `moonshine`, `nemo_transducer`, `fire_red_asr`, `qwen3_asr` | C API via the official Rust crate; cpu static in the base engine; cuda via the cuda pack; coreml on macOS |
-| sherpa-onnx | `ct_transformer` (kind punctuation) | offline punctuation |
-| llama.cpp | `mtmd_asr` | GGUF + mmproj via a pinned `llama-server` sidecar (CUDA / Metal / Vulkan) |
-| whisper.cpp | `whisper_ggml` | optional; only if it beats sherpa for Whisper on Metal/CUDA |
+| sherpa-onnx | `paraformer`, `sense_voice`, `whisper`, `moonshine`, `nemo_transducer`, `fire_red_asr`, `qwen3_asr` | Verified on win-x64 cpu with every catalog variant (`engine/tests/models.rs`). C API via the official Rust crate 2.0.1; cpu is linked statically into the base engine; cuda comes from the cuda pack (verified with `sense_voice` fp32). coreml on macOS is not verified yet. |
+| sherpa-onnx | `funasr_nano` | Loader exists (files `encoder_adaptor`, `llm`, `embedding`, `tokenizer`); no catalog model uses it, so it has no native decode test. |
+| sherpa-onnx | `ct_transformer` (kind punctuation) | Offline punctuation, verified (companion of every model without native punctuation). |
+| llama.cpp | `mtmd_asr` | GGUF + mmproj via a pinned `llama-server` b12360 sidecar (`input_audio` on `/v1/chat/completions`). Verified with CUDA on win-x64 (Qwen3-ASR 0.6B Q8_0, 1.7B Q6_K). Metal and Vulkan are not verified yet. |
+| whisper.cpp | `whisper_ggml` | Not implemented: no measurement shows a need. Whisper runs through sherpa-onnx. |
 
 The engine session owns this table: a row exists only after a real load + decode test passes. Silero VAD ships inside the engine.
 
