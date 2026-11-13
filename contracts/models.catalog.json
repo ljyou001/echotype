@@ -130,9 +130,39 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": null,
-            "host": null
+            "release_to_final_ms_p50_10s": 80,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
+        },
+        {
+          "id": "cuda-fp32",
+          "target": "nvidia",
+          "runtime": "sherpa-onnx",
+          "arch": "sense_voice",
+          "providers": [
+            "cuda"
+          ],
+          "requires_pack": "cuda",
+          "files": {
+            "model": "model.onnx",
+            "tokens": "tokens.txt"
+          },
+          "asset": {
+            "name": "sensevoice-small--cuda-fp32.zip",
+            "release": "models-v3",
+            "sha256": null,
+            "size_bytes": 0,
+            "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2"
+          },
+          "requirements": {
+            "ram_mb": 1400,
+            "vram_mb": 1300
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": 38,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cuda, 4 threads"
+          },
+          "_note": "fp32 graph (model.onnx, 938 MB) from the upstream archive; int8 is slower on the CUDA EP (design/ENGINE_NOTES.md §2). Needs the cuda engine pack. Engine session added it; models session packages the zip (model.onnx + tokens.txt at the root)."
         }
       ],
       "status": "stable",
@@ -214,8 +244,8 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": null,
-            "host": null
+            "release_to_final_ms_p50_10s": 38,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
       ],
@@ -297,8 +327,8 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": null,
-            "host": null
+            "release_to_final_ms_p50_10s": 64,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
       ],
@@ -450,8 +480,8 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": null,
-            "host": null
+            "release_to_final_ms_p50_10s": 618,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         },
         {
@@ -479,8 +509,8 @@
             "vram_mb": 1500
           },
           "bench": {
-            "release_to_final_ms_p50_10s": null,
-            "host": null
+            "release_to_final_ms_p50_10s": 73,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cuda, 4 threads"
           }
         },
         {
@@ -660,8 +690,8 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": null,
-            "host": null
+            "release_to_final_ms_p50_10s": 100,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
       ],
@@ -812,8 +842,8 @@
             "vram_mb": 3000
           },
           "bench": {
-            "release_to_final_ms_p50_10s": null,
-            "host": null
+            "release_to_final_ms_p50_10s": 84,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cuda, 4 threads"
           }
         },
         {
@@ -955,8 +985,8 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": null,
-            "host": null
+            "release_to_final_ms_p50_10s": 984,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
       ],
@@ -1111,8 +1141,8 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": null,
-            "host": null
+            "release_to_final_ms_p50_10s": 1252,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
       ],
@@ -1177,8 +1207,8 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": null,
-            "host": null
+            "release_to_final_ms_p50_10s": 69,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
       ],

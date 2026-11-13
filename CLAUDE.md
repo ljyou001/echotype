@@ -3,8 +3,7 @@ Electron + React 18 + Zustand 5 + TypeScript 5 · 原生 Engine (Rust) + sherpa-
 
 <directory>
 frontend/ - UI 层与 Core 层 (2 子目录: src=UI 层 React 视图, electron=Core 层 主进程大脑)
-engine/ - Engine 层，独立原生推理进程：麦克风、VAD、ASR、标点（v3 新建）
-backend/ - v2 Python 后端，v3 完成后删除
+engine/ - Engine 层，独立原生推理进程 echotype-engine（Rust）：麦克风、VAD、ASR、标点；GPU 引擎包由 engine/scripts/make-pack.sh 组装
 contracts/ - 三层之间的契约：引擎协议、模型清单规范、模型目录
 design/ - 设计文档。现行架构以 design/ARCHITECTURE_V3.md 为准，其余为历史记录
 scripts/ - 构建、打包、测试脚本 (windows/ 为发布流水线)

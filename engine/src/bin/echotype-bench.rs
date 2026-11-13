@@ -463,7 +463,8 @@ fn cmd_report(o: &Opts) {
                     r["audio_s"].as_f64().unwrap_or(0.0), r["tail_ms"], pct(&e, 0.5), pct(&e, 0.95), pct(&cl, 0.5),
                     segs.iter().sum::<f64>() / segs.len().max(1) as f64, e.len()
                 ));
-                if r["tail_ms"] == 0 && r["length"] == 10 {
+                let label = format!("{}/{} [{}]", parts[0], parts[1], parts[2]);
+                if r["tail_ms"] == 0 && r["length"] == 10 && !texts.iter().any(|t: &String| t.starts_with(&format!("- {label}:"))) {
                     texts.push(format!("- {}/{} [{}]: {}", parts[0], parts[1], parts[2], r["text"].as_str().unwrap_or("").chars().take(100).collect::<String>()));
                 }
             }

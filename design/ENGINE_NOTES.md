@@ -31,9 +31,9 @@ In Python ctypes the call silently failed (error 6) until `GetCurrentProcess.res
 
 SenseVoice fp32 is `model.onnx` (938 MB) inside `sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2`.
 CUDA wheel used: `sherpa_onnx-2.0.1+cuda12.cudnn9` + CUDA 12.6 toolkit DLLs + pip `nvidia-cudnn-cu12` 9.x.
-sherpa-onnx does not throw when the CUDA EP fails ("Fallback to cpu" on stderr): detect providers strictly (EP library and
-cudart64_12 / cublas64_12 / cublasLt64_12 / cufft64_11 / cudnn64_9 all loadable). DLL sizes: CUDA EP 276 MB, cuBLASLt 472–669 MB,
-cuDNN 9 ≈ 1.1 GB in total (`cudnn_engines_precompiled64_9.dll` alone 522 MB).
+sherpa-onnx does not throw when the CUDA EP fails ("Fallback to cpu" on stderr): the native engine verifies that the EP really
+loaded after building the recognizer (§8). DLL sizes: CUDA EP 276 MB (ORT 1.28.2: 497 MB), cuBLASLt 472–669 MB,
+cuDNN 9 ≈ 1.1 GB in total (`cudnn_engines_precompiled64_9.dll` alone 522 MB); §8 lists what the pack really needs.
 
 SenseVoice decode cost on CPU int8 vs threads (10 s): 1 → 692 ms, 2 → 491, 4 → 280 (160 when not throttled), 8 → 221, 16 → 228.
 
@@ -72,6 +72,9 @@ SenseVoice decode cost on CPU int8 vs threads (10 s): 1 → 692 ms, 2 → 491, 4
 4. **At stop**: flush; if no speech followed the last speculation → reuse it (release_to_final ≈ 0); otherwise decode only the
    remainder after the last pause (cut at the pause midpoint) and merge: drop the middle full stop, lowercase an English
    continuation. A running speculation that covers the segment is awaited, not repeated; queued speculations are dropped.
+   The native engine applies the same rule when the main VAD closes a segment: if the worker lags (slow model) and the
+   running speculation stops at an earlier pause, it decodes only the remainder instead of the whole segment again
+   (before the fix Parakeet's release-300-ms-after-speech latency was worse than releasing at once: 340 vs 241 ms).
 5. Joining segments: gap < 0.6 s → "。"→"，" (Japanese "、"), ". And" → ", and" for common continuation words only.
 6. Fallback: no VAD speech at all but peak > -45 dBFS and ≥ 0.3 s → decode the whole buffer once.
 7. Warm-up decode of 1 s silence after load. Partials: at most every 300 ms, built from decoded segments + latest speculation.
@@ -83,7 +86,8 @@ Prototype result, SenseVoice int8 CPU, 10 s utterance: release 300 ms after spee
 - v2 `adjust_space` bugs fixed in the prototype (the Rust port must keep the fix): it ate the space after English punctuation
   ("Hello, world." → "Hello,world.") and glued numbers to whole words ("3.5 dollars" → "3.5dollars").
 - `chinese_to_num` reference outputs (including its quirks, e.g. "七八个人" → "78个人", "十点钟" unchanged) are frozen in
-  `engine/tests/fixtures/text.json` (generator: `design/gen_text_fixtures.py`, run against the Python code before deletion).
+  `engine/tests/fixtures/text.json` (generator: `engine/scripts/gen_text_fixtures.py`, run against the Python code before deletion).
+  The Rust port passes all 127 cases (`cargo test --test text_fixtures`).
 
 ## 6. Verified upstream archives (sha256 = GitHub asset digest = local download)
 
@@ -108,3 +112,55 @@ All seven ASR models passed a real load + zh/en decode in the prototype (`backen
   prototype; the native engine uses cpal's stable `DeviceId`.
 - PortAudio needs re-initialization to see hot-plugged devices; only safe with no open stream.
 - Open at the device's native rate and resample yourself; never decimate (v2's `[::3]` aliased 10 kHz into 6 kHz unattenuated).
+
+## 8. Native engine (Rust) facts
+
+Measured 2026-11-13 on the same machine with `engine/` (sherpa-onnx crate 2.0.1, ONNX Runtime 1.28.2, cpal 0.18.2).
+
+- **Sizes.** `echotype-engine.exe` 23.0 MB (22,962,688 bytes) with sherpa-onnx and ONNX Runtime linked statically (`/MT`,
+  `+crt-static`); `echotype-bench.exe` 0.89 MB. The CUDA pack's engine is 3.9 MB plus the shared libraries. The first `cargo build` downloads the sherpa static archive (≈ 1 GB unpacked, cached in `target/`).
+- **The crate drops `lang`.** `OfflineRecognizerResult` has no `lang`/`emotion`/`event`. `final.language` is the configured
+  language, or the model's only language; auto-detected languages (SenseVoice, Whisper) are not reported yet. Fix later by reading
+  `SherpaOnnxGetOfflineStreamResultAsJson` through `sherpa-onnx-sys`.
+- **No open-segment start in the VAD API.** `VoiceActivityDetector` exposes `detected()` but not the start of the running
+  segment. The engine estimates the onset when `detected()` flips to true: current sample − (min_speech + 2 windows). Only the
+  speculative decode uses it; the 0.2 s pre-pad absorbs the error.
+- **cpal on WASAPI reports an `Xrun` right after some streams open.** Only `DeviceNotAvailable`, `StreamInvalidated` and
+  `DeviceChanged` mean the stream is gone. Treating every error as lost made the engine report the mic as lost right after Core opened it (found with the real Core).
+- **Windows CUDA link.** sherpa's CUDA archive ships `onnxruntime.dll` without `onnxruntime.lib`, but `sherpa-onnx-sys` (shared)
+  always links it. The engine never calls ONNX Runtime itself, so a one-symbol import library (`OrtGetApiBase`, made by MSVC
+  `lib.exe /def:`) satisfies the linker. An empty archive fails with LNK1107.
+- **ORT 1.28.2's CUDA EP needs cudart ≥ 12.5.** It imports `cudaLibraryLoadData`, `cudaLibraryUnload`, `cudaLibraryGetKernel`
+  and `cudaKernelSetAttributeForDevice`. llama.cpp's bundled cudart is 12.4: loading `onnxruntime_providers_cuda.dll` then fails
+  with Error 127 and sherpa falls back to CPU with one stderr line. The pack ships one CUDA 12.8 runtime set from PyPI
+  (`nvidia-cuda-runtime-cu12` 12.8.90, `nvidia-cublas-cu12` 12.8.4.1) for both ORT and llama.cpp (built with 12.4, runs on 12.8).
+- **cuDNN 9.28 loads `cudnn_engines_tensor_ir64_9.dll`** for every convolution that ORT routes through the cuDNN frontend
+  (SenseVoice's FSMN `Conv`). Without it ORT throws inside sherpa's `DecodeOneStream`, sherpa catches it, and the text is empty —
+  no error reaches the engine. Packaging is the only defence.
+- **Verify the EP after the load, not before.** `LoadLibrary("onnxruntime_providers_cuda.dll")` outside ORT fails in `DllMain`
+  (error 1114), so it cannot be a probe. After building a `provider=cuda` recognizer the engine checks that the EP module is in the
+  process (`GetModuleHandle`; `dlopen(RTLD_NOLOAD)` on Linux). If it is not, `model.load` warns `PROVIDER_FALLBACK` and reports
+  `provider_used: "cpu"`.
+- **What the CUDA pack actually loads** (process module lists while decoding, win-x64):
+  - engine, SenseVoice fp32: `onnxruntime`, `onnxruntime_providers_shared`, `onnxruntime_providers_cuda`, `sherpa-onnx-c-api`,
+    `cudart64_12`, `cublas64_12`, `cublasLt64_12`, `cudnn64_9`, `cudnn_graph64_9`, `cudnn_ops64_9`, `cudnn_heuristic64_9`,
+    `cudnn_engines_precompiled64_9`, `cudnn_engines_runtime_compiled64_9`, `cudnn_engines_tensor_ir64_9`.
+  - `llama-server`, Qwen3-ASR GGUF: `cudart64_12`, `cublas64_12`, `cublasLt64_12`, `ggml`, `ggml-base`, `ggml-cuda`,
+    one `ggml-cpu-<isa>` (all variants ship; ggml picks one per CPU), `llama`, `llama-common`, `mtmd`, `llama-server-impl`, `libomp`.
+  - Not loaded, not shipped: `cudnn_adv64_9` (230 MB), `cudnn_ext64_9`, `cufft64_11` (287 MB), `ggml-rpc`, the other llama tools'
+    `*-impl.dll`. Shipped although not loaded: `cudnn_cnn64_9` (3 MB, legacy convolution path), because a missing cuDNN sublibrary
+    fails silently (above).
+  - Size: 2760 MiB unpacked, 1667 MiB as a zip (deflate level 6), under GitHub's 2 GiB asset limit.
+- **GPU results** (10 s utterance, release at speech end, P50; the GPU also drove the desktop, 3.4 GB in use before the runs):
+  SenseVoice fp32 on CUDA 38 ms vs int8 on CPU 80 ms (load 4.7 s incl. a 1.0 s cuDNN warm-up, RSS 1.3 GB, VRAM +1.26 GB).
+  Qwen3-ASR GGUF on `llama-server` CUDA: 0.6B Q8_0 73 ms (sherpa int8 on CPU: 618 ms), 1.7B Q6_K 84 ms; VRAM +2.1 GB and
+  +3.1 GB with `-c 4096` (the catalog asks for 1.5 / 3.0 GB). The engine's RSS stays at 153 MB; the model lives in `llama-server`.
+- **Threads** (CPU int8, 10 s, release at speech end): SenseVoice 2/4/8 threads → 120/80/64 ms, Paraformer 89/64/58 ms,
+  Qwen3-ASR 0.6B 806/618/555 ms. The default stays at 4 (logical cores / 2, at most 4): on hybrid laptops more threads land on
+  efficiency cores, and no measurement from such a machine exists yet. `settings.num_threads` overrides it per model.
+- **Qwen3-ASR writes the zh sample in Traditional characters** in both runtimes (sherpa int8 and llama.cpp GGUF), also on VAD
+  segments. SenseVoice, Paraformer, FireRed and Whisper write Simplified.
+- **Text after pause cuts.** Moonshine ends a segment that was cut at a pause with a comma ("…for the boy,"). The pipeline lowercases a
+  capitalised continuation word after such a comma ("boy, And" → "boy, and"), and a final never ends on `, ，、；`
+  (`close_dangling` turns it into a full stop). `punct_style: auto` decides each mark by the nearest letter before it, so
+  CT-Transformer's "下午五点，The boy，and … gold。" becomes "下午五点，The boy, and … gold."; Hangul takes half-width marks.
