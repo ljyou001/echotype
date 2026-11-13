@@ -27,6 +27,7 @@ export function hardenWebContents(contents: WebContents): void {
 
 export interface MainWindowOptions {
   preload: string;
+  preloadArgs: string[]; // 传给 preload 的 process.argv（发行渠道）
   renderer: RendererSource;
   icon: string;
   trust: (contents: WebContents) => void;
@@ -48,7 +49,13 @@ export class MainWindow {
       backgroundColor: "#FEFEFE",
       show: false,
       icon: this.opts.icon,
-      webPreferences: { preload: this.opts.preload, contextIsolation: true, nodeIntegration: false, sandbox: true },
+      webPreferences: {
+        preload: this.opts.preload,
+        additionalArguments: this.opts.preloadArgs,
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: true,
+      },
     });
     this.win = win;
     this.opts.trust(win.webContents);

@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 node:os、node:path
- * [OUTPUT]: 导出 CorePaths、resolveCorePaths、resolveCatalogPath、RuntimeLayout
+ * [OUTPUT]: 导出 CorePaths、resolveCorePaths、resolveCatalogPath、resolveLicensesPath、RuntimeLayout
  * [POS]: Core 全部磁盘位置的唯一来源。其他模块只接收已解析的路径，不自己拼 ~/.echotype。
  *        环境变量 ECHOTYPE_HOME 覆盖用户数据根目录：测试、smoke 与 mock 联调都指向临时目录，
  *        从不触碰用户真实的 ~/.echotype/settings.json。
@@ -15,6 +15,8 @@ export interface CorePaths {
   historyFile: string;
   integrationsFile: string;
   modelsDir: string;
+  enginesDir: string; // GPU 引擎包 ~/.echotype/engines/<pack id>/
+  catalogCacheFile: string; // 远程目录的缓存
   logsDir: string;
   recordingsDir: string;
 }
@@ -27,6 +29,8 @@ export function resolveCorePaths(env: NodeJS.ProcessEnv = process.env, homedir: 
     historyFile: path.join(home, "history.jsonl"),
     integrationsFile: path.join(home, "integrations.json"),
     modelsDir: path.join(home, "models"),
+    enginesDir: path.join(home, "engines"),
+    catalogCacheFile: path.join(home, "cache", "models.catalog.json"),
     logsDir: path.join(home, "logs"),
     recordingsDir: path.join(home, "recordings"),
   };
@@ -50,4 +54,11 @@ export function resolveCatalogPath(layout: RuntimeLayout): string {
   return layout.isPackaged
     ? path.join(layout.resourcesPath, "contracts", "models.catalog.json")
     : path.join(layout.repoRoot, "contracts", "models.catalog.json");
+}
+
+/** 组件许可证清单：打包时由 ci 生成到 resources/licenses/；开发态读 frontend/resources/licenses/（通常不存在 → 空列表）。 */
+export function resolveLicensesPath(layout: RuntimeLayout): string {
+  return layout.isPackaged
+    ? path.join(layout.resourcesPath, "licenses", "third-party.json")
+    : path.join(layout.distDir, "..", "resources", "licenses", "third-party.json");
 }

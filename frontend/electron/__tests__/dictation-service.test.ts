@@ -13,11 +13,7 @@ import { DictationService } from "../services/dictation-service.js";
 import { createDefaultSettings, mergeSettings, type SettingsContext } from "../services/settings-schema.js";
 import { FakeEngine } from "./helpers.js";
 
-const ctx: SettingsContext = {
-  platform: "win32",
-  defaultModelId: "m",
-  modelDefaults: () => ({ provider: "auto", language: "auto", punctuation: true, itn: true }),
-};
+const ctx: SettingsContext = { platform: "win32", defaultModelId: "m" };
 const TIMINGS: EngineTimings = { release_to_final_ms: 40, decode_tail_ms: 30, punct_ms: 5, segments: 1, audio_ms: 900 };
 
 function setup(patch: Parameters<typeof mergeSettings>[1] = {}) {

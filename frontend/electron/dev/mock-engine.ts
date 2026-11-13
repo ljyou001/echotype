@@ -4,6 +4,7 @@
  * [POS]: ENGINE_PROTOCOL v3 的服务端假实现。供 Core 测试、smoke 与 ui 会话联调使用，不进生产路径。
  *        行为忠实于协议规则：token 校验(4401)、单客户端(4409)、SESSION_BUSY、MODEL_NOT_LOADED、
  *        PROVIDER_FALLBACK、20 Hz level、partial ≤ 300 ms、stop 后发一次固定文本的 final。
+ *        model.load 按契约 v2.2 接收 {model, variant, model_dir, settings, companion?}，拒绝未解析的 provider:"auto"。
  *        CLI 入口见 mock-engine-main.ts；故障注入开关（hangFinal / noPong）用于测试 Core 的超时与重启。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -41,10 +42,14 @@ class RequestError extends Error {
   }
 }
 
-interface Manifest {
+interface LoadModel {
+  id?: string;
+  features?: { partials?: boolean };
+}
+
+interface LoadVariant {
   id?: string;
   providers?: string[];
-  features?: { partials?: boolean };
 }
 
 export async function createMockEngine(options: MockEngineOptions): Promise<{ port: number; close: () => Promise<void> }> {
@@ -89,8 +94,9 @@ export async function createMockEngine(options: MockEngineOptions): Promise<{ po
     hello: () => ({
       engine_version: "3.0.0-mock",
       protocol: ENGINE_PROTOCOL_VERSION,
-      runtime: "mock 1.0.0",
+      runtimes: { "sherpa-onnx": "mock", "llama.cpp": "mock" },
       platform: process.platform,
+      arch: process.arch,
       providers,
     }),
     ping: () => (options.noPong ? new Promise(() => {}) : { t: Math.round(performance.now()) }),
@@ -102,20 +108,20 @@ export async function createMockEngine(options: MockEngineOptions): Promise<{ po
     },
     "model.load": async (p) => {
       if (session) throw new RequestError(EngineErrorCode.SESSION_BUSY, "a session is active");
-      const manifest = (p.manifest ?? {}) as Manifest;
+      const loadModel = (p.model ?? {}) as LoadModel;
+      const variant = (p.variant ?? {}) as LoadVariant;
       const dir = String(p.model_dir ?? "");
-      if (!manifest.id || !dir || !fs.existsSync(dir)) throw new RequestError(EngineErrorCode.MODEL_NOT_FOUND, `model dir missing: ${dir}`);
+      if (!loadModel.id || !variant.id || !dir || !fs.existsSync(dir)) throw new RequestError(EngineErrorCode.MODEL_NOT_FOUND, `model dir missing: ${dir}`);
       const settings = (p.settings ?? {}) as { provider?: string; language?: string };
-      const wanted = settings.provider ?? "auto";
-      const supported = (manifest.providers ?? ["cpu"]).filter((x) => providers.includes(x));
-      let used = wanted === "auto" ? supported[0] ?? "cpu" : wanted;
+      if (!settings.provider || settings.provider === "auto") throw new RequestError(EngineErrorCode.INVALID_REQUEST, "Core must resolve provider before model.load");
+      let used = settings.provider;
       if (!providers.includes(used)) {
         emit("warning", { code: EngineErrorCode.PROVIDER_FALLBACK, message: `${used} unavailable, using cpu` });
         used = "cpu";
       }
       model = null;
       loading = true;
-      emit("status", { state: "loading", model_id: manifest.id });
+      emit("status", { state: "loading", model_id: loadModel.id });
       const stages = p.companion ? ["runtime", "model", "punctuation", "vad", "warmup"] : ["runtime", "model", "vad", "warmup"];
       for (const stage of stages) {
         for (const pct of [0, 50, 100]) {
@@ -124,9 +130,9 @@ export async function createMockEngine(options: MockEngineOptions): Promise<{ po
         }
       }
       loading = false;
-      model = { id: manifest.id, partials: !!manifest.features?.partials, language: settings.language ?? "auto" };
-      emit("status", { state: "ready", model_id: manifest.id });
-      return { model_id: manifest.id, provider_used: used, load_ms: loadMs, warmup_ms: 5 };
+      model = { id: loadModel.id, partials: !!loadModel.features?.partials, language: settings.language ?? "auto" };
+      emit("status", { state: "ready", model_id: loadModel.id });
+      return { model_id: loadModel.id, variant_id: variant.id, provider_used: used, load_ms: loadMs, warmup_ms: 5 };
     },
     "model.unload": () => {
       if (session) throw new RequestError(EngineErrorCode.SESSION_BUSY, "a session is active");

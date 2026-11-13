@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 无运行时依赖；镜像 contracts/ENGINE_PROTOCOL.md v3
+ * [INPUT]: 无运行时依赖；镜像 contracts/ENGINE_PROTOCOL.md v3（契约 v2.2：原生引擎、variant 化的 model.load）
  * [OUTPUT]: 导出 ENGINE_PROTOCOL_VERSION、EngineMethods/EngineEvents 映射、报文类型、EngineError、错误码常量
  * [POS]: Core 侧对引擎协议的类型化镜像。engine-client、supervisor、mock 引擎与全部服务共享这一份类型，
  *        协议字段一处定义。协议文档变更时，本文件必须同步。
@@ -28,25 +28,28 @@ export interface EngineTimings {
   audio_ms: number;
 }
 
-export interface ModelLoadSettings {
-  provider: string;
-  language: string;
-  punctuation: boolean;
-  itn: boolean;
-  num_threads: number;
-}
+/** §6：用户在模型页的取值（键由 catalog settings[] 声明）+ Core 已解析的 provider；未知键引擎原样转交 */
+export type ModelLoadSettings = Record<string, string | number | boolean> & { provider: string };
 
 export interface ModelLoadParams {
-  manifest: unknown; // catalog 对象原样转发（§6）
-  model_dir: string;
+  model: unknown; // catalog 模型对象去掉 variants，其余原样（§6）
+  variant: unknown; // Core 选中的那个 variant 对象
+  model_dir: string; // 已安装 variant 的绝对路径
   settings: ModelLoadSettings;
-  companion?: { manifest: unknown; model_dir: string };
+  companion?: { model: unknown; variant: unknown; model_dir: string };
 }
 
 export interface EngineMethods {
   hello: {
     params: { protocol: number };
-    result: { engine_version: string; protocol: number; runtime: string; platform: string; providers: string[] };
+    result: {
+      engine_version: string;
+      protocol: number;
+      runtimes: Record<string, string>; // {"sherpa-onnx":"2.0.1","llama.cpp":"b…"}
+      platform: string;
+      arch: string;
+      providers: string[];
+    };
   };
   ping: { params: Record<string, never>; result: { t: number } };
   "devices.list": { params: Record<string, never>; result: { inputs: EngineInputDevice[] } };
@@ -56,7 +59,7 @@ export interface EngineMethods {
   };
   "model.load": {
     params: ModelLoadParams;
-    result: { model_id: string; provider_used: string; load_ms: number; warmup_ms: number };
+    result: { model_id: string; variant_id: string; provider_used: string; load_ms: number; warmup_ms: number };
   };
   "model.unload": { params: Record<string, never>; result: Record<string, never> };
   "session.start": {
