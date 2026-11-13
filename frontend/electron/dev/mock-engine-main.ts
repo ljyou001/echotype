@@ -3,7 +3,8 @@
  * [OUTPUT]: 无导出。作为进程入口：打印 engine_ready 行，stdin EOF 或 shutdown 时退出 0
  * [POS]: mock 引擎的 CLI 外壳，与真实引擎同一启动契约（ENGINE_PROTOCOL §2），供 supervisor 拉起。
  *        Electron 下以 ELECTRON_RUN_AS_NODE=1 运行，测试下由 node 直接运行。
- *        环境变量：ECHOTYPE_ENGINE_TOKEN（必需）· ECHOTYPE_MOCK_PROVIDERS（逗号分隔，默认 cpu）· ECHOTYPE_MOCK_TEXT · ECHOTYPE_MOCK_LOAD_MS ·
+ *        环境变量：ECHOTYPE_ENGINE_TOKEN（必需）· ECHOTYPE_MOCK_PROVIDERS（逗号分隔，默认 cpu）·
+ *        ECHOTYPE_MOCK_BROKEN_PROVIDERS（逗号分隔，hello 列出但加载时回退 cpu）· ECHOTYPE_MOCK_TEXT · ECHOTYPE_MOCK_LOAD_MS ·
  *        ECHOTYPE_MOCK_FINAL_DELAY_MS · ECHOTYPE_MOCK_HANG_FINAL=1 · ECHOTYPE_MOCK_NO_PONG=1
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -12,6 +13,11 @@ import { createMockEngine } from "./mock-engine.js";
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
   return i >= 0 ? process.argv[i + 1] : undefined;
+}
+
+function listEnv(name: string): string[] | undefined {
+  const v = process.env[name];
+  return v ? v.split(",").filter(Boolean) : undefined;
 }
 
 function numEnv(name: string): number | undefined {
@@ -33,7 +39,8 @@ const engine = await createMockEngine({
   text: process.env.ECHOTYPE_MOCK_TEXT || undefined,
   loadMs: numEnv("ECHOTYPE_MOCK_LOAD_MS"),
   finalDelayMs: numEnv("ECHOTYPE_MOCK_FINAL_DELAY_MS"),
-  providers: process.env.ECHOTYPE_MOCK_PROVIDERS ? process.env.ECHOTYPE_MOCK_PROVIDERS.split(",").filter(Boolean) : undefined,
+  providers: listEnv("ECHOTYPE_MOCK_PROVIDERS"),
+  brokenProviders: listEnv("ECHOTYPE_MOCK_BROKEN_PROVIDERS"),
   hangFinal: process.env.ECHOTYPE_MOCK_HANG_FINAL === "1",
   noPong: process.env.ECHOTYPE_MOCK_NO_PONG === "1",
   log,

@@ -208,7 +208,9 @@ export class ModelRuntime {
 
   private async load(desired: Extract<Desired, { key: string }>): Promise<void> {
     this.set({ phase: "loading", modelId: desired.modelId, providerUsed: null, progress: null, error: null, loaded: null });
-    this.log.info("loading model", { id: desired.modelId, variant: desired.loaded.variantId, settings: desired.params.settings });
+    const c = desired.params.companion as { model: { id: string }; variant: { id: string } } | undefined; // 协议层把目录对象视为不透明
+    const companion = c ? `${c.model.id}/${c.variant.id}` : null;
+    this.log.info("loading model", { id: desired.modelId, variant: desired.loaded.variantId, settings: desired.params.settings, companion });
     try {
       const result = await this.deps.engine.request("model.load", desired.params);
       this.loadedKey = desired.key;

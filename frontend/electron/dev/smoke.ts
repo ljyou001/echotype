@@ -1,6 +1,6 @@
 /**
- * [INPUT]: 依赖 electron 的 BrowserWindow；依赖 core/create-core 的 Core、core/logger；读取模型目录以伪造一个已安装模型
- * [OUTPUT]: 导出 prepareSmokeHome（临时用户目录 + 假模型 + 关闭输出的设置）、runSmoke（端到端检查，返回退出码）
+ * [INPUT]: 依赖 electron 的 nativeTheme；依赖 ./smoke-kit 的 Smoke 骨架；读取模型目录以伪造一个已安装模型
+ * [OUTPUT]: 导出 mockSmoke（SmokeFactory：临时用户目录 + 假模型 + 关闭输出的设置 + 端到端检查）
  * [POS]: `npm run smoke:core` 的执行体：真实 Electron 主进程 + 真实 preload + 真实 IPC + mock 引擎。
  *        在一个隐藏窗口里通过 window.echotype（v2）走一遍：快照与 activeModel、模型列表与设置、引擎包、存储、许可证、渠道、
  *        设备、热键校验、听写、历史、推送、错误码、perModel 只经 models.updateSettings、ui.theme 到 nativeTheme、
@@ -11,12 +11,12 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { BrowserWindow, nativeTheme, type WebContents } from "electron";
-import type { Core } from "../core/create-core.js";
-import type { Logger } from "../core/logger.js";
+import { nativeTheme } from "electron";
+import { Checks, openProbeWindow, sleep, until, writeSmokeSettings, type SmokeContext, type SmokeFactory } from "./smoke-kit.js";
 
-/** 必须在 resolveCorePaths 之前调用：设置 ECHOTYPE_HOME 并返回它。 */
-export function prepareSmokeHome(catalogFile: string): string {
+/** 工厂在 resolveCorePaths 之前调用：设置 ECHOTYPE_HOME，并在其中伪造已安装的默认模型。 */
+export const mockSmoke: SmokeFactory = (catalogFile) => {
+  process.env.ECHOTYPE_ENGINE = "mock";
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "echotype-smoke-"));
   process.env.ECHOTYPE_HOME = home;
   const catalog = JSON.parse(fs.readFileSync(catalogFile, "utf-8")) as {
@@ -29,38 +29,19 @@ export function prepareSmokeHome(catalogFile: string): string {
   fs.mkdirSync(dir, { recursive: true });
   for (const rel of Object.values(variant.files)) fs.writeFileSync(path.join(dir, rel), "smoke");
   fs.writeFileSync(path.join(dir, ".installed.json"), JSON.stringify({ model: model.id, variant: variant.id, asset: "smoke", sha256: null }));
-  fs.writeFileSync(
-    path.join(home, "settings.json"),
-    JSON.stringify({ schemaVersion: 2, output: { directInput: false, clipboard: false }, ui: { onboardingCompleted: true } }),
-  );
-  return home;
-}
+  writeSmokeSettings(home);
+  return { home, budgetMs: 90_000, run: runSmoke };
+};
 
-export interface SmokeContext {
-  core: Core;
-  preload: string;
-  preloadArgs: string[];
-  trust: (contents: WebContents) => void;
-  logger: Logger;
-}
-
-export async function runSmoke({ core, preload, preloadArgs, trust, logger }: SmokeContext): Promise<number> {
-  const passed: string[] = [];
-  const check = (name: string, ok: boolean, detail?: unknown) => {
-    if (!ok) throw new Error(`${name} — got ${JSON.stringify(detail)}`);
-    passed.push(name);
-  };
-  const win = new BrowserWindow({
-    show: false,
-    webPreferences: { preload, additionalArguments: preloadArgs, contextIsolation: true, nodeIntegration: false, sandbox: true },
-  });
-  const js = <T>(code: string): Promise<T> => win.webContents.executeJavaScript(code) as Promise<T>;
+async function runSmoke(ctx: SmokeContext): Promise<number> {
+  const { core, logger } = ctx;
+  const checks = new Checks("SMOKE");
+  const check = checks.check.bind(checks);
+  const { win, js } = await openProbeWindow(ctx);
   try {
     await until(() => core.snapshot().engine.state === "ready", 30_000, "engine ready");
     check("engine spawned, handshaked, model loaded", true);
 
-    trust(win.webContents);
-    await win.loadURL("data:text/html,<title>EchoType smoke</title>");
     const probe = await js<Record<string, unknown>>(`(async () => {
       const b = window.echotype;
       const s = await b.getSnapshot();
@@ -145,25 +126,10 @@ export async function runSmoke({ core, preload, preloadArgs, trust, logger }: Sm
     check("integrations: secrets use the OS keychain when available", integ.storage !== "basic_text", integ);
     await js(`window.echotype.integrations.remove(${JSON.stringify(integ.id)})`);
 
-    process.stdout.write(`SMOKE PASS (${passed.length} checks)\n${passed.map((p) => `  ✓ ${p}`).join("\n")}\n`);
-    return 0;
+    return checks.pass();
   } catch (err) {
-    logger.error("smoke failed", err);
-    process.stdout.write(`SMOKE FAIL: ${(err as Error).message}\n${passed.map((p) => `  ✓ ${p}`).join("\n")}\n`);
-    return 1;
+    return checks.fail(err, logger);
   } finally {
     win.destroy();
   }
-}
-
-async function until(cond: () => boolean, timeoutMs: number, label: string): Promise<void> {
-  const start = Date.now();
-  while (!cond()) {
-    if (Date.now() - start > timeoutMs) throw new Error(`timed out waiting for ${label}`);
-    await sleep(25);
-  }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
 }

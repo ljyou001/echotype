@@ -15,6 +15,7 @@
     "typecheck:core": "tsc -p tsconfig.test.json",
     "test:core": "vitest run --dir electron",
     "smoke:core": "npm run build:core && cross-env ECHOTYPE_ENGINE=mock ECHOTYPE_SMOKE=1 electron .",
+    "smoke:real": "npm run build:core && cross-env ECHOTYPE_SMOKE=real electron .",
     "preview": "vite preview",
     "start": "electron .",
     "package": "npm run build && electron-builder build --config electron-builder.cjs --config.directories.output=dist-package",
