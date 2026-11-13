@@ -69,7 +69,7 @@
     },
     "cards": {
       "model": "模型",
-      "hotkey": "快捷键",
+      "hotkey": "热键",
       "mode": "模式",
       "input": "麦克风",
       "recordingMode": "录音方式",
@@ -469,7 +469,7 @@
       "current": "当前快捷键",
       "configure": "更改热键",
       "pressKeys": "按下任意键...",
-      "clickToRecord": "点击录制新快捷键",
+      "clickToRecord": "点击录制新热键",
       "quickSelect": "推荐按键",
       "quickSelectDescMac": "建议使用右侧修饰键或功能键，避免与系统快捷键冲突",
       "quickSelectDescWin": "建议使用右侧修饰键或特殊锁定键，避免与系统快捷键冲突",
@@ -501,7 +501,7 @@
       "cancel": "取消",
       "errors": {
         "alreadyInUse": "此快捷键已被使用",
-        "invalid": "无效的快捷键组合",
+        "invalid": "无效的热键组合",
         "systemShortcut": "这是系统快捷键"
       },
       "rowDescription": "在电脑任何地方按下它即可听写。",
@@ -665,9 +665,9 @@
       "microphone": "麦克风权限",
       "microphoneDesc": "用于录制语音并转写为文字。",
       "openMicrophone": "打开麦克风设置",
-      "accessibility": "快捷键 / 辅助功能权限",
+      "accessibility": "热键 / 辅助功能权限",
       "accessibilityDescWin": "Windows 上的全局热键不需要单独授权。",
-      "accessibilityDescMac": "用于全局快捷键（如开始/停止录音），需在「辅助功能」中允许本应用。",
+      "accessibilityDescMac": "用于全局热键（开始、停止听写），需在「辅助功能」中允许 EchoType。",
       "openAccessibility": "打开辅助功能设置",
       "checking": "检测中…",
       "granted": "已授权",
