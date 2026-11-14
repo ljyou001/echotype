@@ -3,10 +3,11 @@
 > L3 contract | Parent: contracts/CLAUDE.md
 > Owners: engine session implements the server side. Core session implements the client side.
 > Rule: change this file only through the orchestrator session. Bump `protocol` on breaking change.
+> Version: `protocol` 3 is the wire revision. It is independent of the app version (EchoType 3.x) and of `engine_version`.
 
 ## 1. Transport
 
-- WebSocket. Text frames carry JSON. Binary frames are not used in v3.
+- WebSocket. Text frames carry JSON. Binary frames are not used in protocol 3.
 - Bind `127.0.0.1` only. Start with `--port 0`; the OS picks a free port.
 - Core generates a random token. Core passes it in env `ECHOTYPE_ENGINE_TOKEN`.
 - Core connects to `ws://127.0.0.1:<port>/?token=<token>`. The engine rejects a wrong token with close code 4401.
@@ -107,7 +108,7 @@ Correctness comes first: `final` must equal the `transcribe.file` result for the
 
 1. The mic stream feeds Silero VAD (sherpa-onnx built-in) in 32 ms frames.
 2. The engine groups VAD speech segments into sentence units. A unit ends at a pause of 0.6 s or more, or at 8 s of span. Dictation and `transcribe.file` use the same unit rule.
-3. The engine always decodes a whole unit. It never decodes part of a unit and never joins partial texts.
+3. The engine always decodes a whole unit. It never decodes part of a unit and never joins partial texts. The decode input of a unit is anchored on sample-accurate speech edges, not on VAD frame boundaries. An edge is where the 10 ms sliding RMS reaches the unit peak −35 dB. The input is 0.3 s of captured audio before the start edge, then the speech up to the end edge, then 0.2 s of digital silence. Dictation, speculative decodes and `transcribe.file` use this same rule, so a few milliseconds of jitter in the start time or the release time does not change the text.
 4. When a unit closes, the engine decodes it at once, in a worker thread. At each pause inside the open unit, the engine decodes the unit speculatively, as if it ended there.
 5. At `session.stop`, the engine flushes VAD and closes the open unit. It reuses the speculative result only if that audio slice equals the unit slice sample for sample. Otherwise it decodes the whole unit.
 6. The engine joins the unit texts, runs the punctuation step and the text post-processing, then emits `final`.

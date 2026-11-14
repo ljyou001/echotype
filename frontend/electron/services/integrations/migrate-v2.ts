@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 node:fs；依赖 core/atomic-file；依赖 ./instance-store 的 StoredInstance
  * [OUTPUT]: 导出 migrateV2、seedDefaults、LEGACY_PLUGIN_ACTIONS、MigrationResult
- * [POS]: v2 integrations.json（{instances, defaultIntegrationId}，插件 id + 明文 config）→ v3 实例的一次性迁移。
+ * [POS]: v2 integrations.json（{instances, defaultIntegrationId}，插件 id + 明文 config）→ 集成实例（schema 3）的一次性迁移。
  *        LEGACY_PLUGIN_ACTIONS 是本层唯一允许写死 id 的映射表（同 settings-migration 的先例）。
  *        明文密钥作为 secrets 列表交还给调用方写入 SecretStore；旧文件改名为 integrations.v2.bak.json 并抹掉其中的密钥字段。
  *        OpenClaw 的 WebSocket 协议不再支持，迁为"自定义 OpenAI 兼容"的 HTTP 端点。
@@ -13,7 +13,7 @@ import { readJsonFile, writeFileAtomicSync } from "../../core/atomic-file.js";
 import type { SettingValue } from "../../ipc-contract.js";
 import type { StoredInstance } from "./instance-store.js";
 
-/** v2 插件 id → v3 动作 id。 */
+/** v2 插件 id → integrations.catalog.json 的动作 id。 */
 export const LEGACY_PLUGIN_ACTIONS: Record<string, string> = {
   "google-search": "open-google",
   "bing-search": "open-bing",

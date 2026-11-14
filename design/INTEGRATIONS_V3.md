@@ -571,7 +571,7 @@ interface IntegrationInstanceView {
 3. **ui-integrations**：`IntegrationsPage` 与 `QuickActionWindow` 及子组件、i18n 文案。
 4. （可选）**catalog-content**：只改 `contracts/integrations.catalog.json`（provider 与动作数据），与 2/3 不重叠，需联网核实各 provider 当前 base URL 与建议模型。
 
-2 与 3 只通过契约耦合；3 在 2 完成前可用 mock bridge 开发（沿用 v3 的 `ECHOTYPE_ENGINE=mock` 思路，新增 `ECHOTYPE_INTEGRATIONS=mock`）。
+2 与 3 只通过契约耦合；3 在 2 完成前可用 mock bridge 开发（沿用 `ECHOTYPE_ENGINE=mock` 的思路，新增 `ECHOTYPE_INTEGRATIONS=mock`）。
 
 ## 9. 风险与未决问题
 

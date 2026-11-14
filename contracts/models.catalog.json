@@ -130,7 +130,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 78,
+            "release_to_final_ms_p50_10s": 84,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         },
@@ -244,7 +244,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 38,
+            "release_to_final_ms_p50_10s": 41,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -327,7 +327,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 63,
+            "release_to_final_ms_p50_10s": 74,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -480,7 +480,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 602,
+            "release_to_final_ms_p50_10s": 658,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         },
@@ -690,7 +690,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 194,
+            "release_to_final_ms_p50_10s": 228,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -985,7 +985,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 882,
+            "release_to_final_ms_p50_10s": 1148,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -1141,7 +1141,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 1222,
+            "release_to_final_ms_p50_10s": 1322,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -1207,7 +1207,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 88,
+            "release_to_final_ms_p50_10s": 112,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -1293,16 +1293,16 @@
           "asset": {
             "name": "engine-pack-cuda-win32-x64.zip",
             "release": "engine-packs-v3",
-            "sha256": null,
-            "size_bytes": 0
+            "sha256": "123291cf3dd5c0c2fb20b03d9a3b40314b2cd60fa98664ef1355b27b097992b0",
+            "size_bytes": 1747562132
           }
         },
         "linux-x64": {
           "asset": {
             "name": "engine-pack-cuda-linux-x64.zip",
             "release": "engine-packs-v3",
-            "sha256": null,
-            "size_bytes": 0
+            "sha256": "4c2e17cd8443568cef6561d8580a3d08d413abcd60359f4a4e1b7512d5e72f3c",
+            "size_bytes": 1771739678
           }
         }
       },
@@ -1320,32 +1320,32 @@
           "asset": {
             "name": "engine-pack-vulkan-win32-x64.zip",
             "release": "engine-packs-v3",
-            "sha256": null,
-            "size_bytes": 0
+            "sha256": "afe32a609dccfca0cb93141fa2c3bdfddaf9708f88750a712c11a742fd10cb1a",
+            "size_bytes": 41236486
           }
         },
         "win32-arm64": {
           "asset": {
             "name": "engine-pack-vulkan-win32-arm64.zip",
             "release": "engine-packs-v3",
-            "sha256": null,
-            "size_bytes": 0
+            "sha256": "a2e81e7f85b757e409f17e4fd02f35e3ea561f33eed12ff2850d510229a9bc76",
+            "size_bytes": 33226808
           }
         },
         "linux-x64": {
           "asset": {
             "name": "engine-pack-vulkan-linux-x64.zip",
             "release": "engine-packs-v3",
-            "sha256": null,
-            "size_bytes": 0
+            "sha256": "dc054ff8f048d6c32d487fc6e7fa431d0c3f72ffbb234439e5d81a7c9ec99345",
+            "size_bytes": 55226322
           }
         },
         "linux-arm64": {
           "asset": {
             "name": "engine-pack-vulkan-linux-arm64.zip",
             "release": "engine-packs-v3",
-            "sha256": null,
-            "size_bytes": 0
+            "sha256": "c42be27735944736627fbca3f21d94b3f758285176caeded56181f6b816cf0c9",
+            "size_bytes": 46830315
           }
         }
       },

@@ -2,14 +2,14 @@
 //!          text::close_dangling
 //! [OUTPUT]: 导出 Transcript 与 transcribe(host, vad, audio, language)
 //! [POS]: transcribe.file 的离线转写。与听写会话同一套解码单元：同一个 VAD 的段经 UnitBuilder 合成句级单元
-//!        （0.6 s 静音断句、最长 8 s）、同样补边、每个单元整段解码一次、同样拼接与文本管线，所以同一段录音的
+//!        （0.6 s 静音断句、最长 8 s）、同样的采样级边沿切片（unit_audio）、每个单元整段解码一次、同样拼接与文本管线，所以同一段录音的
 //!        听写 final 与它逐字一致（tests/models.rs 断言）。
 //!        engine 在模型的解码线程上调用它，与会话共用单飞队列；测试直接调用。
 //! [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 
 use std::time::Instant;
 
-use super::segments::{SegmentTrack, UnitBuilder, SAMPLE_RATE};
+use super::segments::{unit_audio, SegmentTrack, UnitBuilder, SAMPLE_RATE};
 use crate::asr::host::ModelHost;
 use crate::asr::vad::Detector;
 use crate::protocol::EResult;
@@ -32,15 +32,15 @@ pub fn transcribe(host: &ModelHost, vad: &mut dyn Detector, audio: &[f32], langu
     spans.extend(vad.flush());
     let mut track = SegmentTrack::default();
     for u in UnitBuilder::units(&spans) {
-        track.add(u.start, u.end, audio.len());
+        track.add(audio, u.start, u.end);
     }
     if track.segments.is_empty() && !audio.is_empty() {
-        track.add(0, audio.len(), audio.len());
+        track.add(audio, 0, audio.len());
     }
     let mut decode_ms = 0;
     for i in 0..track.segments.len() {
         let (s, e) = (track.segments[i].start, track.segments[i].end);
-        let d = host.decode(&audio[s..e], language)?;
+        let d = host.decode(&unit_audio(audio, s, e), language)?;
         decode_ms += d.ms;
         track.segments[i].text = Some(d.text);
         track.segments[i].decoded = true;

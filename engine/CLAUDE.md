@@ -43,6 +43,7 @@ scripts/: make-pack、bench、测试样例下载、fixture 生成（见 scripts/
 - Windows 必须关闭 EcoQoS，否则解码慢 2.2 倍且忽快忽慢（design/ENGINE_NOTES.md §1）。
 - sherpa VAD 必须按 ≤ 512 样本小块喂。
 - 准确率不随切分变化：一个解码单元是一句话（0.6 s 静音断句），整段解码一次，从不拼余段；听写与 transcribe.file 共用切分。
+- 解码输入锚定在采样级语音边沿（不是 VAD 的 32 ms 帧边界）：边沿前 0.3 s 实录 + 语音 + 0.2 s 数字静音，起点抖动不改文本。
 - 基础引擎只含 CPU（sherpa 静态库）；GPU 只来自引擎包或 macOS 基础包里的 llama-server。
 
 ## 构建、测试、运行

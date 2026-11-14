@@ -2,9 +2,10 @@
 # [INPUT]: 依赖 scripts/ci/build-engine.sh（基础引擎与 GPU 引擎包，内部调用 engine/scripts/make-pack.sh）、
 #          frontend/electron-builder.cjs（安装包、渠道、许可清单）、scripts/ci/check-engine.mjs（打包态握手检查）、
 #          scripts/ci/release-assets.mjs（校验和、pack 清单与发布）、engine/scripts/bench.sh
-# [OUTPUT]: 每个目标一个 artifact（installer-<target> / engine-pack-<pack>-<target>）；
-#           tag v* 时生成草稿 Release（安装包）并把 GPU 引擎包补传到 engine-packs-v3；手动触发可跑 macOS 基准
-# [POS]: 发布流水线。6 个安装包行 + 6 个 GPU 引擎包行并行，每行在本机原生构建，不交叉编译。
+# [OUTPUT]: 每个目标一个 artifact（installer-<target> / engine-pack-<pack>-<target>）；勾选 publish_packs 或推 tag 时
+#           把 GPU 引擎包补传到 engine-packs-v3；用户推 tag v* 时另建草稿 Release（安装包）；手动可只跑 macOS 基准
+# [POS]: 发布流水线，手动触发（main 上的 workflow_dispatch），不走 PR。Windows x64 也可在本地用同一份脚本构建。
+#        6 个安装包行 + 6 个 GPU 引擎包行并行，每行在本机原生构建，不交叉编译。
 #        说明见 scripts/ci/CLAUDE.md。
 # [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 # ============================================================================

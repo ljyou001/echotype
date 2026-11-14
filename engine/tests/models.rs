@@ -187,3 +187,97 @@ fn dictation_final_matches_transcribe_file() {
         }
     }
 }
+
+// ============================================================
+// 时序抖动：样例起点偏移几毫秒（VAD 的 32 ms 帧落点随之改变）× 松键延迟
+// ============================================================
+const JITTER_MODELS: &[&str] = &["sensevoice-small", "paraformer-zh-small", "paraformer-zh"];
+
+/// 预录静音（300 ms + 偏移）+ 样例 + 松键前的静音：会话缓冲区里的样子
+fn jittered(clip: &[f32], offset_ms: usize, delay_ms: usize) -> (Vec<f32>, usize) {
+    let lead = 4800 + offset_ms * 16;
+    let mut x = vec![0.0f32; lead];
+    x.extend_from_slice(clip);
+    x.extend(std::iter::repeat_n(0.0f32, delay_ms * 16));
+    (x, lead)
+}
+
+/// 首尾「词」：英文取首尾单词，中文取首尾两个字（去掉标点后）
+fn edges(text: &str) -> (String, String) {
+    let w: Vec<String> = text.split(|c: char| !c.is_alphanumeric()).filter(|s| !s.is_empty()).map(str::to_lowercase).collect();
+    if w.len() > 1 {
+        return (w[0].clone(), w[w.len() - 1].clone());
+    }
+    let c: Vec<char> = words_of(text).chars().collect();
+    let n = c.len();
+    (c[..2.min(n)].iter().collect(), c[n.saturating_sub(2)..].iter().collect())
+}
+
+#[test]
+#[ignore = "measurement: ECHOTYPE_TEST_MODELS_DIR=… cargo test --release --test models -- --ignored --nocapture jitter"]
+fn jitter_report() {
+    use echotype_engine::asr::vad::Detector;
+    use echotype_engine::dictation::segments::UnitBuilder;
+    use std::collections::BTreeMap;
+    for_each_installed(|m, v, host, _| {
+        if !JITTER_MODELS.contains(&m["id"].as_str().unwrap()) || v["id"] != "cpu-int8" {
+            return;
+        }
+        for lang in clips_for(m) {
+            let audio = clip(lang);
+            for delay in [150, 300, 600] {
+                let mut firsts: BTreeMap<String, usize> = BTreeMap::new();
+                let mut lasts: BTreeMap<String, usize> = BTreeMap::new();
+                let mut spans: BTreeMap<(i64, i64), usize> = BTreeMap::new();
+                let mut texts: BTreeMap<String, usize> = BTreeMap::new();
+                for offset in (0..=64).step_by(4) {
+                    let (x, lead) = jittered(&audio, offset, delay);
+                    let mut vad = SpeechDetector::new(SEGMENT_VAD).unwrap();
+                    let mut segs = vad.accept(&x);
+                    segs.extend(vad.flush());
+                    for u in UnitBuilder::units(&segs) {
+                        *spans.entry((u.start as i64 - lead as i64, u.end as i64 - lead as i64)).or_default() += 1;
+                    }
+                    let t = transcribe(host, &mut SpeechDetector::new(SEGMENT_VAD).unwrap(), &x, None).unwrap().text;
+                    let (f, l) = edges(&t);
+                    *firsts.entry(f).or_default() += 1;
+                    *lasts.entry(l).or_default() += 1;
+                    *texts.entry(t).or_default() += 1;
+                }
+                eprintln!("JITTER {} {lang} delay {delay} ms | first {firsts:?} | last {lasts:?} | {} span(s) {:?} | {} text(s)",
+                    m["id"].as_str().unwrap(), spans.len(), spans.keys().map(|(a, b)| (a / 16, b / 16)).collect::<Vec<_>>(), texts.len());
+                for (t, n) in &texts {
+                    eprintln!("JITTER     {n:2}× {t}");
+                }
+            }
+        }
+    });
+}
+
+#[test]
+fn text_is_stable_when_the_clip_starts_a_few_ms_later() {
+    use std::collections::BTreeSet;
+    let mut failures = Vec::new();
+    let tested = for_each_installed(|m, v, host, provider| {
+        if !JITTER_MODELS.contains(&m["id"].as_str().unwrap()) {
+            return;
+        }
+        for lang in clips_for(m) {
+            let audio = clip(lang);
+            let texts: BTreeSet<String> = (0..=64)
+                .step_by(8)
+                .map(|offset| transcribe(host, &mut SpeechDetector::new(SEGMENT_VAD).unwrap(), &jittered(&audio, offset, 300).0, None).unwrap().text)
+                .collect();
+            eprintln!("{} {} [{provider}] {lang}: {} text(s) over 9 start offsets: {texts:?}", m["id"], v["id"], texts.len());
+            if texts.len() != 1 {
+                failures.push(format!("{} {} {lang}: {texts:?}", m["id"], v["id"]));
+            }
+        }
+    });
+    match tested {
+        None => eprintln!("skipped: set ECHOTYPE_TEST_MODELS_DIR"),
+        Some(_) => assert!(failures.is_empty(), "text depends on the start offset:
+{}", failures.join("
+")),
+    }
+}

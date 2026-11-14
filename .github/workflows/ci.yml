@@ -1,7 +1,7 @@
 # ============================================================================
 # [INPUT]: 依赖 frontend 的 tsconfig.json、vite、npm script typecheck:core / test:core；依赖 engine/ 的 Cargo 工程
-# [OUTPUT]: push main 与 PR 的快速检查：UI 层、Core 层、Engine 层各一个任务
-# [POS]: 合并前的守门检查，不出安装包（安装包见 build.yml）。命令与各层 CLAUDE.md 的"测试"一节一致。
+# [OUTPUT]: push main 的快速检查（外部贡献者的 PR 也跑）：UI 层、Core 层、Engine 层各一个任务
+# [POS]: main 的守门检查，不出安装包（安装包见 build.yml）。命令与各层 CLAUDE.md 的"测试"一节一致。
 # [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 # ============================================================================
 name: CI
