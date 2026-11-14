@@ -1,7 +1,8 @@
 /**
  * [INPUT]: 依赖 services/model-registry、engine-packs、model-catalog、asset-installer；依赖 node:http 起本地夹具服务器；./helpers 的 makeZip
  * [OUTPUT]: catalog schema 2 的安装测试：variant 目录、requires 顺序、Range 续传、多源回落、local 源、sha256、取消、
- *          缺文件、同一资产支撑多个 variant（就地复制）、渠道许可证过滤、按 variant 删除、遗留目录、GPU 引擎包的安装/失效/删除
+ *          缺文件、同一资产支撑多个 variant（就地复制）、渠道许可证过滤、按 variant 删除、遗留目录、GPU 引擎包的安装/失效/删除；
+ *          MODEL_MANIFEST §5 引擎包版本：记录构建、过期、原地更新（校验通过前旧包不动）、新包未发布、换位中断后放回
  * [POS]: 不联网。夹具服务器按 sources 模板提供 {release}/{asset}，支持 Range、404（主源宕机）、中途断流、慢速流。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -13,7 +14,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createMemoryLogger } from "../core/logger.js";
 import { ENGINE_EXECUTABLE } from "../engine/engine-command.js";
-import { locateAsset } from "../services/asset-installer.js";
+import { locateAsset, readMarker } from "../services/asset-installer.js";
 import { EnginePacks } from "../services/engine-packs.js";
 import { ModelCatalog, type AssetRef, type CatalogData, type CatalogModel, type CatalogVariant } from "../services/model-catalog.js";
 import { ModelRegistry } from "../services/model-registry.js";
@@ -28,6 +29,7 @@ const assets: Record<string, Buffer> = {
   "test-punct--cpu-int8.zip": makeZip({ "model.int8.onnx": randomBytes(1024) }),
   "broken--cpu-int8.zip": makeZip({ "unexpected.bin": "x" }),
   [`engine-pack-cuda-${process.platform}-${process.arch}.zip`]: makeZip({ [ENGINE_EXECUTABLE]: "fake engine", "cudart.dll": "x" }),
+  [`engine-pack-cuda-${process.platform}-${process.arch}-3.0.1.zip`]: makeZip({ [ENGINE_EXECUTABLE]: "fake engine 3.0.1", "cudart.dll": "y" }),
 };
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
 const localDir = makeTempDir("echotype-local-source-");
@@ -414,5 +416,65 @@ describe("EnginePacks", () => {
     const newer = new EnginePacks({ catalog, enginesDir: makeTempDir(), platformKey: `${process.platform}-${process.arch}`, protocol: 3, locate: () => [], fetch: globalThis.fetch, logger: createMemoryLogger() });
     expect(newer.offered("cuda")).toBe(false);
     expect(newer.views(null)).toEqual([]);
+  });
+
+  // ---------- MODEL_MANIFEST §5：一个包只属于一个引擎版本 ----------
+  const PLATFORM = `${process.platform}-${process.arch}`;
+  const OLD = `engine-pack-cuda-${PLATFORM}.zip`;
+  const NEW = `engine-pack-cuda-${PLATFORM}-3.0.1.zip`;
+  const pin = (catalog: ModelCatalog, name: string, sha256: string | null) =>
+    (catalog.packs()[0].platforms[PLATFORM].asset = { name, release: "engine-packs-v3", sha256, size_bytes: 0 });
+
+  it("records the installed build, then updates an outdated pack in place: the old one stays until the new one is verified", async () => {
+    const { packs, enginesDir, catalog } = makePacks();
+    await packs.install("cuda");
+    const dir = path.join(enginesDir, "cuda");
+    expect(readMarker(dir)).toMatchObject({ pack: "cuda", asset: OLD, sha256: sha(assets[OLD]) });
+
+    pin(catalog, NEW, sha(Buffer.from("a different build"))); // 应用更新后目录钉住新构建
+    expect(packs.isInstalled("cuda")).toBe(true);
+    expect(packs.usable("cuda")).toBe(false);
+    expect(packs.preferred("cuda")).toBeNull();
+    expect(packs.views(null)).toMatchObject([{ id: "cuda", install: { status: "not_installed", error: { code: "PACK_OUTDATED" } } }]);
+
+    await expect(packs.install("cuda")).rejects.toMatchObject({ code: "CHECKSUM_MISMATCH" }); // 下载的不是目录钉住的构建
+    expect(fs.readFileSync(path.join(dir, ENGINE_EXECUTABLE), "utf-8")).toBe("fake engine"); // 旧包原样
+    expect(readMarker(dir)).toMatchObject({ asset: OLD });
+    expect(packs.isInstalled("cuda")).toBe(true);
+    expect(packs.usable("cuda")).toBe(false);
+
+    pin(catalog, NEW, sha(assets[NEW]));
+    await packs.install("cuda");
+    expect(fs.readFileSync(path.join(dir, ENGINE_EXECUTABLE), "utf-8")).toBe("fake engine 3.0.1");
+    expect(readMarker(dir)).toMatchObject({ asset: NEW, sha256: sha(assets[NEW]) });
+    expect(packs.usable("cuda")).toBe(true);
+    expect(packs.views("cuda")).toMatchObject([{ id: "cuda", inUse: true, install: { status: "installed", error: null } }]);
+    expect(fs.readdirSync(enginesDir)).toEqual(["cuda"]); // 不留 .previous / .tmp / .partial
+  });
+
+  it("while the new pack is unpublished, the installed older pack is outdated, unlisted and left untouched", async () => {
+    const { packs, enginesDir, catalog } = makePacks();
+    await packs.install("cuda");
+    pin(catalog, NEW, null);
+    expect(packs.usable("cuda")).toBe(false);
+    expect(packs.preferred(null)).toBeNull();
+    expect(packs.views(null)).toEqual([]); // UI：暂不可用
+    await expect(packs.install("cuda")).rejects.toMatchObject({ code: "PACK_UNAVAILABLE" });
+    expect(fs.readFileSync(path.join(enginesDir, "cuda", ENGINE_EXECUTABLE), "utf-8")).toBe("fake engine");
+  });
+
+  it("finishes a swap that was cut off between its two renames on the next scan", async () => {
+    const { packs, enginesDir, catalog } = makePacks();
+    await packs.install("cuda");
+    const dir = path.join(enginesDir, "cuda");
+    fs.renameSync(dir, `${dir}.previous`); // 旧目录已挪走、新目录还没就位时进程退出
+    const again = new EnginePacks({ catalog, enginesDir, platformKey: PLATFORM, protocol: 3, locate: () => [], fetch: globalThis.fetch, logger: createMemoryLogger() });
+    again.scan();
+    expect(again.usable("cuda")).toBe(true);
+    expect(fs.readdirSync(enginesDir)).toEqual(["cuda"]);
+
+    fs.cpSync(dir, `${dir}.previous`, { recursive: true }); // 新目录已就位、旧目录还没删完
+    again.scan();
+    expect(fs.readdirSync(enginesDir)).toEqual(["cuda"]);
   });
 });

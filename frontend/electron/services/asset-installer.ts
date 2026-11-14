@@ -1,13 +1,14 @@
 /**
  * [INPUT]: 依赖 node:fs/crypto/stream；依赖 extract-zip；依赖 core/atomic-file 的原子写与重试 rename；
  *          依赖 ./model-catalog 的 AssetRef、AssetSource
- * [OUTPUT]: 导出 locateAsset、installAsset、cloneInstalled、readMarker、removeDir、cleanupStaging、directorySize、freeBytes、
+ * [OUTPUT]: 导出 locateAsset、installAsset、cloneInstalled、swapIntoPlace、readMarker、removeDir、cleanupStaging、directorySize、freeBytes、
  *          InstallError、AssetLocation
  * [POS]: 一切可下载资产（模型 variant、引擎包）共用的安装流水线（MODEL_MANIFEST §2/§5/§6）：
  *        按渠道的 sources 顺序生成候选位置（http 下载 / local 复制），失败自动换下一个源 →
  *        <dir>.partial（HTTP Range 续传，换源续传同一文件，sha256 兜底）→ sha256（目录值为 null 时告警跳过）→
- *        解 zip 到 <dir>.tmp（文件位于 zip 根）→ 核对必需文件 → 写 .installed.json → 原子 rename 为 <dir>。
- *        取消保留 .partial；任何失败都不会留下半个目标目录。
+ *        解 zip 到 <dir>.tmp（文件位于 zip 根）→ 核对必需文件 → 写 .installed.json（资产名 + 实际 sha256）→
+ *        swapIntoPlace 换位（旧目录先挪到 <dir>.previous，新目录就位后才删旧目录，用于引擎包与模型的更新）。
+ *        取消保留 .partial；任何失败都不会留下半个目标目录，也不会丢掉旧目录。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { createHash } from "node:crypto";
@@ -109,8 +110,7 @@ export async function installAsset(spec: InstallSpec, opts: InstallOptions): Pro
       path.join(staging, INSTALL_MARKER),
       `${JSON.stringify({ ...spec.marker, asset: spec.asset.name, sha256, installedAt: new Date().toISOString() }, null, 2)}\n`,
     );
-    await removeDir(spec.targetDir);
-    renameWithRetrySync(staging, spec.targetDir);
+    await swapIntoPlace(staging, spec.targetDir);
   } finally {
     fs.rmSync(staging, { recursive: true, force: true });
   }
@@ -243,8 +243,7 @@ export async function cloneInstalled(fromDir: string, spec: Pick<InstallSpec, "t
       path.join(staging, INSTALL_MARKER),
       `${JSON.stringify({ ...spec.marker, asset: spec.asset.name, sha256: source?.sha256 ?? null, clonedFrom: path.basename(fromDir), installedAt: new Date().toISOString() }, null, 2)}\n`,
     );
-    await removeDir(spec.targetDir);
-    renameWithRetrySync(staging, spec.targetDir);
+    await swapIntoPlace(staging, spec.targetDir);
   } finally {
     fs.rmSync(staging, { recursive: true, force: true });
   }
@@ -269,7 +268,36 @@ export async function removeDir(dir: string): Promise<void> {
   await fs.promises.rm(trash, { recursive: true, force: true, maxRetries: 3 });
 }
 
-/** 清理 parent 下中断留下的 *.tmp 与 *.trash-*；保留 *.partial 供续传。 */
+/**
+ * 新目录就位的唯一方式（安装与更新共用）：已校验、已解压、已核对的 staging 换下旧目录。
+ * 旧目录先改名为 <dir>.previous，新目录改名到位后才删除旧目录；第二次改名失败时把旧目录放回。
+ * 两次改名之间进程中断：下次 cleanupStaging 发现只有 .previous，把它改回原名。
+ */
+export async function swapIntoPlace(staging: string, targetDir: string): Promise<void> {
+  const previous = `${targetDir}${PREVIOUS_SUFFIX}`;
+  settlePrevious(previous);
+  const hadOld = fs.existsSync(targetDir);
+  if (hadOld) renameWithRetrySync(targetDir, previous);
+  try {
+    renameWithRetrySync(staging, targetDir);
+  } catch (err) {
+    if (hadOld) renameWithRetrySync(previous, targetDir);
+    throw err;
+  }
+  if (hadOld) await fs.promises.rm(previous, { recursive: true, force: true, maxRetries: 3 });
+}
+
+const PREVIOUS_SUFFIX = ".previous";
+
+/** <dir>.previous 的善后：<dir> 不在 → 改回原名（换位被打断）；<dir> 在 → 删掉旧目录 */
+function settlePrevious(previous: string): void {
+  if (!fs.existsSync(previous)) return;
+  const dir = previous.slice(0, -PREVIOUS_SUFFIX.length);
+  if (fs.existsSync(dir)) fs.rmSync(previous, { recursive: true, force: true });
+  else renameWithRetrySync(previous, dir);
+}
+
+/** 清理 parent 下中断留下的 *.tmp 与 *.trash-*，善后 *.previous；保留 *.partial 供续传。 */
 export function cleanupStaging(parent: string): void {
   let entries: string[];
   try {
@@ -278,7 +306,8 @@ export function cleanupStaging(parent: string): void {
     return;
   }
   for (const name of entries) {
-    if (name.endsWith(".tmp") || /\.trash-\d+$/.test(name)) fs.rmSync(path.join(parent, name), { recursive: true, force: true });
+    if (name.endsWith(PREVIOUS_SUFFIX)) settlePrevious(path.join(parent, name));
+    else if (name.endsWith(".tmp") || /\.trash-\d+$/.test(name)) fs.rmSync(path.join(parent, name), { recursive: true, force: true });
   }
 }
 
