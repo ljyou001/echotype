@@ -136,7 +136,9 @@ module.exports = {
   },
   deb: {
     // 写 depends 会替换默认列表，所以先列 electron-builder 26 的默认项，再加 XTest/Xt/XRandR（uiohook、robotjs）
-    // 与 ALSA/PulseAudio 客户端库（引擎的 cpal 动态链接；t64 发行版的 libasound2t64 提供 libasound2）
+    // 与 ALSA/PulseAudio 客户端库（引擎的 cpal 动态链接；t64 发行版的 libasound2t64 提供 libasound2），
+    // 以及 CPU 版 llama-server 需要的 libgomp1 与 OpenSSL 3（ubuntu 预编译件不带；noble 的 libssl3t64 提供 libssl3）。
+    // 缺后两个时引擎照常启动，只是不报 llama.cpp，cpu-gguf-q8 变体不可用
     depends: [
       "libgtk-3-0",
       "libnotify4",
@@ -151,6 +153,8 @@ module.exports = {
       "libxrandr2",
       "libasound2",
       "libpulse0",
+      "libgomp1",
+      "libssl3",
     ],
   },
 };

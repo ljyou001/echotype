@@ -4,8 +4,8 @@
 发布流水线的脚本层。workflow 只编排矩阵，构建逻辑全部在这里，本地与 CI 运行同一份脚本。
 
 成员清单
-build-engine.sh: 引擎构建入口。安装包行 `cargo build --release --locked --bin echotype-engine`（feature static）并暂存到 `engine/dist/<target-id>/`，mac 行再以 `make-pack.sh metal` 把 Metal llama-server 写进同一目录；GPU 行以 `make-pack.sh <pack>` 产出整套引擎，校验含 echotype-engine，打成可复现 zip，文件名取自 catalog `asset.name`，超过 2 GiB 即失败
-check-engine.mjs: 安装包冒烟检查。在 electron-builder 输出目录里找到解包应用，用 Core 编译产物的 `resolveEngineCommand`（isPackaged 布局）与 `EngineSupervisor` 拉起 `resources/engine/` 的引擎，要求 hello 握手成功且 `engine_version` 等于 `engine/Cargo.toml` 的版本（拦住残留的旧引擎），再调一次 `devices.list`
+build-engine.sh: 引擎构建入口。安装包行 `cargo build --release --locked --bin echotype-engine`（feature static）并暂存到 `engine/dist/<target-id>/`，再把 llama-server 写进同一目录（mac 行 `make-pack.sh metal`，win/linux 行 `make-pack.sh cpu`）；GPU 行以 `make-pack.sh <pack>` 产出整套引擎，校验含 echotype-engine，打成可复现 zip，文件名取自 catalog `asset.name`，超过 2 GiB 即失败
+check-engine.mjs: 安装包冒烟检查。在 electron-builder 输出目录里找到解包应用，用 Core 编译产物的 `resolveEngineCommand`（isPackaged 布局）与 `EngineSupervisor` 拉起 `resources/engine/` 的引擎，要求 hello 握手成功、`engine_version` 等于 `engine/Cargo.toml` 的版本（拦住残留的旧引擎）、`hello.runtimes` 含 llama.cpp（拦住漏装 llama-server），再调一次 `devices.list`
 third-party-licenses.mjs: 组件许可清单生成器。合并 npm 生产依赖、Rust 依赖闭包（`cargo metadata --filter-platform`，不含 dev 依赖）与原生组件，输出 `[{name, version, license, url}]`。electron-builder 的 beforePack 每个 平台 × 架构 调用一次
 licenses/native.json: 原生组件默认清单：sherpa-onnx、ONNX Runtime、llama.cpp、Silero VAD。`engine/third-party.json` 按 name 覆盖它（llama.cpp b12360 等版本由 engine 维护）
 release-assets.mjs: 发布资产工具。`checksums` 写 SHA256SUMS.txt；`packs` 按 catalog 校验 pack 资产名并写 `engine-packs.json`，`--publish` 时补传到 engine-packs-v3，从不覆盖已有资产
@@ -58,7 +58,8 @@ Linux 在 22.04 上构建，用户只需 glibc ≥ 2.35。Windows 的 crt-static
 | mac-x64 | `EchoType-<v>-mac-x64.dmg` · `EchoType-<v>-mac-x64.zip` |
 
 Linux 的 `${arch}` 由 electron-builder 按格式惯例改写：AppImage 用 x86_64，deb 用 amd64。
-deb 在 electron-builder 默认依赖之外加 `libxt6 libxrandr2`（uiohook、robotjs）与 `libasound2 libpulse0`（引擎的 cpal）。
+deb 在 electron-builder 默认依赖之外加 `libxt6 libxrandr2`（uiohook、robotjs）、`libasound2 libpulse0`（引擎的 cpal）与 `libgomp1 libssl3`（CPU 版 llama-server）。
+AppImage 无法声明依赖：草稿 Release 的说明开头写明 llama.cpp 需要 libgomp 与 OpenSSL 3。缺它们时引擎照常启动，只是不报 llama.cpp。
 
 GPU 引擎包（名称取自 catalog `engine_packs[].platforms[].asset.name`，发布到 `asset.release` 即 engine-packs-v3）：
 `engine-pack-cuda-{win32-x64,linux-x64}.zip` · `engine-pack-vulkan-{win32-x64,win32-arm64,linux-x64,linux-arm64}.zip`
@@ -74,7 +75,7 @@ resources/
 ├── app.asar.unpacked/node_modules    uiohook-napi、robotjs 的 .node（electron-builder 自动解包）
 ├── engine/                           ← engine/dist/<target-id>/
 │   ├── echotype-engine[.exe]         Core 的 engine/engine-command.ts 从这里拉起
-│   └── llama-server、*.dylib …        仅 mac：make-pack metal 写入
+│   └── llama-server[.exe]、运行库 …    mac：make-pack metal 写入（Metal 版）；win/linux：make-pack cpu 写入（CPU 版）
 ├── contracts/models.catalog.json     Core 的 core/paths.ts resolveCatalogPath 从这里读
 ├── contracts/integrations.catalog.json
 └── licenses/third-party.json         ← frontend/build/licenses/（beforePack 生成），设置 → 关于 展示
@@ -82,10 +83,11 @@ resources/
 
 ## 5. 与 engine 会话的接口
 
-- 基础引擎：`cargo build --release --locked --bin echotype-engine`，只暂存这一个文件。Silero VAD 已由 include_bytes! 编进二进制。
+- 基础引擎：`cargo build --release --locked --bin echotype-engine`，暂存引擎二进制，再由 make-pack 写入 llama-server。Silero VAD 已由 include_bytes! 编进二进制。
 - `engine/scripts/make-pack.sh <pack> <platform> <out-dir>`：把运行时文件写进 `<out-dir>` 根目录。
   - cuda / vulkan：整套引擎（make-pack 以 `CARGO_TARGET_DIR=engine/target/pack-<pack>` 自己编译）+ GPU 库 + llama-server + THIRD-PARTY-NOTICES.txt。
   - metal：只写 Metal llama-server 及其 dylib，`<out-dir>` 是基础引擎暂存目录本身；darwin-x64 用 llama.cpp 的 macos-x64 构建。
+  - cpu：只写 CPU 版 llama-server 及其运行库（win 为 win-cpu 构建，linux 为 ubuntu 构建），`<out-dir>` 同样是基础引擎暂存目录。不编译任何东西。
   - 下载缓存 `ECHOTYPE_PACK_CACHE`：CI 指向 `runner.temp/pack-cache`，不进 rust-cache。
   - 依赖：cargo、curl、python；Windows cuda 另需 VS 的 `lib.exe`（windows-2025 自带）。llama.cpp 有 ubuntu cuda 12.8 预编译版，Linux 不需要 CUDA toolkit。
 - `engine/scripts/bench.sh <engine-dir> <out-dir>`：按 catalog 从 models-v3 下载模型并校验 sha256，构建 echotype-bench，输出 bench.json 与 BENCHMARKS.md。CI 把工作目录 `ECHOTYPE_BENCH_WORK` 指向 `runner.temp`。
@@ -99,7 +101,7 @@ Windows x64 在本地构建：
 1. `bash scripts/ci/build-engine.sh win-x64`
 2. `cd frontend && npm ci && npm run build`
 3. `npx electron-builder --config electron-builder.cjs --win --x64 --publish never`，产出 `frontend/dist-package/EchoType-<v>-win-x64.{exe,zip}`。加 `--dir` 只出解包目录。
-4. `node scripts/ci/check-engine.mjs frontend/dist-package`：必须输出 `HELLO OK`，且 `engine_version` 等于 `engine/Cargo.toml` 的版本（v3 为 3.0.0）。
+4. `node scripts/ci/check-engine.mjs frontend/dist-package`：必须输出 `HELLO OK`，`engine_version` 等于 `engine/Cargo.toml` 的版本（v3 为 3.0.0），`runtimes` 含 `llama.cpp@b12360`。
 
 其余目标在 GitHub 构建：用户推送 main 后，Actions → Build → Run workflow，分支选 main。
 - 每行产出 artifact `installer-<target-id>` 或 `engine-pack-<pack>-<target-id>`，并在 runner 上跑同一份 check-engine。
@@ -124,7 +126,9 @@ engine-packs-v3 被所有已发布版本共用，旧版本的 catalog 钉住旧 
 - 解包后的 `EchoType.exe` 以 `ECHOTYPE_SMOKE=1` 运行：真实 Electron 打包态完成 spawn → hello；smoke 伪造的模型文件让 `model.load` 失败（sherpa 报 protobuf 解析失败），smoke 因此超时，属预期。
 - ci.yml 的命令：renderer `tsc --noEmit`、`typecheck:core`、`test:core`（107 通过）、`cargo test --release --locked`（43 通过）。
 - 渠道产物名、非法渠道与 msstore 缺身份的报错、beforePack 许可清单、可复现 zip、release-assets 的三种发布分支（替换 gh 的副本）。
-- 未在本地运行：make-pack cuda（engine 会话已构建，1667 MiB）、make-pack vulkan / metal、bench.sh。
+- make-pack cpu（2026-11-14，engine 8730055）：`engine/dist/win-x64` 共 68 MB（引擎 22.9 MB + CPU llama-server 及运行库约 45 MB），check-engine 输出 `runtimes=llama.cpp@b12360,sherpa-onnx@2.0.1`；删去 llama-server.exe 后 rc=1。
+- deb 依赖名：Ubuntu 24.04 的 libssl3t64 Provides `libssl3`，libgomp1 不改名；22.04 与 Debian 12 直接是 libssl3。
+- 未在本地运行：make-pack cuda（engine 会话已构建，1667 MiB）、make-pack vulkan / metal、Linux 与 win-arm64 的 make-pack cpu、bench.sh。
 
 GitHub runner 已验证（Build run 43528065540，main cd0c58b，手动触发，2026-11-13）：12 行全部成功。
 - 6 个安装包行的 check-engine 全部 `HELLO OK engine_version=3.0.0`（当时 Cargo.toml 为 3.0.0）：win-x64、win-arm64、linux-x64、linux-arm64 为 `providers=cpu`；mac-arm64、mac-x64 经 ad-hoc 签名 + hardenedRuntime 后为 `providers=cpu,metal`，签名后的引擎与 Metal llama-server 均能启动。
