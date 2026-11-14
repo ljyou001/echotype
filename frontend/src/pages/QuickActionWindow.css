@@ -1,7 +1,8 @@
 /*
  * [INPUT]: 依赖 styles/tokens.css 的变量
  * [OUTPUT]: Quick Action 小窗样式：.qa 根容器、可拖动标题栏、集成图标按钮、结果区与回执
- * [POS]: pages/QuickActionWindow.tsx 的专属样式。小窗无边框，标题栏承担拖动（指针事件 → bridge.quickAction.move）。
+ * [POS]: pages/QuickActionWindow.tsx 的专属样式。小窗无边框，标题栏是系统原生拖动区（-webkit-app-region: drag），
+ *        区内按钮标 no-drag 才能点击。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 .qa {
@@ -20,13 +21,12 @@
   gap: var(--space-2);
   margin: 0 calc(-1 * var(--space-2));
   padding: var(--space-1) 0;
-  cursor: grab;
   user-select: none;
-  touch-action: none;
+  -webkit-app-region: drag;
 }
 
-.qa__header:active {
-  cursor: grabbing;
+.qa__header button {
+  -webkit-app-region: no-drag;
 }
 
 .qa__grip {
