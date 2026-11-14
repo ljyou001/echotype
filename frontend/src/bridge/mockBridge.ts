@@ -416,7 +416,7 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
       },
       getStorage: async () => {
         const usedBytes = registry.usedBytes() + packs.usedBytes();
-        return { dir: String.raw`C:\Users\you\.echotype\models`, usedBytes, freeBytes: DISK_TOTAL_BYTES * 0.41 - usedBytes };
+        return { dir: String.raw`C:\Users\you\.echotype-v3\models`, usedBytes, freeBytes: DISK_TOTAL_BYTES * 0.41 - usedBytes };
       },
       onModelsChanged: (cb) => modelsChanged.on(cb),
     },
