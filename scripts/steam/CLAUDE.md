@@ -29,6 +29,12 @@ Windows 与 Linux 上它等于安装目录，models depot 正好命中。macOS �
 Core 从 steam 源安装时复制 zip、校验 sha256、解压到 `~/.echotype-v3/models/`，所以模型占两份磁盘。
 Windows 的 CPU 版 llama-server 依赖 VC++ 2015–2022 运行库，安装包不带：在 Steamworks → Installation → Redistributables 勾选它。
 
+规划（等 `design/STEAM_RELEASE_V3.md` §7 的契约落地、Core 实现 `dir` 源后再改）：
+- models depot 换成两部分：基础 App 的 Content depot，加上每个 DLC 一个 depot。
+- 资产解压到 `content/<asset_stem>/`，并写 `.asset.json`；Core 就地使用，不再复制 zip。
+- steam.conf 增加 DLC depot 与资产的对应表。
+在此之前保持现有的 zip 布局。
+
 ## 2. 用法
 
 1. 构建 steam 渠道的 Windows 包（与 scripts/ci/CLAUDE.md §6 相同，只多一个环境变量）：
