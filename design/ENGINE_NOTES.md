@@ -243,9 +243,18 @@ Measured with EcoQoS off (as in the engine), zh.wav/en.wav, then the 10 s uttera
   (`-ngl 0 --device none -t 8`): 0.6B Q8_0 decodes zh/en in 326/440 ms vs 1033/1268 ms for sherpa int8 at 8 threads;
   1.7B Q6_K in 590/928 ms and gets "chieftain" right. Release latency (10 s utterance): 0.6B GGUF 260/98 ms (tail 0/300)
   vs sherpa int8 566/368 ms. The engine accepts provider `cpu` for runtime `llama.cpp` whenever a `llama-server` sits next
-  to it. Shipping it in the base install costs 22 files, 47.5 MB on disk, 19.2 MB zipped (win-x64; all `ggml-cpu-*`
-  variants kept, `ggml-rpc` and other tools dropped). Not shipped yet: needs a packaging decision, the ci staging, and
-  catalog variants (`cpu-gguf-q8`).
+  to it. Shipping it in the base install costs 22 libraries and executables plus 3 text files, 46 MB on disk, about 19 MB
+  zipped (win-x64; all `ggml-cpu-*` variants kept, `ggml-rpc` and other tools dropped).
+- **Shipped in the base engine (2026-11-14).** `engine/scripts/make-pack.sh cpu <platform> <base-engine-dir>` stages the
+  pinned CPU `llama-server` next to the Windows and Linux base engines (the macOS base engine already gets the Metal build,
+  which has the CPU backend too). The catalog lists `cpu-gguf-q8` for Qwen3-ASR 0.6B (before `cpu-int8`, so a new install
+  picks it) and 1.7B (its first CPU variant). Verified from a base-engine directory: `hello.runtimes` has `llama.cpp b12360`,
+  both variants load with `provider_used: cpu`, `runtime: llama.cpp`; 10 s utterance, tail 300, 3 runs, median 220 ms (0.6B)
+  and 490 ms (1.7B).
+- **Linux needs two system libraries.** The ubuntu builds link `libgomp.so.1` and OpenSSL 3 (`libssl.so.3`,
+  `libcrypto.so.3`) and do not ship them. Ubuntu 22.04+ and Debian 12+ desktops have both. When either cannot be loaded,
+  the engine reports no llama provider at all, so `hello.runtimes` has no `llama.cpp` and a llama variant fails with
+  `PROVIDER_UNAVAILABLE` instead of a sidecar start failure. The Windows build ships its own `libomp.dll`.
 - Release latency after both engine changes (10 s utterance, 4 threads before → 8 threads + Whisper 300 after, P50 ms,
   tail 0 / tail 300): Whisper 1322/1354 → 628/352, FireRed 1148/913 → 949/814, Qwen3 0.6B int8 658/534 → 566/368,
   Parakeet 228/82 → 172/37, SenseVoice 84/0 → 70/0, Paraformer 74/7 → 62/6.

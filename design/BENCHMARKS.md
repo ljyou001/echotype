@@ -145,11 +145,12 @@ Sample finals (10 s, tail 0):
 | parakeet-tdt-0.6b-v3/cpu-int8 | sherpa-onnx | 228 → 172 | 82 → 37 |
 | sensevoice-small/cpu-int8 | sherpa-onnx | 84 → 70 | 0 → 0 |
 | paraformer-zh/cpu-int8 | sherpa-onnx | 74 → 62 | 7 → 6 |
-| qwen3-asr-0.6b/cpu-gguf-q8 (not in the catalog) | llama.cpp CPU | – → 260 | – → 98 |
-| qwen3-asr-1.7b/cpu-gguf-q8 (not in the catalog) | llama.cpp CPU | – → 525 | – → 345 |
+| qwen3-asr-0.6b/cpu-gguf-q8 | llama.cpp CPU | – → 260 | – → 98 |
+| qwen3-asr-1.7b/cpu-gguf-q8 | llama.cpp CPU | – → 525 | – → 345 |
 
-The two `cpu-gguf-q8` rows ran with a CPU-only `llama-server` b12360 next to the engine and a local catalog copy; the base
-install does not ship `llama-server` yet (+19.2 MB zipped).
+The two `cpu-gguf-q8` rows ran with a CPU-only `llama-server` b12360 next to the engine. Since 2026-11-14 the Windows and
+Linux base engines ship it (`make-pack.sh cpu`, about 19 MB zipped) and the catalog lists both variants. A rerun from a
+base-engine directory (tail 300, 3 runs) gave 220 ms and 490 ms.
 
 ## Edge-anchored decode input (2026-11-13)
 

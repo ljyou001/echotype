@@ -4,7 +4,8 @@
 //! [POS]: hello.providers / hello.runtimes 的来源，也是 model.load 选择 provider 与降级的依据。
 //!        基础引擎是 CPU 静态构建，只报 cpu；CUDA 引擎包（--features shared + CUDA 版 sherpa 共享库）在 exe 旁边带
 //!        onnxruntime_providers_cuda 与 NVIDIA 运行库，能真正加载时才报 cuda。llama.cpp 的 GPU 后端由 exe 旁的
-//!        llama-server + ggml-cuda / ggml-vulkan（macOS 为 Metal）决定；有 llama-server 就有 llama 的 cpu provider。sherpa 请求 cuda 失败时只打印 "Fallback to cpu"
+//!        llama-server + ggml-cuda / ggml-vulkan（macOS 为 Metal）决定；有 llama-server 就有 llama 的 cpu provider
+//!        （Windows / Linux 基础引擎自带 CPU 版 llama-server；Linux 另需系统的 libgomp 与 OpenSSL 3）。sherpa 请求 cuda 失败时只打印 "Fallback to cpu"
 //!        不报错，所以分两步：启动时按名字试加载运行库（hello 用）；建好识别器后用 cuda_ep_loaded() 核实 EP 真的
 //!        加载了——cudart 过旧（缺 12.5+ 符号，Error 127）只在这一步暴露（ENGINE_NOTES §8）。EP 不能拿来直接试加载：
 //!        脱离 ORT 时它的 DllMain 失败（错误 1114）。
@@ -17,7 +18,7 @@ use std::sync::OnceLock;
 pub struct Capabilities {
     /// sherpa-onnx 可用的 provider（cpu 恒在；cuda 需要 CUDA EP 与其依赖都能加载）
     pub sherpa: Vec<&'static str>,
-    /// llama.cpp sidecar 可用的 provider（cuda / vulkan / metal）
+    /// llama.cpp sidecar 可用的 provider（cuda / vulkan / metal / cpu）
     pub llama: Vec<&'static str>,
     pub llama_server: Option<PathBuf>,
     pub llama_version: Option<String>,
@@ -69,7 +70,10 @@ fn detect(dir: &Path) -> Capabilities {
         }
     }
     let server = dir.join(if cfg!(windows) { "llama-server.exe" } else { "llama-server" });
-    if server.exists() {
+    // Linux 的 llama.cpp 预编译件依赖系统的 libgomp 与 OpenSSL 3，归档里不带：缺一个，llama-server 就起不来，
+    // 这时不报任何 llama provider（hello.runtimes 也没有 llama.cpp），而不是让 model.load 卡在 sidecar 启动失败上
+    let system_libs = || !cfg!(target_os = "linux") || loads(&["libgomp.so.1", "libssl.so.3", "libcrypto.so.3"]);
+    if server.exists() && system_libs() {
         let lib = |stem: &str| {
             if cfg!(windows) {
                 dir.join(format!("{stem}.dll"))
@@ -90,10 +94,8 @@ fn detect(dir: &Path) -> Capabilities {
         }
         // 每个 llama.cpp 构建都带 CPU 后端：Qwen3-ASR GGUF 在 CPU 上比 sherpa int8 快 2.5–3 倍（ENGINE_NOTES §11）
         caps.llama.push("cpu");
-        if !caps.llama.is_empty() {
-            caps.llama_server = Some(server);
-            caps.llama_version = std::fs::read_to_string(dir.join("llama-version.txt")).ok().map(|s| s.trim().to_string());
-        }
+        caps.llama_server = Some(server);
+        caps.llama_version = std::fs::read_to_string(dir.join("llama-version.txt")).ok().map(|s| s.trim().to_string());
     }
     log::info!(target: "echotype::providers", "sherpa providers {:?}, llama providers {:?}", caps.sherpa, caps.llama);
     caps
