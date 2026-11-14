@@ -184,7 +184,7 @@ export interface HistoryEntry {
 }
 
 // ============================================================
-// Integrations — actions run in Core; secrets never reach the UI (design/INTEGRATIONS_V4.md)
+// Integrations — actions run in Core; secrets never reach the UI (design/INTEGRATIONS_V3.md)
 // ============================================================
 export type LocalizedText = { en: string; zh?: string };
 export type ActionKind = "transform" | "send" | "open";

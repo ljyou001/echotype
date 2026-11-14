@@ -8,12 +8,12 @@ build-engine.sh: 引擎构建入口。安装包行 `cargo build --release --lock
 check-engine.mjs: 安装包冒烟检查。在 electron-builder 输出目录里找到解包应用，用 Core 编译产物的 `resolveEngineCommand`（isPackaged 布局）与 `EngineSupervisor` 拉起 `resources/engine/` 的引擎，要求 hello 握手成功且 `engine_version` 等于 `engine/Cargo.toml` 的版本（拦住残留的旧引擎），再调一次 `devices.list`
 third-party-licenses.mjs: 组件许可清单生成器。合并 npm 生产依赖、Rust 依赖闭包（`cargo metadata --filter-platform`，不含 dev 依赖）与原生组件，输出 `[{name, version, license, url}]`。electron-builder 的 beforePack 每个 平台 × 架构 调用一次
 licenses/native.json: 原生组件默认清单：sherpa-onnx、ONNX Runtime、llama.cpp、Silero VAD。`engine/third-party.json` 按 name 覆盖它（llama.cpp b12360 等版本由 engine 维护）
-release-assets.mjs: 发布资产工具。`checksums` 写 SHA256SUMS.txt；`packs` 按 catalog 校验 pack 资产名并写 `engine-packs.json`，`--publish` 时补传到 engine-packs-v4，从不覆盖已有资产
+release-assets.mjs: 发布资产工具。`checksums` 写 SHA256SUMS.txt；`packs` 按 catalog 校验 pack 资产名并写 `engine-packs.json`，`--publish` 时补传到 engine-packs-v3，从不覆盖已有资产
 mac/entitlements.mac.plist: mac 主程序与全部嵌套二进制（引擎、llama-server、dylib）共用的 entitlements：JIT、ad-hoc 必需的 disable-library-validation、麦克风 audio-input
 .gitattributes: 强制 `*.sh` 为 LF。Windows runner 默认 autocrlf=true，CRLF 会让 Git Bash 报 `$'\r'`
 
 关联文件（不在本目录，同属打包层）
-../../.github/workflows/build.yml: 发布流水线。手动触发（workflow_dispatch）或用户推 tag `v*`；build（12 行）→ release（草稿，仅 tag）与 packs（engine-packs-v4，tag 或勾选 `publish_packs`）；手动可选 bench-macos
+../../.github/workflows/build.yml: 发布流水线。手动触发（workflow_dispatch）或用户推 tag `v*`；build（12 行）→ release（草稿，仅 tag）与 packs（engine-packs-v3，tag 或勾选 `publish_packs`）；手动可选 bench-macos
 ../../.github/workflows/ci.yml: push main 的快速检查（外部贡献者的 PR 也跑）：renderer typecheck + vite build、Core typecheck + vitest、`cargo test --release --locked`（ubuntu-22.04 与 windows-2025）
 ../../.github/workflows/cla.yml: 外部贡献者 PR 的 CLA 守门。维护者直推 main，不经过它。按数字 ID 比对 PR 全部提交作者与 `.github/cla-signatures.txt`，未签署时留言并失败；用户名可改，不作凭据
 ../../frontend/electron-builder.cjs: electron-builder 唯一配置。渠道、资源布局、许可清单、签名、deb 依赖都在这里
@@ -60,7 +60,7 @@ Linux 在 22.04 上构建，用户只需 glibc ≥ 2.35。Windows 的 crt-static
 Linux 的 `${arch}` 由 electron-builder 按格式惯例改写：AppImage 用 x86_64，deb 用 amd64。
 deb 在 electron-builder 默认依赖之外加 `libxt6 libxrandr2`（uiohook、robotjs）与 `libasound2 libpulse0`（引擎的 cpal）。
 
-GPU 引擎包（名称取自 catalog `engine_packs[].platforms[].asset.name`，发布到 `asset.release` 即 engine-packs-v4）：
+GPU 引擎包（名称取自 catalog `engine_packs[].platforms[].asset.name`，发布到 `asset.release` 即 engine-packs-v3）：
 `engine-pack-cuda-{win32-x64,linux-x64}.zip` · `engine-pack-vulkan-{win32-x64,win32-arm64,linux-x64,linux-arm64}.zip`
 win-x64 cuda 包实测 zip 1667 MiB（engine 会话构建），离 2 GiB 上限约 380 MiB。
 
@@ -88,7 +88,7 @@ resources/
   - metal：只写 Metal llama-server 及其 dylib，`<out-dir>` 是基础引擎暂存目录本身；darwin-x64 用 llama.cpp 的 macos-x64 构建。
   - 下载缓存 `ECHOTYPE_PACK_CACHE`：CI 指向 `runner.temp/pack-cache`，不进 rust-cache。
   - 依赖：cargo、curl、python；Windows cuda 另需 VS 的 `lib.exe`（windows-2025 自带）。llama.cpp 有 ubuntu cuda 12.8 预编译版，Linux 不需要 CUDA toolkit。
-- `engine/scripts/bench.sh <engine-dir> <out-dir>`：按 catalog 从 models-v4 下载模型并校验 sha256，构建 echotype-bench，输出 bench.json 与 BENCHMARKS.md。CI 把工作目录 `ECHOTYPE_BENCH_WORK` 指向 `runner.temp`。
+- `engine/scripts/bench.sh <engine-dir> <out-dir>`：按 catalog 从 models-v3 下载模型并校验 sha256，构建 echotype-bench，输出 bench.json 与 BENCHMARKS.md。CI 把工作目录 `ECHOTYPE_BENCH_WORK` 指向 `runner.temp`。
 - 原生组件版本：`engine/third-party.json` 按 name 覆盖 `licenses/native.json`。
 
 ## 6. 发布流程（手动）
@@ -99,20 +99,20 @@ Windows x64 在本地构建：
 1. `bash scripts/ci/build-engine.sh win-x64`
 2. `cd frontend && npm ci && npm run build`
 3. `npx electron-builder --config electron-builder.cjs --win --x64 --publish never`，产出 `frontend/dist-package/EchoType-<v>-win-x64.{exe,zip}`。加 `--dir` 只出解包目录。
-4. `node scripts/ci/check-engine.mjs frontend/dist-package`：必须输出 `HELLO OK`，且 `engine_version` 等于 `engine/Cargo.toml` 的版本（v4 为 4.0.0）。
+4. `node scripts/ci/check-engine.mjs frontend/dist-package`：必须输出 `HELLO OK`，且 `engine_version` 等于 `engine/Cargo.toml` 的版本（v3 为 3.0.0）。
 
 其余目标在 GitHub 构建：用户推送 main 后，Actions → Build → Run workflow，分支选 main。
 - 每行产出 artifact `installer-<target-id>` 或 `engine-pack-<pack>-<target-id>`，并在 runner 上跑同一份 check-engine。
-- `publish_packs`：packs 任务把缺失的 GPU 引擎包补传到 engine-packs-v4，并产出 artifact `engine-packs-catalog-fragment`。用它回填 catalog 的 sha256 与 size_bytes。
+- `publish_packs`：packs 任务把缺失的 GPU 引擎包补传到 engine-packs-v3，并产出 artifact `engine-packs-catalog-fragment`。用它回填 catalog 的 sha256 与 size_bytes。
 - `channel`：steam / msstore 出商店构建，只产出 artifact。
 - `job`：bench-macos 只跑 Apple Silicon 基准。
 
 正式发布只在用户打 tag 时发生：
-1. 用户推 tag：`git tag v4.0.0 && git push origin v4.0.0`。版本号取自 tag。带后缀的 tag（`v4.0.0-beta.1`）标为预发布。
+1. 用户推 tag：`git tag v3.0.0 && git push origin v3.0.0`。版本号取自 tag。带后缀的 tag（`v3.0.0-beta.1`）标为预发布。
 2. 12 行全部成功后：release 任务建草稿 Release，重跑只覆盖草稿，已发布的拒绝覆盖；packs 任务补传缺失的 GPU 引擎包。
 3. 用户检查草稿后发布。
 
-engine-packs-v4 被所有已发布版本共用，旧版本的 catalog 钉住旧 sha256，所以同名资产从不覆盖：zip 可复现，内容未变则跳过，内容变了只告警。要换包须手动删除旧资产并更新 catalog。
+engine-packs-v3 被所有已发布版本共用，旧版本的 catalog 钉住旧 sha256，所以同名资产从不覆盖：zip 可复现，内容未变则跳过，内容变了只告警。要换包须手动删除旧资产并更新 catalog。
 
 ## 7. 验证
 
@@ -137,7 +137,7 @@ GitHub runner 已验证（Build run 43528065540，main cd0c58b，手动触发，
 尚未验证：
 - 引擎子进程能否通过 TCC 弹出麦克风授权：需要真机手动确认，CI 只证明能启动。ad-hoc 签名每次构建 cdhash 都变，升级后系统会重新询问授权。
 - Apple 基准：bench-macos 的 Metal/CoreML 实测，结果作为 artifact。
-- packs 任务首次创建 engine-packs-v4 并上传（对仓库的真实写入，需勾选 `publish_packs` 或推 tag）。用户决定等引擎定稿后再传。
+- packs 任务首次创建 engine-packs-v3 并上传（对仓库的真实写入，需勾选 `publish_packs` 或推 tag）。用户决定等引擎定稿后再传。
 - release 任务：草稿创建与重跑覆盖（需推 tag）。
 - msstore 渠道的 AppX 构建（需要上面三个仓库变量）。
 

@@ -13,7 +13,7 @@ integrations.catalog.json: 全部 LLM provider 与集成动作的清单实例，
 相关契约（位于实现方目录，同属本层管辖）
 ../frontend/electron/ipc-contract.ts: Core ⇄ UI 的类型契约与 IPC channel 名
 
-版本：每份契约自带编号（引擎协议 3、ipcVersion 2、catalog schema 2、Model Manifest v2.2），与产品版本 EchoType 4.x 无关。只有破坏性变更才升契约编号。
+版本：每份契约自带编号（引擎协议 3、ipcVersion 2、catalog schema 2、Model Manifest v2.2），与产品版本 EchoType 3.x 无关。只有破坏性变更才升契约编号。
 
 法则：契约先行 · 一处定义 · 实现方不得私改 · 破坏性变更必须升版本号
 

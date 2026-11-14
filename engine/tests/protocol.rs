@@ -155,7 +155,7 @@ fn handshake_errors_and_envelope() {
     let e = spawn("hs");
     let mut c = Client::new(open(&e, TOKEN));
     let hello = c.ok("hello", json!({"protocol": 3}));
-    assert_eq!(hello["protocol"], 3); // 协议修订号独立于产品版本（EchoType 4.0.0 仍说 ENGINE_PROTOCOL v3）
+    assert_eq!(hello["protocol"], 3); // 协议修订号独立于产品版本，只在协议不兼容时升
     assert_eq!(hello["engine_version"], env!("CARGO_PKG_VERSION"));
     assert_eq!(hello["runtimes"]["sherpa-onnx"], "2.0.1");
     assert!(hello["providers"].as_array().unwrap().contains(&json!("cpu")));

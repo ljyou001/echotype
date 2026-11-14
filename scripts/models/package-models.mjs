@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * [INPUT]: 依赖 contracts/models.catalog.json 的 models[].variants[]；依赖系统 curl 与 tar（bsdtar，解 .tar.bz2 并打 zip）；依赖 GitHub/HF 公共 API 校验上游哈希
- * [OUTPUT]: 产出 %USERPROFILE%/.echotype-staging/models-v4/<model>--<variant>.zip，并回写 variants[].asset.{sha256,size_bytes,upstream_url} 与 variants[].files；导出 SOURCES 表
+ * [OUTPUT]: 产出 %USERPROFILE%/.echotype-staging/models-v3/<model>--<variant>.zip，并回写 variants[].asset.{sha256,size_bytes,upstream_url} 与 variants[].files；导出 SOURCES 表
  * [POS]: 模型打包流水线的唯一入口。上游来源与保留清单只写在本文件的 SOURCES 表，catalog 只接收结果字段。UPLOAD.md 由 write-upload-doc.mjs 读 catalog 生成。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  *
@@ -23,7 +23,7 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const CATALOG = resolve(HERE, '../../contracts/models.catalog.json')
 const STAGING = join(homedir(), '.echotype-staging')
 const UPSTREAM_DIR = join(STAGING, 'upstream')
-const OUT_DIR = join(STAGING, 'models-v4')
+const OUT_DIR = join(STAGING, 'models-v3')
 const WORK_DIR = join(STAGING, 'work')
 const MAX_ZIP_BYTES = 2 * 1024 ** 3 // GitHub Release 单文件上限 2 GiB
 const TAR = existsSync('C:\\Windows\\System32\\tar.exe') ? 'C:\\Windows\\System32\\tar.exe' : 'tar'

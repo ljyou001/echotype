@@ -1,6 +1,6 @@
 //! [INPUT]: 依赖 audio::source（AudioBackend、ActiveStream、InputDevice）、audio::resample::Resampler、events::Emitter、protocol
 //! [OUTPUT]: 导出 Sink trait、PumpMsg、MicHub（控制线程 + 泵线程）、MicCtl（控制面，只在控制线程上存在）
-//! [POS]: 引擎里麦克风的唯一拥有者（ARCHITECTURE_V4 §1.2「双脑」的修复）。
+//! [POS]: 引擎里麦克风的唯一拥有者（ARCHITECTURE_V3 §1.2「双脑」的修复）。
 //!        控制线程：独占 AudioBackend 与打开中的流（cpal 流在部分平台不是 Send），按提交顺序执行 configure/hold/release/list，
 //!        所以上一次会话的 release 永远排在下一次会话的 hold 之前。
 //!        泵线程：采集块 → 重采样到 16 kHz → 300 ms 预录环 → 20 Hz 电平 → 当前 sink。attach/detach 与音频块走同一通道，

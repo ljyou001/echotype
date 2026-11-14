@@ -3,7 +3,7 @@
 > L3 contract | Parent: contracts/CLAUDE.md
 > Owners: engine session implements the server side. Core session implements the client side.
 > Rule: change this file only through the orchestrator session. Bump `protocol` on breaking change.
-> Version: `protocol` 3 is the wire revision. It is independent of the app version (EchoType 4.x) and of `engine_version`.
+> Version: `protocol` 3 is the wire revision. It is independent of the app version (EchoType 3.x) and of `engine_version`.
 
 ## 1. Transport
 
@@ -18,7 +18,7 @@
 1. Core spawns the engine: `echotype-engine --port 0 --models-dir <dir> --log-dir <dir>` — the bundled one, or the one inside an installed engine pack (MODEL_MANIFEST §5).
    The engine owns any sidecar it starts (e.g. `llama-server` next to its own binary) and kills it on unload or exit.
 2. After bind, the engine prints exactly one line to **stdout**, then flushes:
-   `{"event":"engine_ready","port":49731,"protocol":3,"engine_version":"4.0.0"}`
+   `{"event":"engine_ready","port":49731,"protocol":3,"engine_version":"3.0.0"}`
 3. All other output goes to stderr and to the log file. stdout carries nothing else.
 4. Core sends `ping` every 5 s. Three missed `pong` mean a dead engine. Core then kills it and restarts it with backoff 1 s → 2 s → 4 s → 8 s (max 5 tries).
 5. On stdin EOF or on `shutdown`, the engine releases the mic and exits with code 0.
@@ -108,7 +108,7 @@ Correctness comes first: `final` must equal the `transcribe.file` result for the
 
 1. The mic stream feeds Silero VAD (sherpa-onnx built-in) in 32 ms frames.
 2. The engine groups VAD speech segments into sentence units. A unit ends at a pause of 0.6 s or more, or at 8 s of span. Dictation and `transcribe.file` use the same unit rule.
-3. The engine always decodes a whole unit. It never decodes part of a unit and never joins partial texts.
+3. The engine always decodes a whole unit. It never decodes part of a unit and never joins partial texts. The decode input of a unit is anchored on sample-accurate speech edges, not on VAD frame boundaries. An edge is where the 10 ms sliding RMS reaches the unit peak −35 dB. The input is 0.3 s of captured audio before the start edge, then the speech up to the end edge, then 0.2 s of digital silence. Dictation, speculative decodes and `transcribe.file` use this same rule, so a few milliseconds of jitter in the start time or the release time does not change the text.
 4. When a unit closes, the engine decodes it at once, in a worker thread. At each pause inside the open unit, the engine decodes the unit speculatively, as if it ended there.
 5. At `session.stop`, the engine flushes VAD and closes the open unit. It reuses the speculative result only if that audio slice equals the unit slice sample for sample. Otherwise it decodes the whole unit.
 6. The engine joins the unit texts, runs the punctuation step and the text post-processing, then emits `final`.

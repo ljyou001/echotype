@@ -41,7 +41,7 @@ A variant exists for a target only after it measurably beats the cpu variant on 
   "files": { "…": "relative/path" },     // arch-specific keys, relative to the variant folder
   "asset": {
     "name": "sensevoice-small--cuda-fp16.zip", // file name on every source (§6); files sit at the zip root
-    "release": "models-v4",              // release/bucket name a source template may use
+    "release": "models-v3",              // release/bucket name a source template may use
     "sha256": "…",                       // null only while drafting
     "size_bytes": 0,
     "upstream_url": "https://…"          // original source, for re-packaging only — Core never downloads it
@@ -91,8 +91,8 @@ The engine session owns this table: a row exists only after a real load + decode
   "providers": ["cuda"],
   "protocol": 3,                         // must equal the bundled engine's protocol
   "platforms": {
-    "win32-x64": { "asset": { "name": "engine-pack-cuda-win32-x64.zip", "release": "engine-packs-v4", "sha256": "…", "size_bytes": 0 } },
-    "linux-x64": { "asset": { "name": "engine-pack-cuda-linux-x64.zip", "release": "engine-packs-v4", "sha256": "…", "size_bytes": 0 } }
+    "win32-x64": { "asset": { "name": "engine-pack-cuda-win32-x64.zip", "release": "engine-packs-v3", "sha256": "…", "size_bytes": 0 } },
+    "linux-x64": { "asset": { "name": "engine-pack-cuda-linux-x64.zip", "release": "engine-packs-v3", "sha256": "…", "size_bytes": 0 } }
   }
 }
 ```
@@ -124,5 +124,5 @@ The engine session owns this table: a row exists only after a real load + decode
 
 1. Add one object to `contracts/models.catalog.json`.
 2. If its `arch` is new, add one loader in the engine and one row in §4.
-3. Package each variant as `<model id>--<variant id>.zip` (files at the zip root) and upload it to the `models-v4` release on each source.
+3. Package each variant as `<model id>--<variant id>.zip` (files at the zip root) and upload it to the `models-v3` release on each source.
 4. Nothing else. Core and UI need no code change.
