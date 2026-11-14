@@ -2,12 +2,15 @@
 # ============================================================================
 # [INPUT]: 依赖 engine/ 的 Cargo 工程与 cargo/rustc（基础引擎）；依赖 engine/scripts/make-pack.sh（GPU 引擎包，
 #          以及基础引擎的 llama-server：mac 为 Metal 版，Windows / Linux 为 CPU 版）；依赖 contracts/models.catalog.json 的
-#          engine_packs[].platforms[].asset.name；依赖 python3 或 python（catalog 查询与打 zip）
+#          engine_packs[].platforms[].asset.name；依赖 python3 或 python（catalog 查询与打 zip）；
+#          Windows 目标另依赖 node + scripts/ci/pe-imports.mjs 与 Visual Studio 的 VC/Redist/MSVC（经 vswhere 定位）
 # [OUTPUT]: 基础引擎 → engine/dist/<target-id>/echotype-engine[.exe] + llama-server 及其运行库（mac 为 Metal 版，其余为 CPU 版）
 #           GPU 引擎包 → engine/dist/packs/<catalog asset.name>（可复现 zip，文件位于 zip 根）
+#           Windows 的两者都随目录带上导入表需要的 VC++ 运行库，并在 THIRD-PARTY-NOTICES.txt 记一行
 # [POS]: 打包流水线中唯一构建引擎的入口。build.yml 每个矩阵行调用一次，本地也可直接运行。
 #        electron-builder 以 engine/dist/${os}-${arch} 读取基础引擎，所以 target-id 必须等于 <os>-<arch>。
-#        GPU 引擎包的内容全部由 make-pack 决定（engine/scripts/CLAUDE.md），这里只负责命名、校验、打包。
+#        GPU 引擎包的组件由 make-pack 决定（engine/scripts/CLAUDE.md），这里负责命名、校验、打包，
+#        以及 Windows 上统一的一步：按 PE 导入表随目录部署 VC++ 运行库，再要求每个导入都能解析。
 # [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 # ============================================================================
 #
@@ -18,6 +21,7 @@
 # 环境变量：
 #   CARGO_TARGET_DIR      与 cargo 语义相同，默认 engine/target
 #   ECHOTYPE_PACK_CACHE   透传给 make-pack 的下载缓存目录（CI 指向 runner.temp，不进 Rust 缓存）
+#   ECHOTYPE_MSVC_CRT_DIR 指定 Microsoft.VC14x.CRT 目录，跳过 vswhere 查找
 set -euo pipefail
 
 # GitHub Release 单个资产的上限
@@ -140,6 +144,39 @@ PY
 file_size() { wc -c < "$1" | tr -d ' '; }
 
 # ---------------------------------------------------------------------------
+# Windows：VC++ 运行库随目录部署。llama-server、ggml、ONNX Runtime 等预编译件动态链接它，
+# 干净的 Windows 没有。只取 Visual Studio 的可再发行目录（与目标架构一致），从不取 System32
+# ---------------------------------------------------------------------------
+find_msvc_crt() {
+  if [ -n "${ECHOTYPE_MSVC_CRT_DIR:-}" ]; then echo "$ECHOTYPE_MSVC_CRT_DIR"; return; fi
+  local arch=x64 vswhere="C:/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe" vs
+  [ "$TARGET" = win-arm64 ] && arch=arm64
+  [ -f "$vswhere" ] || return 1
+  vs=$("$vswhere" -latest -products '*' -property installationPath | tr -d '\r')
+  [ -n "$vs" ] || return 1
+  # <VS>/VC/Redist/MSVC/<版本>/<arch>/Microsoft.VC14x.CRT，取最新版本；onecore 与 debug 目录不在这一层
+  find "$vs/VC/Redist/MSVC" -mindepth 3 -maxdepth 3 -type d -path "*/$arch/Microsoft.VC14*.CRT" 2>/dev/null | sort -V | tail -n 1 | grep .
+}
+
+# stage_msvc_runtime <dir>：按导入表补齐运行库 → 每个导入都必须能解析 → 记入许可文本
+stage_msvc_runtime() {
+  local dir=$1 crt runtime
+  case "$TARGET" in win-*) ;; *) return 0 ;; esac
+  command -v node >/dev/null || die "node not found on PATH; it reads the PE import tables."
+  crt=$(find_msvc_crt) || die "No Microsoft.VC14x.CRT folder for $TARGET under Visual Studio's VC/Redist/MSVC. Install the MSVC build tools or set ECHOTYPE_MSVC_CRT_DIR."
+  node "$ROOT/scripts/ci/pe-imports.mjs" stage-runtime "$dir" "$crt"
+  node "$ROOT/scripts/ci/pe-imports.mjs" check "$dir" || die "Unresolved DLL imports in $dir (listed above)."
+  runtime=$(ls "$dir" | grep -iE '^(vcruntime|msvcp|concrt|vccorlib|vcomp)140' | paste -sd' ' - || true)
+  if [ -n "$runtime" ]; then
+    {
+      echo "- Microsoft Visual C++ Runtime ($runtime), from $(basename "$(dirname "$(dirname "$crt")")"): Distributable Code under the Microsoft Visual Studio license terms"
+      echo "  https://learn.microsoft.com/visualstudio/releases/2022/redistribution"
+    } >> "$dir/THIRD-PARTY-NOTICES.txt"
+    annotate notice "Staged the VC++ runtime into $(basename "$dir"): $runtime"
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # 基础引擎：cargo build --release（默认 feature static，CPU）→ 暂存到 engine/dist/<target-id>/
 # ---------------------------------------------------------------------------
 build_engine() {
@@ -164,6 +201,7 @@ build_engine() {
   esac
   make_pack "$llama" "$out"
   annotate notice "Staged the $llama llama-server into engine/dist/$TARGET/."
+  stage_msvc_runtime "$out"
   ls -la "$out"
 }
 
@@ -182,6 +220,7 @@ build_pack() {
 
   make_pack "$pack" "$stage"
   [ -f "$stage/$EXE" ] || die "make-pack $pack $PLATFORM did not produce $EXE. A pack is a complete engine build (MODEL_MANIFEST §5)."
+  stage_msvc_runtime "$stage"
 
   zip_reproducible "$py" "$stage" "$zip"
   local size

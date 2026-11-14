@@ -2,11 +2,13 @@
 # [INPUT]: 依赖 scripts/ci/build-engine.sh（基础引擎与 GPU 引擎包，内部调用 engine/scripts/make-pack.sh）、
 #          frontend/electron-builder.cjs（安装包、渠道、许可清单）、scripts/ci/check-engine.mjs（打包态握手检查）、
 #          scripts/ci/release-assets.mjs（校验和、pack 清单与发布）、engine/scripts/bench.sh
-# [OUTPUT]: 每个目标一个 artifact（installer-<target> / engine-pack-<pack>-<target>）；勾选 publish_packs 或推 tag 时
-#           把 GPU 引擎包补传到 engine-packs-v3；用户推 tag v* 时另建草稿 Release（安装包）；手动可只跑 macOS 基准
+# [OUTPUT]: 每个目标一个 artifact（installer-<target> / engine-pack-<pack>-<target>）；只有手动勾选 publish_packs 时
+#           才把 GPU 引擎包补传到 engine-packs-v3；用户推 tag v* 时先核对 catalog 钉住的 pack 都已发布，再建草稿 Release
+#           （安装包）；手动可只跑 macOS 基准
 # [POS]: 发布流水线，手动触发（main 上的 workflow_dispatch），不走 PR。Windows x64 也可在本地用同一份脚本构建。
 #        6 个安装包行 + 6 个 GPU 引擎包行并行，每行在本机原生构建，不交叉编译。
-#        说明见 scripts/ci/CLAUDE.md。
+#        发布分两段：main 上发布 pack → catalog 回填 sha256 → 打 tag。tag 不再发布 pack：引擎二进制不可复现，
+#        重建的 pack 与已发布的同名资产内容不同，而已发布资产从不替换。说明见 scripts/ci/CLAUDE.md。
 # [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 # ============================================================================
 name: Build
@@ -27,7 +29,7 @@ on:
         options: [github, steam, msstore]
         default: github
       publish_packs:
-        description: Upload GPU engine packs to engine-packs-v3 (adds missing assets, never replaces)
+        description: Upload GPU engine packs to engine-packs-v3 (adds missing assets, never replaces or deletes)
         type: boolean
         default: false
 
@@ -77,12 +79,12 @@ jobs:
       - uses: actions/checkout@v7
 
       # ---- 工具链 ----------------------------------------------------------
+      # 每行都要：安装包行跑前端与 check-engine；Windows 的引擎行用 pe-imports.mjs 部署运行库并检查导入表
       - name: Set up Node
-        if: matrix.gpu == ''
         uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
+          cache: ${{ matrix.gpu == '' && 'npm' || '' }}
           cache-dependency-path: frontend/package-lock.json
 
       # 安装包行编基础引擎并读 cargo metadata（许可清单）；GPU 行由 make-pack 以 GPU feature 编整套引擎
@@ -194,6 +196,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # 两段式发布的门禁：这个 tag 的 catalog 钉住的每个 pack 都已在 engine-packs-v3 上，且 sha256 一致
+      - name: Verify engine packs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: node scripts/ci/release-assets.mjs verify-packs
+
       - name: Download installers
         uses: actions/download-artifact@v8
         with:
@@ -228,11 +237,11 @@ jobs:
             gh release create "$TAG" release/* "${flags[@]}"
           fi
 
-  # ---- GPU 引擎包进 engine-packs-v3（所有版本共用，只增不改）---------------------
+  # ---- GPU 引擎包进 engine-packs-v3（所有版本共用，只增不改；只由手动勾选触发）-------
   packs:
     name: Publish engine packs
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v') || inputs.publish_packs
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_packs
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     permissions:

@@ -221,10 +221,9 @@ steamapps/common/EchoType/
 | GPU Runtime DLC | 该 DLC | Windows 一个、Linux 一个 | `content/engine-pack-<id>-<platform>/` |
 
 - 启动项（Installation → General）：Windows `EchoType.exe`；Linux `echotype`；macOS `EchoType.app`。
-- 运行库（Redistributables）：勾选 Visual C++ Redist 2015–2022 (x64)。
-  - CPU 版 llama-server 与 ggml / llama 的 DLL 依赖 vcruntime140、vcruntime140_1、msvcp140，安装包没有带。
-  - 不勾的话，没装过该运行库的机器上，GGUF 变体加载不了。
-  - 同一个问题也影响 GitHub 渠道的 NSIS 安装包，已报告。
+- 运行库（Redistributables）：什么都不勾。
+  - llama-server、ggml / llama 与 GPU 包里的 ONNX Runtime 依赖 VC++ 2015–2022 运行库。
+  - 自 3.0.1 起，build-engine.sh 按导入表把它随引擎目录分发，check-engine 校验每个导入都能解析。
 - Package：基础 App 的 store package 与 beta testing package 包含 OS depot 与 Content depot。DLC 不放进基础 package，由用户各自领取。
 - 分支：default 加一个带密码的 `internal`。先 `--branch internal` 上传，自测通过后在网页上把同一 build 设为 default。
 - Steam Cloud、Steam Input、成就：都不开。
@@ -303,7 +302,7 @@ steamapps/common/EchoType/
 2. **基础 App 的 SteamPipe**：
    - Depots：建 EchoType Windows 与 EchoType Content 两个 depot，设好 OS。
    - Installation → General：Windows 启动项设为 `EchoType.exe`。
-   - Redistributables：勾选 VC++ 2015–2022 x64。
+   - Redistributables：不勾（VC++ 运行库已随引擎目录分发）。
    - 把两个 depot 加进 store package 与 beta testing package。
    - Branches：建 `internal`（带密码）。
 3. **填 `scripts/steam/steam.conf`**，然后 `bash scripts/steam/steam-build.sh --branch internal` 上传，在 steamcmd 里输入账号密码与 Steam Guard 验证码。
@@ -343,4 +342,4 @@ steamapps/common/EchoType/
 - Core 的 `dir` 源（尚未实现）与 DLC 目录的就地使用。
 - 真实点击托盘菜单退出；退出时正在下载模型、正在听写、引擎正在重启这几种情况。
 - Steam overlay 与 Quick Action 窗口的兼容性；Linux 与 macOS。
-- 没有 VC++ 运行库的干净 Windows 上，llama-server 的实际表现（DLL 依赖是从二进制里扫出来的，没有在干净机器上跑过）。
+- 没有 VC++ 运行库的干净 Windows 上的实际运行：导入表检查证明 DLL 都随目录分发，但没有在干净机器上跑过。
