@@ -227,3 +227,34 @@ catalog model got worse. The trailing pad is synthetic, so the input is complete
 
 Limits: the edge threshold is relative to the unit's own peak. With a noise floor above peak − 35 dB (SNR < 35 dB) the
 edges fall back to the search bounds around the VAD span, and alignment sensitivity returns for that recording.
+
+## 11. Slow models on CPU (2026-11-13)
+
+Measured with EcoQoS off (as in the engine), zh.wav/en.wav, then the 10 s utterance through the engine.
+- **Whisper `tail_paddings`.** sherpa pads every decode with 1000 feature frames (10 s) for multilingual Whisper models
+  (`tail_paddings: -1`). The encoder computes that silence too. Decode time for the zh/en clips at 4 threads:
+  default 1942/2298 ms, 300 frames 1196/1575 ms with identical text, 200 frames identical text, 50 frames 970/1379 ms but a
+  different English style ("boy, and … fifty"), 500 frames turned Chinese into Traditional characters. The engine uses 300.
+- **Threads.** 4 → 6 threads: slow models 10–15 % faster; 6 → 8: no further change for them, SenseVoice another 13 %
+  (223 → 167 ms for zh.wav). Default is now the number of performance cores, at most 8 (`platform::default_threads`:
+  Windows `GetLogicalProcessorInformationEx` EfficiencyClass, macOS `hw.perflevel0.physicalcpu`, else logical / 2).
+  On this machine 8; on a 4P+8E laptop 4, so threads do not land on efficiency cores.
+- **Qwen3-ASR on llama.cpp CPU.** The same GGUF files as the CUDA variants, run by a CPU-only `llama-server` b12360
+  (`-ngl 0 --device none -t 8`): 0.6B Q8_0 decodes zh/en in 326/440 ms vs 1033/1268 ms for sherpa int8 at 8 threads;
+  1.7B Q6_K in 590/928 ms and gets "chieftain" right. Release latency (10 s utterance): 0.6B GGUF 260/98 ms (tail 0/300)
+  vs sherpa int8 566/368 ms. The engine accepts provider `cpu` for runtime `llama.cpp` whenever a `llama-server` sits next
+  to it. Shipping it in the base install costs 22 libraries and executables plus 3 text files, 46 MB on disk, about 19 MB
+  zipped (win-x64; all `ggml-cpu-*` variants kept, `ggml-rpc` and other tools dropped).
+- **Shipped in the base engine (2026-11-14).** `engine/scripts/make-pack.sh cpu <platform> <base-engine-dir>` stages the
+  pinned CPU `llama-server` next to the Windows and Linux base engines (the macOS base engine already gets the Metal build,
+  which has the CPU backend too). The catalog lists `cpu-gguf-q8` for Qwen3-ASR 0.6B (before `cpu-int8`, so a new install
+  picks it) and 1.7B (its first CPU variant). Verified from a base-engine directory: `hello.runtimes` has `llama.cpp b12360`,
+  both variants load with `provider_used: cpu`, `runtime: llama.cpp`; 10 s utterance, tail 300, 3 runs, median 220 ms (0.6B)
+  and 490 ms (1.7B).
+- **Linux needs two system libraries.** The ubuntu builds link `libgomp.so.1` and OpenSSL 3 (`libssl.so.3`,
+  `libcrypto.so.3`) and do not ship them. Ubuntu 22.04+ and Debian 12+ desktops have both. When either cannot be loaded,
+  the engine reports no llama provider at all, so `hello.runtimes` has no `llama.cpp` and a llama variant fails with
+  `PROVIDER_UNAVAILABLE` instead of a sidecar start failure. The Windows build ships its own `libomp.dll`.
+- Release latency after both engine changes (10 s utterance, 4 threads before → 8 threads + Whisper 300 after, P50 ms,
+  tail 0 / tail 300): Whisper 1322/1354 → 628/352, FireRed 1148/913 → 949/814, Qwen3 0.6B int8 658/534 → 566/368,
+  Parakeet 228/82 → 172/37, SenseVoice 84/0 → 70/0, Paraformer 74/7 → 62/6.

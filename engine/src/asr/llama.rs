@@ -1,6 +1,7 @@
 //! [INPUT]: 依赖 std::process（拉起 llama-server）、std::net（极简 HTTP/1.1 客户端）、serde_json、protocol
 //! [OUTPUT]: 导出 LlamaSidecar（start / transcribe / stop）、parse_asr_output()
-//! [POS]: runtime = "llama.cpp"、arch = "mtmd_asr" 的识别后端（Qwen3-ASR GGUF 的 CUDA / Metal / Vulkan 版本）。
+//! [POS]: runtime = "llama.cpp"、arch = "mtmd_asr" 的识别后端（Qwen3-ASR GGUF 的 CUDA / Metal / Vulkan / CPU 版本）。
+//!        provider "cpu"：-ngl 0 --device none，纯 CPU；所有 provider 都用引擎的线程数（-t），不让 llama 占满全部核。
 //!        引擎拥有这个 sidecar：model.load 时在 127.0.0.1 随机端口拉起 exe 旁的 llama-server（引擎包或 macOS 基础包自带），
 //!        轮询 /health 直到模型就绪；每个 VAD 段编码成 16 kHz wav，以 OpenAI `input_audio` 发到 /v1/chat/completions
 //!        （上游没有 transcription 端点）；unload、引擎退出或 Drop 时杀掉进程（ENGINE_PROTOCOL §2.1）。
@@ -177,11 +178,13 @@ pub struct LlamaSidecar {
 }
 
 impl LlamaSidecar {
-    pub fn start(server: &Path, model: &Path, mmproj: &Path, provider: &str) -> EResult<Self> {
+    pub fn start(server: &Path, model: &Path, mmproj: &Path, provider: &str, threads: i32) -> EResult<Self> {
         let port = TcpListener::bind(("127.0.0.1", 0)).and_then(|l| l.local_addr()).map(|a| a.port())
             .map_err(|e| EngineError::new(code::INTERNAL, format!("no free port for llama-server: {e}")))?;
         let mut cmd = Command::new(server);
-        cmd.args(["--host", "127.0.0.1", "--port", &port.to_string(), "--no-webui", "--parallel", "1", "-c", "4096", "-ngl", "999"])
+        let gpu_layers = if provider == "cpu" { "0" } else { "999" };
+        cmd.args(["--host", "127.0.0.1", "--port", &port.to_string(), "--no-webui", "--parallel", "1", "-c", "4096", "-ngl", gpu_layers])
+            .args(["-t", &threads.to_string()])
             .arg("-m")
             .arg(model)
             .arg("--mmproj")
@@ -197,8 +200,14 @@ impl LlamaSidecar {
                 cmd.env(key, if cur.is_empty() { dir.display().to_string() } else { format!("{}:{cur}", dir.display()) });
             }
         }
-        if provider == "vulkan" {
-            cmd.args(["--device", "Vulkan0"]);
+        match provider {
+            "vulkan" => {
+                cmd.args(["--device", "Vulkan0"]);
+            }
+            "cpu" => {
+                cmd.args(["--device", "none"]); // 引擎包里的 llama-server 也带 GPU 后端：cpu 变体不得偷偷用显卡
+            }
+            _ => {}
         }
         #[cfg(windows)]
         {

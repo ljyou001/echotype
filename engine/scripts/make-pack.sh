@@ -6,13 +6,14 @@
 #           cuda   → 完整引擎（--features shared）+ ONNX Runtime GPU + NVIDIA 运行库（cudart/cuBLAS 12.8、cuDNN 9.28）+ CUDA llama-server
 #           vulkan → CPU 静态引擎 + Vulkan llama-server
 #           metal  → Metal llama-server（写进 mac 基础引擎的暂存目录）
-# [POS]: GPU 引擎包的唯一组装脚本（MODEL_MANIFEST §5）。scripts/ci/build-engine.sh 调用：make-pack <pack> <platform> <out-dir>。
+#           cpu    → CPU llama-server（写进 Windows / Linux 基础引擎的暂存目录；llama.cpp 的 cpu provider）
+# [POS]: GPU 引擎包与基础引擎 llama-server 的唯一组装脚本（MODEL_MANIFEST §5）。scripts/ci/build-engine.sh 调用：make-pack <pack> <platform> <out-dir>。
 #        只放进进程真正加载的库：NVIDIA 库的清单按实测（Windows：进程模块列表；见 design/ENGINE_NOTES.md）确定。
 # [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 # ============================================================================
 #
 # 用法：make-pack.sh <pack> <platform> <out-dir>
-#   pack     ∈ cuda vulkan metal
+#   pack     ∈ cuda vulkan metal cpu（metal、cpu 写进基础引擎目录，不是独立的引擎包）
 #   platform ∈ win32-x64 win32-arm64 linux-x64 linux-arm64 darwin-x64 darwin-arm64
 # 环境变量：ECHOTYPE_PACK_CACHE 下载缓存目录（默认 engine/target/pack-cache）
 set -euo pipefail
@@ -193,26 +194,38 @@ DEF
     ldir="$CACHE/llama-vulkan-$PLATFORM"; [ -d "$ldir" ] || unpack "$llama" "$ldir"
     stage_llama "$ldir"
     ;;
-  metal:darwin-arm64 | metal:darwin-x64)
+  # 基础引擎的 llama-server：不编译引擎，只把预编译 llama-server 写进基础引擎目录。
+  # metal = macOS（Metal + CPU 后端）；cpu = Windows / Linux（只有 CPU 后端）。Qwen3-ASR GGUF 在 CPU 上
+  # 比 sherpa int8 快 2–4 倍（design/ENGINE_NOTES.md §11），所以基础安装包就带它
+  metal:darwin-arm64 | metal:darwin-x64 | cpu:win32-x64 | cpu:win32-arm64 | cpu:linux-x64 | cpu:linux-arm64)
     case "$PLATFORM" in
-      darwin-arm64) a="llama-$LLAMA-bin-macos-arm64.tar.gz"; s=e815561e9621c606388d4538101d56fcf317cdec6ce8f2bbd1bf14f0df29925e ;;
-      darwin-x64)   a="llama-$LLAMA-bin-macos-x64.tar.gz";   s=ed329ff7f4048dbfbc401909926a6c6f49114fc7cb7860ed9c7976fadcc11a34 ;;
+      darwin-arm64) a="llama-$LLAMA-bin-macos-arm64.tar.gz";   s=e815561e9621c606388d4538101d56fcf317cdec6ce8f2bbd1bf14f0df29925e ;;
+      darwin-x64)   a="llama-$LLAMA-bin-macos-x64.tar.gz";     s=ed329ff7f4048dbfbc401909926a6c6f49114fc7cb7860ed9c7976fadcc11a34 ;;
+      win32-x64)    a="llama-$LLAMA-bin-win-cpu-x64.zip";      s=eae1726047e0eaa707b1302929d196c999b96c2f243b21aea6e93bcebacc4e17 ;;
+      win32-arm64)  a="llama-$LLAMA-bin-win-cpu-arm64.zip";    s=269794d34c6d8f5c827f4558442ee28ae07b03a5daf64da8ce112ea477bef4fc ;;
+      linux-x64)    a="llama-$LLAMA-bin-ubuntu-x64.tar.gz";    s=b60dc211e4ba206bb04bbc9eb06294364c43d0aab8fc308c44a361477466ba4c ;;
+      linux-arm64)  a="llama-$LLAMA-bin-ubuntu-arm64.tar.gz";  s=a8e2783d74e3e77c4f5e31fbe88e6365c98dffbeb203a1031737121764b62a2a ;;
     esac
     llama=$(fetch "$LLAMA_URL/$a" "$s")
-    ldir="$CACHE/llama-metal-$PLATFORM"; [ -d "$ldir" ] || unpack "$llama" "$ldir"
+    ldir="$CACHE/llama-$PACK-$PLATFORM"; [ -d "$ldir" ] || unpack "$llama" "$ldir"
     stage_llama "$ldir"
     ;;
   *) die "unsupported pack/platform: $PACK $PLATFORM" ;;
 esac
 
-# 许可文本：Core 的「关于」页只读基础安装包的 third-party.json，包内附原文
-cat > "$OUT/THIRD-PARTY-NOTICES.txt" <<EOF
-This EchoType engine pack ($PACK, $PLATFORM) redistributes:
-- llama.cpp $LLAMA (MIT) https://github.com/ggml-org/llama.cpp
-- sherpa-onnx 2.0.1 (Apache-2.0) https://github.com/k2-fsa/sherpa-onnx
-- ONNX Runtime 1.28.2 (MIT) https://github.com/microsoft/onnxruntime
-- NVIDIA CUDA runtime, cuBLAS, cuDNN (NVIDIA Software License Agreement, redistributable components)
-  https://docs.nvidia.com/cuda/eula/ https://docs.nvidia.com/deeplearning/cudnn/latest/reference/eula.html
-EOF
-[ -f "$OUT/LICENSE-LLVM-OpenMP" ] && echo "- LLVM OpenMP runtime libomp (Apache-2.0 WITH LLVM-exception), see LICENSE-LLVM-OpenMP" >> "$OUT/THIRD-PARTY-NOTICES.txt"
+# 许可文本：Core 的「关于」页只读基础安装包的 third-party.json，目录内附原文。
+# 每个引擎目录都含引擎二进制（sherpa-onnx + ONNX Runtime）；NVIDIA 库只在 cuda 包里
+{
+  echo "This EchoType engine ($PACK, $PLATFORM) redistributes:"
+  echo "- llama.cpp $LLAMA (MIT) https://github.com/ggml-org/llama.cpp"
+  echo "- sherpa-onnx 2.0.1 (Apache-2.0) https://github.com/k2-fsa/sherpa-onnx"
+  echo "- ONNX Runtime 1.28.2 (MIT) https://github.com/microsoft/onnxruntime"
+  if [ "$PACK" = cuda ]; then
+    echo "- NVIDIA CUDA runtime, cuBLAS, cuDNN (NVIDIA Software License Agreement, redistributable components)"
+    echo "  https://docs.nvidia.com/cuda/eula/ https://docs.nvidia.com/deeplearning/cudnn/latest/reference/eula.html"
+  fi
+  if [ -f "$OUT/LICENSE-LLVM-OpenMP" ]; then
+    echo "- LLVM OpenMP runtime libomp (Apache-2.0 WITH LLVM-exception), see LICENSE-LLVM-OpenMP"
+  fi
+} > "$OUT/THIRD-PARTY-NOTICES.txt"
 log "done: $(ls "$OUT" | wc -l) files in $OUT"

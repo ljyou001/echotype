@@ -25,7 +25,7 @@ src/server.rs: 传输层。127.0.0.1、token 错 → 4401、第二个客户端 �
 src/engine.rs: 方法表与状态机（idle/loading/ready/error）。单 actor：状态检查按到达顺序同步完成，慢操作完成后以 Msg::Done 回 actor；换模型前等已 stop 会话的 final
 src/protocol.rs: 版本、错误码、信封解析与封装、参数读取
 src/events.rs: Emitter，线程安全的事件出口；无客户端时丢弃
-src/platform.rs: 关闭 Windows EcoQoS、默认线程数（物理核，上限 4）、hello 的 platform/arch
+src/platform.rs: 关闭 Windows EcoQoS、默认线程数（性能核数，上限 8；Windows 读 EfficiencyClass，macOS 读 hw.perflevel0）、hello 的 platform/arch
 src/logging.rs: stderr + `<log-dir>/engine.log`（2 MB 轮转 ×3）
 src/testkit.rs: 测试替身（ECHOTYPE_TESTKIT=1 时生效）：能量 VAD、音调识别器
 src/audio/: 采集、重采样、设备、wav（见 src/audio/CLAUDE.md）
@@ -44,14 +44,15 @@ scripts/: make-pack、bench、测试样例下载、fixture 生成（见 scripts/
 - sherpa VAD 必须按 ≤ 512 样本小块喂。
 - 准确率不随切分变化：一个解码单元是一句话（0.6 s 静音断句），整段解码一次，从不拼余段；听写与 transcribe.file 共用切分。
 - 解码输入锚定在采样级语音边沿（不是 VAD 的 32 ms 帧边界）：边沿前 0.3 s 实录 + 语音 + 0.2 s 数字静音，起点抖动不改文本。
-- 基础引擎只含 CPU（sherpa 静态库）；GPU 只来自引擎包或 macOS 基础包里的 llama-server。
+- 基础引擎只含 CPU：sherpa 静态库 + 旁边的 llama-server（Windows / Linux 为 CPU 版，macOS 为 Metal 版）。CUDA / Vulkan 只来自引擎包。
 
 ## 构建、测试、运行
 - 构建：`cargo build --release`（首次下载 sherpa 静态库约 1 GB 解压）。CI：`scripts/ci/build-engine.sh <target-id>`。
 - 测试：`cargo test --release`。真实模型：`scripts/fetch-test-wavs.sh` 后 `ECHOTYPE_TEST_MODELS_DIR=<models> cargo test --release --test models -- --nocapture`
   （样例缺省在 `target/test-wavs/`，ECHOTYPE_TEST_WAVS 可覆盖）。
 - 运行：`ECHOTYPE_ENGINE_TOKEN=<随机串> echotype-engine --port 0 --models-dir <dir> --log-dir <dir>`；调试 `--fake-mic a.wav [--fake-mic b.wav]`、`--no-speculate`。
-- Core 开发态：`ECHOTYPE_ENGINE_PATH=<repo>/engine/target/release/echotype-engine.exe`。
+- Core 开发态：`ECHOTYPE_ENGINE_PATH=<repo>/engine/target/release/echotype-engine.exe`。要跑 llama.cpp 的 cpu 变体，先 `scripts/make-pack.sh cpu win32-x64 target/release`。
+- 基础引擎的 llama-server：`scripts/make-pack.sh cpu <platform> <base-engine-dir>`（macOS 用 `metal`）。
 - GPU 引擎包：`scripts/make-pack.sh cuda win32-x64 <out-dir>`（Windows 用 Git Bash，需 VS Build Tools 的 lib.exe；Linux：`make-pack.sh cuda linux-x64 <out-dir>`）。
 
 [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md

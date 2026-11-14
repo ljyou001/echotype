@@ -130,8 +130,8 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 84,
-            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
+            "release_to_final_ms_p50_10s": 70,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 8 threads"
           }
         },
         {
@@ -327,8 +327,8 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 74,
-            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
+            "release_to_final_ms_p50_10s": 62,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 8 threads"
           }
         }
       ],
@@ -454,6 +454,35 @@
       ],
       "variants": [
         {
+          "id": "cpu-gguf-q8",
+          "target": "cpu",
+          "runtime": "llama.cpp",
+          "arch": "mtmd_asr",
+          "providers": [
+            "cpu"
+          ],
+          "requires_pack": null,
+          "files": {
+            "model": "Qwen3-ASR-0.6B-Q8_0.gguf",
+            "mmproj": "mmproj-Qwen3-ASR-0.6B-Q8_0.gguf"
+          },
+          "asset": {
+            "name": "qwen3-asr-0.6b--gguf-q8.zip",
+            "release": "models-v3",
+            "sha256": "af9fbece19d60bcdb19464aa76f4ae012dc82bec6d25967336c3e1c65d4344a4",
+            "size_bytes": 969451962,
+            "upstream_url": "https://huggingface.co/ggml-org/Qwen3-ASR-0.6B-GGUF"
+          },
+          "requirements": {
+            "ram_mb": 1500,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": 260,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 8 threads"
+          }
+        },
+        {
           "id": "cpu-int8",
           "target": "cpu",
           "runtime": "sherpa-onnx",
@@ -480,8 +509,8 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 658,
-            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
+            "release_to_final_ms_p50_10s": 566,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 8 threads"
           }
         },
         {
@@ -690,8 +719,8 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 228,
-            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
+            "release_to_final_ms_p50_10s": 172,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 8 threads"
           }
         }
       ],
@@ -817,6 +846,35 @@
         }
       ],
       "variants": [
+        {
+          "id": "cpu-gguf-q8",
+          "target": "cpu",
+          "runtime": "llama.cpp",
+          "arch": "mtmd_asr",
+          "providers": [
+            "cpu"
+          ],
+          "requires_pack": null,
+          "files": {
+            "model": "Qwen3-ASR-1.7B-Q6_K.gguf",
+            "mmproj": "mmproj-Qwen3-ASR-1.7B-Q8_0.gguf"
+          },
+          "asset": {
+            "name": "qwen3-asr-1.7b--gguf-q8.zip",
+            "release": "models-v3",
+            "sha256": "7b844055c170fdd77243e5f0dba6796334e0df48d0f42ee90390ea691dd65518",
+            "size_bytes": 1995165542,
+            "upstream_url": "https://huggingface.co/mradermacher/Qwen3-ASR-1.7B-GGUF"
+          },
+          "requirements": {
+            "ram_mb": 3000,
+            "vram_mb": 0
+          },
+          "bench": {
+            "release_to_final_ms_p50_10s": 525,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 8 threads"
+          }
+        },
         {
           "id": "cuda-gguf-q8",
           "target": "nvidia",
@@ -985,8 +1043,8 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 1148,
-            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
+            "release_to_final_ms_p50_10s": 949,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 8 threads"
           }
         }
       ],
@@ -1141,8 +1199,8 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 1322,
-            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
+            "release_to_final_ms_p50_10s": 628,
+            "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 8 threads"
           }
         }
       ],

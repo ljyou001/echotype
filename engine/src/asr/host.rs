@@ -244,7 +244,7 @@ pub fn load_model(p: LoadParams, progress: &dyn Fn(&str, u32), warn: &dyn Fn(&st
             let Some(server) = caps.llama_server.clone().filter(|_| caps.llama.contains(&provider.as_str())) else {
                 return Err(EngineError::new(
                     code::PROVIDER_UNAVAILABLE,
-                    format!("variant needs llama.cpp with provider '{provider}', which this engine build does not include (install the engine pack)"),
+                    format!("variant needs llama.cpp with provider '{provider}', which this engine cannot run (llama-server, or a library it needs, is missing; the engine log names it)"),
                 ));
             };
             if arch != "mtmd_asr" {
@@ -253,7 +253,7 @@ pub fn load_model(p: LoadParams, progress: &dyn Fn(&str, u32), warn: &dyn Fn(&st
             progress("runtime", 100);
             progress("model", 0);
             let f = super::recognizers::resolve_files(&files, &p.model_dir, &arch);
-            let sidecar = LlamaSidecar::start(&server, &PathBuf::from(f("model")?), &PathBuf::from(f("mmproj")?), &provider)?;
+            let sidecar = LlamaSidecar::start(&server, &PathBuf::from(f("model")?), &PathBuf::from(f("mmproj")?), &provider, threads)?;
             progress("model", 100);
             (Backend::Llama(sidecar), provider)
         }
