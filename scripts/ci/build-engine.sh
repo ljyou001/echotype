@@ -114,7 +114,7 @@ PY
 }
 
 # 可复现 zip：路径排序、时间戳固定为 1980-01-01、权限只保留可执行位；软链按目标内容存入。
-# 内容不变则 sha256 不变，发布任务据此判断 engine-packs-v3 上的资产是否需要更新。
+# 内容不变则 sha256 不变，发布任务据此判断 engine-packs-v4 上的资产是否需要更新。
 zip_reproducible() {
   local py=$1 src=$2 out=$3
   "$py" - "$src" "$out" <<'PY'

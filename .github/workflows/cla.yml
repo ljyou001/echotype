@@ -1,3 +1,10 @@
+# ============================================================================
+# [INPUT]: 依赖 .github/cla-signatures.txt（每行一个 GitHub 数字 ID）与 PR 的提交作者（gh api，分页取全）
+# [OUTPUT]: PR 的 cla 检查；有作者未签署时在 PR 下留言并失败，全部签署后删除那条留言
+# [POS]: 外部贡献者 PR 的许可守门，维护者直推 main 不经过它。按不可变数字 ID 比对，与 CLA.md 对项目所有者的定义一致：
+#        用户名可以改，不能当凭据。提交邮箱未关联 GitHub 账号时 API 不给作者，这类提交不参与比对
+# [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+# ============================================================================
 name: CLA Check
 
 on:
@@ -11,57 +18,56 @@ permissions:
 
 jobs:
   cla:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v7
 
       - name: Get PR committers
         id: committers
         env:
           GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
-          COMMITTERS=$(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/commits --jq '.[].author.login // empty' | grep -v '^$' | sort -u)
-          # Format for GITHUB_OUTPUT multiline string
-          echo "committers<<EOF" >> $GITHUB_OUTPUT
-          echo "$COMMITTERS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # 每行 "<数字 ID> <用户名>"。该接口每页 30 条，不分页会漏掉第 31 个提交之后的作者
+          COMMITTERS=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/commits" \
+            --jq '.[] | select(.author != null) | "\(.author.id) \(.author.login)"' | sort -u)
+          {
+            echo "committers<<EOF"
+            echo "$COMMITTERS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Check CLA signatures
         id: check
+        env:
+          COMMITTERS: ${{ steps.committers.outputs.committers }}
         run: |
-          # Read signature file, ignore comments and empty lines, convert to lowercase for case-insensitive comparison
           if [ ! -f .github/cla-signatures.txt ]; then
-            echo "Error: .github/cla-signatures.txt not found!"
+            echo "::error::.github/cla-signatures.txt not found"
             exit 1
           fi
-          
-          SIGNATURES=$(grep -v '^#' .github/cla-signatures.txt | grep -v '^[[:space:]]*$' | tr '[:upper:]' '[:lower:]')
+          # 名单记的是数字 ID（见 CLA.md）。去掉注释、空白与 CR 后逐行精确比对
+          SIGNATURES=$(grep -v '^#' .github/cla-signatures.txt | tr -d '[:blank:]\r' | grep -v '^$' || true)
           MISSING=""
-          
-          while IFS= read -r user; do
-            user_lower=$(echo "$user" | tr '[:upper:]' '[:lower:]')
-            if [ -z "$user_lower" ]; then continue; fi
-            
-            # Check if user is in the signatures list
-            if ! echo "$SIGNATURES" | grep -qFx "$user_lower"; then
-              if [ -n "$MISSING" ]; then MISSING="$MISSING, "; fi
-              MISSING="${MISSING}@${user}"
+          while read -r id login; do
+            [ -z "$id" ] && continue
+            if ! grep -qFx "$id" <<< "$SIGNATURES"; then
+              # 带上数字 ID：维护者把它原样加进 cla-signatures.txt
+              MISSING="${MISSING:+$MISSING, }@${login} (${id})"
             fi
-          done <<< "${{ steps.committers.outputs.committers }}"
-          
-          echo "missing=$MISSING" >> $GITHUB_OUTPUT
+          done <<< "$COMMITTERS"
+
+          echo "missing=$MISSING" >> "$GITHUB_OUTPUT"
           if [ -n "$MISSING" ]; then
-            echo "signed=false" >> $GITHUB_OUTPUT
+            echo "signed=false" >> "$GITHUB_OUTPUT"
           else
-            echo "signed=true" >> $GITHUB_OUTPUT
+            echo "signed=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Comment on PR when CLA not signed
         if: steps.check.outputs.signed == 'false'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const body = `## ❌ CLA Check Failed / CLA 检查未通过
@@ -109,7 +115,7 @@ jobs:
 
       - name: Remove CLA comment when signed
         if: steps.check.outputs.signed == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const { data: comments } = await github.rest.issues.listComments({

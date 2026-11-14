@@ -8,7 +8,7 @@ make-appx.ps1: AppX 打包入口。校验 .env 的 Store 身份，生成 AppX �
 make-self-signed-cert.ps1: 生成本地侧载测试证书，CN 等于 WINDOWS_PUBLISHER_ID
 EchoTypeTestCert.pfx: 历史提交的测试证书副本。证书入库的处理由 orchestrator 与用户决定，本目录不改动它
 
-v3 删除的 v2 流水线
+v4 删除的 v2 流水线
 - PyInstaller 后端：`deploy-01-build-backend.ps1`、`build_*.py`、`ultimate_stub.py`、`deploy-00-sync-configs.ps1`
 - 7z 自解压单文件与 C# / C++ 启动壳：`deploy-03-make-single-exe.ps1`、`deploy-extras-7z-config.txt`、`deploy-extras-smart-logic.ps1`、`native_stub.cpp`、`InstallerBase.cs`、`Resources.cs`、`IconReplacer.cs`、`gen_resources.py`、`inspect_sfx.py`、`convert_icon.py`、`icon-white.ico`
 - Inno Setup 安装器：`deploy-03-make-installer.ps1`、`deploy-extras-installer-config.iss`、`deploy-02-build-frontend.ps1`、`deploy-99-full-release.ps1`

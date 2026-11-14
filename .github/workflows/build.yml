@@ -2,9 +2,10 @@
 # [INPUT]: 依赖 scripts/ci/build-engine.sh（基础引擎与 GPU 引擎包，内部调用 engine/scripts/make-pack.sh）、
 #          frontend/electron-builder.cjs（安装包、渠道、许可清单）、scripts/ci/check-engine.mjs（打包态握手检查）、
 #          scripts/ci/release-assets.mjs（校验和、pack 清单与发布）、engine/scripts/bench.sh
-# [OUTPUT]: 每个目标一个 artifact（installer-<target> / engine-pack-<pack>-<target>）；
-#           tag v* 时生成草稿 Release（安装包）并把 GPU 引擎包补传到 engine-packs-v3；手动触发可跑 macOS 基准
-# [POS]: 发布流水线。6 个安装包行 + 6 个 GPU 引擎包行并行，每行在本机原生构建，不交叉编译。
+# [OUTPUT]: 每个目标一个 artifact（installer-<target> / engine-pack-<pack>-<target>）；勾选 publish_packs 或推 tag 时
+#           把 GPU 引擎包补传到 engine-packs-v4；用户推 tag v* 时另建草稿 Release（安装包）；手动可只跑 macOS 基准
+# [POS]: 发布流水线，手动触发（main 上的 workflow_dispatch），不走 PR。Windows x64 也可在本地用同一份脚本构建。
+#        6 个安装包行 + 6 个 GPU 引擎包行并行，每行在本机原生构建，不交叉编译。
 #        说明见 scripts/ci/CLAUDE.md。
 # [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
 # ============================================================================
@@ -26,7 +27,7 @@ on:
         options: [github, steam, msstore]
         default: github
       publish_packs:
-        description: Upload GPU engine packs to engine-packs-v3 (adds missing assets, never replaces)
+        description: Upload GPU engine packs to engine-packs-v4 (adds missing assets, never replaces)
         type: boolean
         default: false
 
@@ -144,7 +145,7 @@ jobs:
         run: |
           # target-id = <os>-<arch>，正好是 electron-builder 的 --<os> --<arch>
           args=(--config electron-builder.cjs "--${TARGET%-*}" "--${TARGET#*-}" --publish never)
-          # tag 是版本号的唯一来源：v3.1.0 → 3.1.0
+          # tag 是版本号的唯一来源：v4.1.0 → 4.1.0
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             args+=("-c.extraMetadata.version=${GITHUB_REF_NAME#v}")
           fi
@@ -220,12 +221,12 @@ jobs:
             gh release upload "$TAG" release/* --clobber
           else
             flags=(--draft --verify-tag --generate-notes --title "EchoType ${TAG#v}")
-            # v3.1.0-beta.1 这类带后缀的 tag 标为预发布
+            # v4.1.0-beta.1 这类带后缀的 tag 标为预发布
             if [[ "$TAG" == *-* ]]; then flags+=(--prerelease); fi
             gh release create "$TAG" release/* "${flags[@]}"
           fi
 
-  # ---- GPU 引擎包进 engine-packs-v3（所有版本共用，只增不改）---------------------
+  # ---- GPU 引擎包进 engine-packs-v4（所有版本共用，只增不改）---------------------
   packs:
     name: Publish engine packs
     needs: build
@@ -277,7 +278,7 @@ jobs:
           ECHOTYPE_PACK_CACHE: ${{ runner.temp }}/pack-cache
         run: bash scripts/ci/build-engine.sh mac-arm64
 
-      # bench.sh <engine-dir> <out-dir>：按 catalog 从 models-v3 下载模型，构建 echotype-bench，输出 bench.json 与 BENCHMARKS.md
+      # bench.sh <engine-dir> <out-dir>：按 catalog 从 models-v4 下载模型，构建 echotype-bench，输出 bench.json 与 BENCHMARKS.md
       - name: Run benchmark
         env:
           ECHOTYPE_BENCH_WORK: ${{ runner.temp }}/bench-work
