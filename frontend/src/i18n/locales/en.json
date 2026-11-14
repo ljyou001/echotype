@@ -310,8 +310,7 @@
       "noneUsableWithPack": "Needs a GPU. Install the GPU runtime from Manage models to use it."
     },
     "license": {
-      "open": "View license",
-      "checkCommercial": "Check the license before commercial use."
+      "open": "View license"
     },
     "packs": {
       "removeTitle": "Remove the {{name}} engine?",
@@ -586,13 +585,7 @@
       "viewLicenses": "View licenses",
       "licensesTitle": "Licenses",
       "modelLicenses": "Speech models",
-      "modelLicensesHint": "Each model has its own license. Check it before you use a model commercially.",
       "componentLicenses": "Open-source components",
-      "commercial": {
-        "yes": "Commercial use OK",
-        "no": "Non-commercial only",
-        "unclear": "Check before commercial use"
-      },
       "source": "Source code",
       "sourceDescription": "EchoType is open source.",
       "reportIssue": "Report an issue"

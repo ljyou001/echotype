@@ -95,7 +95,6 @@ export function ModelCard({ model }: { model: ModelView }) {
               {model.license.id} <FiExternalLink />
             </button>
           </div>
-          {model.license.commercial !== "yes" && <p className="model-card__license-note">{t("models.license.checkCommercial")}</p>}
           {pack && !installing && (
             <p className="model-card__pack-note">
               {t(status === "installed" ? "manager.needsRuntime" : "manager.alsoDownloadsRuntime", {

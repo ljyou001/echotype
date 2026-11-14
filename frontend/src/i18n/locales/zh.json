@@ -310,8 +310,7 @@
       "noneUsableWithPack": "需要 GPU。在「管理模型」里安装 GPU 运行库后即可使用。"
     },
     "license": {
-      "open": "查看许可证",
-      "checkCommercial": "商用前请先确认许可证。"
+      "open": "查看许可证"
     },
     "packs": {
       "removeTitle": "删除 {{name}} 引擎？",
@@ -586,13 +585,7 @@
       "viewLicenses": "查看许可证",
       "licensesTitle": "许可证",
       "modelLicenses": "语音模型",
-      "modelLicensesHint": "每个模型有各自的许可证，商用前请先确认。",
       "componentLicenses": "开源组件",
-      "commercial": {
-        "yes": "可商用",
-        "no": "仅限非商用",
-        "unclear": "商用前请确认"
-      },
       "source": "源代码",
       "sourceDescription": "EchoType 是开源软件。",
       "reportIssue": "反馈问题"
