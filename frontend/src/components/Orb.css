@@ -3,6 +3,7 @@
  * [OUTPUT]: 光球样式：.orb 与各状态 .orb--loading / ready / recording / finalizing / idle / error
  * [POS]: components/Orb.tsx 的专属样式。颜色全部来自主题令牌，换主题色、深色模式自动跟随。
  *        动效分三层互不冲突：halo 用 transform 呼吸、core 用 scale 跟随 --level、body 用 transform 呼吸、swirl 旋转。
+ *        body 用 clip-path 按圆裁切（流光是合成层，overflow 裁不住），所以外投影挂在 core 上。
  *        系统要求减少动态效果时只保留静态球体。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -33,20 +34,25 @@
   animation: orb-halo var(--breathe) ease-in-out infinite;
 }
 
-/* ---------- 核心：随音量缩放 ---------- */
+/* ---------- 核心：随音量缩放；外投影放在这里，因为球体自己要按圆裁切 ---------- */
 .orb__core {
   position: absolute;
   inset: 0;
+  border-radius: 50%;
+  box-shadow: var(--orb-shadow);
   scale: calc(1 + var(--level) * 0.1);
 }
 
-/* ---------- 球体：渐变底 + 内阴影 + 呼吸 ---------- */
+/* ---------- 球体：渐变底 + 内阴影 + 呼吸 ----------
+ * 流光是旋转、模糊、混色的合成层，Chromium 的 overflow + border-radius 裁不住它们，
+ * 四角会漏出方形的光。clip-path 按圆裁切所有子层。 */
 .orb__body {
   position: absolute;
   inset: 0;
   overflow: hidden;
   isolation: isolate;
   border-radius: 50%;
+  clip-path: circle(50%);
   background: radial-gradient(
     circle at 50% 115%,
     var(--orb-b) 0%,
@@ -55,8 +61,7 @@
   );
   box-shadow:
     inset 0 -10px 22px var(--orb-inner-shade),
-    inset 0 8px 18px var(--orb-inner-light),
-    var(--orb-shadow);
+    inset 0 8px 18px var(--orb-inner-light);
   animation: orb-breathe var(--breathe) ease-in-out infinite;
 }
 

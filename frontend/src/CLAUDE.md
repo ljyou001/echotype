@@ -39,7 +39,7 @@ LevelMeter.tsx: 唯一电平条。经 useSmoothedLevel 取平滑电平，逐帧�
 HotkeyModal.tsx(.css): 热键录制与推荐键，经 `bridge().hotkey.validate` 校验；只产出 accelerator，持久化由调用方完成；hotkey.error 时顶部先说明问题与出路
 Modal.tsx: 门户弹窗、右侧抽屉 Drawer 与 ConfirmDialog（遮罩点击、Esc 关闭）
 Toast.tsx: 右下角单条提示，展示 `store.run()` 捕获的 Core 错误
-Orb.tsx(.css): 首页状态光球。分层：光晕 → 随音量缩放的核心 → 呼吸的球体（两层反向旋转流光 + 高光）；录音时把电平写进 --level；颜色全取主题令牌；尊重减少动态效果
+Orb.tsx(.css): 首页状态光球。分层：光晕 → 随音量缩放的核心（挂外投影）→ 呼吸的球体（clip-path 按圆裁切；两层反向旋转流光 + 高光）；录音时把电平写进 --level；颜色全取主题令牌；尊重减少动态效果
 KeyHint.tsx: 把含 KEY_TOKEN 的译文渲染成"文字 + <kbd> + 文字"
 LanguageTags.tsx: 模型支持语言的一行标签，超出折叠为 "+N"
 controls.tsx: Switch、Segmented、ProgressBar、Badge
