@@ -1,11 +1,13 @@
 /**
  * [INPUT]: 依赖 contracts/models.catalog.json（假模型与 GPU 引擎包的唯一数据源）；依赖 ipc-contract 的 ModelView、
  *          VariantView、ModelSettingDef、EnginePackView、HardwareTarget 等类型
- * [OUTPUT]: 导出 MockModelRegistry（模型 × variant 的安装模拟、variant 选择、设置定义与取值、磁盘占用）、
- *          MockPackRegistry（GPU 引擎包）、MockMachine、preinstalledKeys()、defaultModelId
+ * [OUTPUT]: 导出 MockModelRegistry（模型 × variant 的安装模拟、variant 选择、设置定义与取值、磁盘占用、fail 模拟下载失败）、
+ *          MockPackRegistry（GPU 引擎包，含 fail）、MockMachine、preinstalledKeys()、defaultModelId
  * [POS]: mockBridge 的模型子系统，只在浏览器开发模式加载。不硬编码任何模型 id，一律从清单推导。
- *        模拟一台有 NVIDIA 显卡的 win32-x64：CUDA 引擎包可装（装之前 cuda 版本"可下载、不可运行"），
- *        Apple Silicon 与 Vulkan 版本在这台机器上不可用。
+ *        模拟一台有 NVIDIA 显卡的 win32-x64：CUDA 引擎包可装（装之前 cuda 版本"可下载、不可运行"，体积取清单真实值）；
+ *        显卡也支持 Vulkan，但 Vulkan 引擎包假装尚未发布（MODEL_MANIFEST §2 规则 4，sha256 为 null）：
+ *        vulkan 版本与 provider 选项照常列出，包不进 packs 列表、auto 从不选它，用来检查"暂未提供"。
+ *        Apple Silicon 版本在这台机器上不可用。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import catalog from "../../../contracts/models.catalog.json";
@@ -29,7 +31,8 @@ type Install = VariantView["install"];
 const MB = 1024 * 1024;
 const TICK_MS = 120;
 const PLATFORM_KEY = "win32-x64";
-const MACHINE_GPU_TARGETS: HardwareTarget[] = ["nvidia"]; // 假装本机是 NVIDIA 显卡
+const MACHINE_GPU_TARGETS: HardwareTarget[] = ["nvidia", "vulkan"]; // 假装本机是 NVIDIA 显卡（也支持 Vulkan）
+const MOCK_UNPUBLISHED_PACKS = new Set(["vulkan"]); // 假装这些包在本平台的资产 sha256 为 null
 const TARGET_ORDER: HardwareTarget[] = ["nvidia", "apple", "vulkan", "cpu"]; // MODEL_MANIFEST §2：auto 的优先顺序
 const FAKE_PACK_BYTES: Record<string, number> = { nvidia: 1434 * MB, vulkan: 180 * MB };
 const TIER_BENCH_MS = { instant: 45, balanced: 95, accurate: 260 } as const;
@@ -94,17 +97,36 @@ export function gpuCapableModel(): { id: string; cpu: string; gpu: string; pack:
 // ============================================================
 // 本机：可装的引擎包与当前可用的 provider
 // ============================================================
+function published(p: CatalogPack): boolean {
+  const platform = (p.platforms as Record<string, { asset: { sha256: string | null } }>)[PLATFORM_KEY];
+  return !!platform?.asset.sha256 && !MOCK_UNPUBLISHED_PACKS.has(p.id);
+}
+
 export class MockMachine {
-  /** 本平台提供、且与本机显卡匹配的引擎包 */
-  readonly packs: CatalogPack[] = catalog.engine_packs.filter(
+  /** 本平台有资产、且与本机显卡匹配的引擎包（含未发布的） */
+  private readonly hardwarePacks: CatalogPack[] = catalog.engine_packs.filter(
     (p) => PLATFORM_KEY in p.platforms && MACHINE_GPU_TARGETS.includes(p.target as HardwareTarget),
   );
+  /** 真正提供的引擎包：已发布。未发布的不出现在 packs 列表里 */
+  readonly packs: CatalogPack[] = this.hardwarePacks.filter(published);
   installedPacks = new Set<string>();
   gpuBroken = false; // 回退场景：显卡驱动坏了，引擎只能跑 CPU
 
-  /** 可装或已装的 provider：决定设置项选项与 variant 是否"可用" */
+  /** 可装或已装的 provider：决定 variant 是否"可用"、auto 选什么 */
   possibleProviders(): Provider[] {
     return ["cpu", ...this.packs.flatMap((p) => p.providers as Provider[])];
+  }
+
+  /** provider 下拉列出的硬件：本机有这块硬件即列出，包没发布的由界面置灰 */
+  listedProviders(): Provider[] {
+    return ["cpu", ...this.hardwarePacks.flatMap((p) => p.providers as Provider[])];
+  }
+
+  /** 列在模型里的版本：可用的，加上只差一个未发布引擎包的 */
+  isListed(v: CatalogVariant): boolean {
+    const pack = packOf(v);
+    if (pack && !this.hardwarePacks.some((p) => p.id === pack)) return false;
+    return v.providers.some((p) => this.listedProviders().includes(p as Provider));
   }
 
   /** 此刻真能跑的 provider */
@@ -235,6 +257,14 @@ export class MockModelRegistry {
     this.installs.set(keyOf(id, variantId), INSTALLED);
   }
 
+  /** 模拟一次失败的下载：记成 error，像 Core 的安装任务簿那样 */
+  fail(id: string, variantId: string | undefined, error: AppError): void {
+    const v = variantId ?? this.get(id)?.selectedVariantId;
+    if (!v) return;
+    this.installs.set(keyOf(id, v), { status: "error", pct: null, error });
+    this.onChange();
+  }
+
   // ---------- 内部 ----------
   private forVariants(id: string, variantId: string | undefined, fn: (key: string) => void): void {
     const m = catalog.models.find((x) => x.id === id);
@@ -256,8 +286,8 @@ export class MockModelRegistry {
   }
 
   private view(m: CatalogModel): ModelView {
-    const possible = this.machine.possibleProviders();
-    const providerOptions = possible.filter((p) => m.variants.some((v) => this.machine.isAvailable(v) && (v.providers as string[]).includes(p)));
+    const listed = this.machine.listedProviders();
+    const providerOptions = listed.filter((p) => m.variants.some((v) => this.machine.isListed(v) && (v.providers as string[]).includes(p)));
     const settings: ModelSettingDef[] = [
       { key: "provider", type: "select", default: "auto", options: ["auto", ...providerOptions] },
       ...(m.settings as ModelSettingDef[]),
@@ -299,7 +329,8 @@ export class MockModelRegistry {
    */
   private select(m: CatalogModel, provider: string): string | null {
     const available = m.variants.filter((v) => this.machine.isAvailable(v));
-    if (provider !== "auto") return available.find((v) => (v.providers as string[]).includes(provider))?.id ?? null;
+    // 显式 provider：选列出它的版本，即使它的引擎包还没发布（界面据此说明"暂未提供"）
+    if (provider !== "auto") return m.variants.find((v) => this.machine.isListed(v) && (v.providers as string[]).includes(provider))?.id ?? null;
     const ranked = TARGET_ORDER.flatMap((t) => available.filter((v) => v.target === t));
     const ready = ranked.find((v) => {
       const pack = packOf(v);
@@ -369,6 +400,12 @@ export class MockPackRegistry {
       }
     }, TICK_MS);
     this.timers.set(id, timer);
+  }
+
+  /** 模拟一次失败的下载 */
+  fail(id: string, error: AppError): void {
+    this.states.set(id, { status: "error", pct: null, error });
+    this.onChange(false);
   }
 
   remove(id: string): void {
