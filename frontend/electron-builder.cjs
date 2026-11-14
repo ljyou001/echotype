@@ -41,7 +41,7 @@ const KNOWN_CHANNELS = Object.keys(JSON.parse(fs.readFileSync(CATALOG, "utf8")).
 if (!KNOWN_CHANNELS.includes(CHANNEL)) {
   throw new Error(`ECHOTYPE_CHANNEL="${CHANNEL}" is not in contracts/models.catalog.json channels (${KNOWN_CHANNELS.join(", ")}).`);
 }
-// github 是默认渠道，产物名不带渠道；其余渠道插在版本号之后：EchoType-3.0.0-steam-win-x64.zip
+// github 是默认渠道，产物名不带渠道；其余渠道插在版本号之后：EchoType-4.0.0-steam-win-x64.zip
 const CHANNEL_TAG = CHANNEL === "github" ? "" : `-${CHANNEL}`;
 
 /** @type {import("electron-builder").Configuration} */

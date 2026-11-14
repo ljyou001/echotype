@@ -3,9 +3,9 @@
  *          engine_packs[].platforms[].asset；publish 时依赖 gh CLI 与 GH_TOKEN、GH_REPO
  * [OUTPUT]: `checksums <dir>` → <dir>/SHA256SUMS.txt
  *           `packs <dir> [--publish]` → <dir>/engine-packs.json（catalog engine_packs 片段，sha256 与 size_bytes 已填）；
- *           --publish 时把 pack 上传到 catalog 声明的 release（engine-packs-v3）
+ *           --publish 时把 pack 上传到 catalog 声明的 release（engine-packs-v4）
  * [POS]: build.yml 的 release 与 packs 任务调用。CI 不修改契约：orchestrator 用 engine-packs.json 回填 catalog。
- *        engine-packs-v3 被所有已发布版本共用，旧版本 catalog 钉住旧 sha256，所以已有资产一律不覆盖。
+ *        engine-packs-v4 被所有已发布版本共用，旧版本 catalog 钉住旧 sha256，所以已有资产一律不覆盖。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { execFileSync } from "node:child_process";
