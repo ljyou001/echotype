@@ -27,7 +27,7 @@ Steam 把一个 App 的全部 depot 叠放进同一个安装目录。
 Core 的 steam 源是 `{steam_app_dir}/models/{asset}`，`steam_app_dir = path.dirname(process.execPath)`。
 Windows 与 Linux 上它等于安装目录，models depot 正好命中。macOS 上它是 `EchoType.app/Contents/MacOS`，命中不了，Core 回落到 GitHub 下载。
 Core 从 steam 源安装时复制 zip、校验 sha256、解压到 `~/.echotype-v3/models/`，所以模型占两份磁盘。
-Windows 的 CPU 版 llama-server 依赖 VC++ 2015–2022 运行库，安装包不带：在 Steamworks → Installation → Redistributables 勾选它。
+VC++ 运行库自 3.0.1 起随引擎目录分发（scripts/ci/build-engine.sh），Steamworks 的 Redistributables 不用勾。
 
 规划（等 `design/STEAM_RELEASE_V3.md` §7 的契约落地、Core 实现 `dir` 源后再改）：
 - models depot 换成两部分：基础 App 的 Content depot，加上每个 DLC 一个 depot。

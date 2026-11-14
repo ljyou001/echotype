@@ -1,19 +1,22 @@
 /**
  * [INPUT]: 依赖 frontend/dist-electron 的 Core 模块（engine/engine-command 的 resolveEngineCommand、
  *          engine/engine-supervisor 的 EngineSupervisor）；依赖 electron-builder 输出目录里的解包应用；
- *          依赖 engine/Cargo.toml 的 [package] version（期望的引擎版本）
- * [OUTPUT]: CLI。退出码 0 = Core 以打包态布局拉起 resources/engine/ 下的引擎，完成 ready 行 → token 连接 → hello 握手，
+ *          依赖 engine/Cargo.toml 的 [package] version（期望的引擎版本）；依赖 ./pe-imports.mjs 的 checkImports
+ * [OUTPUT]: CLI。退出码 0 = resources/engine 里每个 PE 的导入都能解析（Windows），且 Core 以打包态布局拉起
+ *           resources/engine/ 下的引擎，完成 ready 行 → token 连接 → hello 握手，
  *           hello 的 engine_version 等于 Cargo.toml 的版本，且 hello.runtimes 含 llama.cpp
  * [POS]: 安装包冒烟检查。build.yml 每个安装包行打包后运行，本地验证同一份。
  *        只复用 Core 的选路与 supervisor，不起 Electron 窗口、不装全局键盘钩子、不碰用户的 ~/.echotype。
  *        版本比对拦住 engine/dist 里残留的旧引擎：引擎的 ENGINE_VERSION 就是 CARGO_PKG_VERSION，所以期望值只读 Cargo.toml。
  *        llama.cpp 比对拦住漏装 llama-server 的安装包：6 个基础引擎都带它，catalog 的 cpu-gguf-q8 变体靠它运行。
+ *        导入表检查拦住漏带的 DLL：runner 与开发机装了 VC++ 运行库，握手照样通过，干净的 Windows 却加载不了。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { checkImports, formatMissing } from "./pe-imports.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CORE_DIST = path.join(ROOT, "frontend", "dist-electron");
@@ -46,6 +49,17 @@ if (resourcesDirs.length !== 1) {
   process.exit(1);
 }
 const resourcesPath = path.resolve(resourcesDirs[0]);
+
+// ---------------------------------------------------------------------------
+// 1b. Windows：resources/engine 里每个 .exe/.dll 的导入都必须能解析。这台机器装了的运行库不算数：
+//     握手通过不代表干净的 Windows 也能加载 llama-server 与 ggml
+// ---------------------------------------------------------------------------
+const imports = checkImports(path.join(resourcesPath, "engine"));
+if (imports.missing.length) {
+  console.error(`resources/engine has ${imports.missing.length} unresolved DLL import(s); ship these next to the binaries:\n${formatMissing(imports.missing)}`);
+  process.exit(1);
+}
+if (imports.binaries) console.log(`imports OK: ${imports.binaries} PE files in resources/engine`);
 
 // ---------------------------------------------------------------------------
 // 2. 与 Core 打包态相同的选路：isPackaged=true、无引擎包、不受开发者环境变量影响

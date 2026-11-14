@@ -2,5 +2,6 @@
   { "name": "sherpa-onnx", "version": "2.0.1", "license": "Apache-2.0", "url": "https://github.com/k2-fsa/sherpa-onnx" },
   { "name": "ONNX Runtime", "version": "1.28.2", "license": "MIT", "url": "https://github.com/microsoft/onnxruntime" },
   { "name": "llama.cpp", "version": "", "license": "MIT", "url": "https://github.com/ggml-org/llama.cpp" },
-  { "name": "Silero VAD", "version": "", "license": "MIT", "url": "https://github.com/snakers4/silero-vad" }
+  { "name": "Silero VAD", "version": "", "license": "MIT", "url": "https://github.com/snakers4/silero-vad" },
+  { "name": "Microsoft Visual C++ Runtime", "version": "14 (Visual Studio 2015–2022 redistributable)", "license": "Microsoft Visual Studio Distributable Code", "url": "https://learn.microsoft.com/visualstudio/releases/2022/redistribution", "platforms": ["win32"] }
 ]

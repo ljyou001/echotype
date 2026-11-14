@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 frontend/package-lock.json 与 frontend/node_modules（npm 生产依赖）；依赖 `cargo metadata`
  *          （engine/Cargo.toml 的 Rust 依赖闭包）；依赖 scripts/ci/licenses/native.json 与可选的
- *          engine/third-party.json（原生组件，engine 会话提供的版本覆盖默认值）
+ *          engine/third-party.json（原生组件，engine 会话提供的版本覆盖默认值；`platforms` 字段把条目限定到某些平台）
  * [OUTPUT]: 导出 generateThirdPartyLicenses({ platform, arch, out })；CLI 写出 [{name, version, license, url}]
  * [POS]: 设置 → 关于 的组件许可证来源（ipc-contract LicensesView.components）。
  *        electron-builder.cjs 的 beforePack 每次打包都调用它，输出经 extraResources 进 resources/licenses/。
@@ -121,19 +121,21 @@ function rustComponents(triple) {
 // ---------------------------------------------------------------------------
 // 3. 原生组件：默认清单 + engine 会话的覆盖（按 name 合并）
 // ---------------------------------------------------------------------------
-function nativeComponents() {
+function nativeComponents(platform) {
   const byName = new Map(readJson(path.join(ROOT, "scripts", "ci", "licenses", "native.json")).map((c) => [c.name, c]));
   const override = path.join(ROOT, "engine", "third-party.json");
   if (existsSync(override)) for (const c of readJson(override)) byName.set(c.name, { ...byName.get(c.name), ...c });
-  for (const c of byName.values()) if (!c.version) warn(`${c.name} has no pinned version; engine/third-party.json should provide it.`);
-  return [...byName.values()];
+  // platforms 缺省 = 所有平台；VC++ 运行库只随 Windows 引擎分发
+  const kept = [...byName.values()].filter((c) => !c.platforms || c.platforms.includes(platform));
+  for (const c of kept) if (!c.version) warn(`${c.name} has no pinned version; engine/third-party.json should provide it.`);
+  return kept;
 }
 
 // ---------------------------------------------------------------------------
 // 汇总：按 name@version 去重，按名称排序
 // ---------------------------------------------------------------------------
 export function generateThirdPartyLicenses({ platform = process.platform, arch = process.arch, out }) {
-  const all = [...npmComponents(), ...rustComponents(RUST_TRIPLES[`${platform}-${arch}`]), ...nativeComponents()];
+  const all = [...npmComponents(), ...rustComponents(RUST_TRIPLES[`${platform}-${arch}`]), ...nativeComponents(platform)];
   const unique = new Map();
   for (const c of all) unique.set(`${c.name.toLowerCase()}@${c.version}`, { name: c.name, version: c.version ?? "", license: c.license, url: c.url });
   const list = [...unique.values()].sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }) || a.version.localeCompare(b.version));

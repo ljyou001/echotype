@@ -4,16 +4,17 @@
 发布流水线的脚本层。workflow 只编排矩阵，构建逻辑全部在这里，本地与 CI 运行同一份脚本。
 
 成员清单
-build-engine.sh: 引擎构建入口。安装包行 `cargo build --release --locked --bin echotype-engine`（feature static）并暂存到 `engine/dist/<target-id>/`，再把 llama-server 写进同一目录（mac 行 `make-pack.sh metal`，win/linux 行 `make-pack.sh cpu`）；GPU 行以 `make-pack.sh <pack>` 产出整套引擎，校验含 echotype-engine，打成可复现 zip，文件名取自 catalog `asset.name`，超过 2 GiB 即失败
-check-engine.mjs: 安装包冒烟检查。在 electron-builder 输出目录里找到解包应用，用 Core 编译产物的 `resolveEngineCommand`（isPackaged 布局）与 `EngineSupervisor` 拉起 `resources/engine/` 的引擎，要求 hello 握手成功、`engine_version` 等于 `engine/Cargo.toml` 的版本（拦住残留的旧引擎）、`hello.runtimes` 含 llama.cpp（拦住漏装 llama-server），再调一次 `devices.list`
+build-engine.sh: 引擎构建入口。安装包行 `cargo build --release --locked --bin echotype-engine`（feature static）并暂存到 `engine/dist/<target-id>/`，再把 llama-server 写进同一目录（mac 行 `make-pack.sh metal`，win/linux 行 `make-pack.sh cpu`）；GPU 行以 `make-pack.sh <pack>` 产出整套引擎，校验含 echotype-engine，打成可复现 zip，文件名取自 catalog `asset.name`（带引擎版本），超过 2 GiB 即失败。Windows 的基础引擎与每个 pack 打包前，按导入表从 Visual Studio 的 `VC/Redist/MSVC/<最新版本>/<x64|arm64>/Microsoft.VC14x.CRT`（vswhere 定位，从不取 System32）复制缺的 VC++ 运行库，再要求每个导入都能解析，并在 THIRD-PARTY-NOTICES.txt 记一行
+pe-imports.mjs: PE 导入表工具（纯 Node，按偏移读取）。`check <dir>`：每个 .exe/.dll 的导入（含 delay 导入）只能是同目录文件、Windows 系统 DLL、`api-ms-win-*` / `ext-ms-*` API set 或 GPU 驱动 DLL（nvcuda、vulkan-1 …），否则逐条列出「二进制: DLL」并失败；VC++ 运行库不算系统 DLL。`stage-runtime <dir> <crt>` 从 CRT 目录补齐缺的运行库直到闭包完整。被 build-engine.sh、check-engine.mjs、release-assets.mjs 共用
+check-engine.mjs: 安装包冒烟检查。在 electron-builder 输出目录里找到解包应用，用 Core 编译产物的 `resolveEngineCommand`（isPackaged 布局）与 `EngineSupervisor` 拉起 `resources/engine/` 的引擎，先要求 `resources/engine` 里每个 PE 的导入都能解析（Windows），再要求 hello 握手成功、`engine_version` 等于 `engine/Cargo.toml` 的版本（拦住残留的旧引擎）、`hello.runtimes` 含 llama.cpp（拦住漏装 llama-server），再调一次 `devices.list`
 third-party-licenses.mjs: 组件许可清单生成器。合并 npm 生产依赖、Rust 依赖闭包（`cargo metadata --filter-platform`，不含 dev 依赖）与原生组件，输出 `[{name, version, license, url}]`。electron-builder 的 beforePack 每个 平台 × 架构 调用一次
-licenses/native.json: 原生组件默认清单：sherpa-onnx、ONNX Runtime、llama.cpp、Silero VAD。`engine/third-party.json` 按 name 覆盖它（llama.cpp b12360 等版本由 engine 维护）
-release-assets.mjs: 发布资产工具。`checksums` 写 SHA256SUMS.txt；`packs` 按 catalog 校验 pack 资产名并写 `engine-packs.json`，`--publish` 时补传到 engine-packs-v3，从不覆盖已有资产
+licenses/native.json: 原生组件默认清单：sherpa-onnx、ONNX Runtime、llama.cpp、Silero VAD、Microsoft Visual C++ Runtime（`platforms: ["win32"]`，只进 Windows 的许可清单）。`engine/third-party.json` 按 name 覆盖它（llama.cpp b12360 等版本由 engine 维护）
+release-assets.mjs: 发布资产工具。`checksums` 写 SHA256SUMS.txt；`packs` 按 catalog 校验 pack 资产名、解开每个 Windows pack 做导入表检查、写 `engine-packs.json`，`--publish` 时只上传 engine-packs-v3 上没有的资产：同名同内容跳过，同名不同内容即失败；gh 封装拒绝 `--clobber` 与删除；`verify-packs` 要求 catalog 的每个 pack 都已发布且 sha256 一致（tag 门禁）
 mac/entitlements.mac.plist: mac 主程序与全部嵌套二进制（引擎、llama-server、dylib）共用的 entitlements：JIT、ad-hoc 必需的 disable-library-validation、麦克风 audio-input
 .gitattributes: 强制 `*.sh` 为 LF。Windows runner 默认 autocrlf=true，CRLF 会让 Git Bash 报 `$'\r'`
 
 关联文件（不在本目录，同属打包层）
-../../.github/workflows/build.yml: 发布流水线。手动触发（workflow_dispatch）或用户推 tag `v*`；build（12 行）→ release（草稿，仅 tag）与 packs（engine-packs-v3，tag 或勾选 `publish_packs`）；手动可选 bench-macos
+../../.github/workflows/build.yml: 发布流水线。手动触发（workflow_dispatch）或用户推 tag `v*`；build（12 行）→ release（仅 tag：先 `verify-packs`，再建草稿）与 packs（engine-packs-v3，只由勾选 `publish_packs` 触发）；手动可选 bench-macos
 ../../.github/workflows/ci.yml: push main 的快速检查（外部贡献者的 PR 也跑）：renderer typecheck + vite build、Core typecheck + vitest、`cargo test --release --locked`（ubuntu-22.04 与 windows-2025）
 ../../.github/workflows/cla.yml: 外部贡献者 PR 的 CLA 守门。维护者直推 main，不经过它。按数字 ID 比对 PR 全部提交作者与 `.github/cla-signatures.txt`，未签署时留言并失败；用户名可改，不作凭据
 ../../frontend/electron-builder.cjs: electron-builder 唯一配置。渠道、资源布局、许可清单、签名、deb 依赖都在这里
@@ -62,7 +63,9 @@ deb 在 electron-builder 默认依赖之外加 `libxt6 libxrandr2`（uiohook、r
 AppImage 无法声明依赖：草稿 Release 的说明开头写明 llama.cpp 需要 libgomp 与 OpenSSL 3。缺它们时引擎照常启动，只是不报 llama.cpp。
 
 GPU 引擎包（名称取自 catalog `engine_packs[].platforms[].asset.name`，发布到 `asset.release` 即 engine-packs-v3）：
-`engine-pack-cuda-{win32-x64,linux-x64}.zip` · `engine-pack-vulkan-{win32-x64,win32-arm64,linux-x64,linux-arm64}.zip`
+`engine-pack-cuda-{win32-x64,linux-x64}-<引擎版本>.zip` · `engine-pack-vulkan-{win32-x64,win32-arm64,linux-x64,linux-arm64}-<引擎版本>.zip`。
+名字带引擎版本（MODEL_MANIFEST §5，自 3.0.1）：新版本的 pack 是新资产，与旧版本 catalog 钉住的资产并存；v3.0.0 的无版本号资产原样保留。
+Windows pack 内含导入表需要的 VC++ 运行库。
 win-x64 cuda 包实测 zip 1667 MiB（engine 会话构建），离 2 GiB 上限约 380 MiB。
 
 草稿 Release 含全部安装包与 `SHA256SUMS.txt`。packs 任务另产出 artifact `engine-packs-catalog-fragment`（`engine-packs.json`）。
@@ -89,7 +92,7 @@ resources/
   - metal：只写 Metal llama-server 及其 dylib，`<out-dir>` 是基础引擎暂存目录本身；darwin-x64 用 llama.cpp 的 macos-x64 构建。
   - cpu：只写 CPU 版 llama-server 及其运行库（win 为 win-cpu 构建，linux 为 ubuntu 构建），`<out-dir>` 同样是基础引擎暂存目录。不编译任何东西。
   - 下载缓存 `ECHOTYPE_PACK_CACHE`：CI 指向 `runner.temp/pack-cache`，不进 rust-cache。
-  - 依赖：cargo、curl、python；Windows cuda 另需 VS 的 `lib.exe`（windows-2025 自带）。llama.cpp 有 ubuntu cuda 12.8 预编译版，Linux 不需要 CUDA toolkit。
+  - 依赖：cargo、curl、python；Windows cuda 另需 VS 的 `lib.exe`（windows-2025 自带）。VC++ 运行库不由 make-pack 放入：build-engine.sh 在它之后统一按导入表补齐。llama.cpp 有 ubuntu cuda 12.8 预编译版，Linux 不需要 CUDA toolkit。
 - `engine/scripts/bench.sh <engine-dir> <out-dir>`：按 catalog 从 models-v3 下载模型并校验 sha256，构建 echotype-bench，输出 bench.json 与 BENCHMARKS.md。CI 把工作目录 `ECHOTYPE_BENCH_WORK` 指向 `runner.temp`。
 - 原生组件版本：`engine/third-party.json` 按 name 覆盖 `licenses/native.json`。
 
@@ -101,20 +104,21 @@ Windows x64 在本地构建：
 1. `bash scripts/ci/build-engine.sh win-x64`
 2. `cd frontend && npm ci && npm run build`
 3. `npx electron-builder --config electron-builder.cjs --win --x64 --publish never`，产出 `frontend/dist-package/EchoType-<v>-win-x64.{exe,zip}`。加 `--dir` 只出解包目录。
-4. `node scripts/ci/check-engine.mjs frontend/dist-package`：必须输出 `HELLO OK`，`engine_version` 等于 `engine/Cargo.toml` 的版本（v3 为 3.0.0），`runtimes` 含 `llama.cpp@b12360`。
+4. `node scripts/ci/check-engine.mjs frontend/dist-package`：必须输出 `imports OK` 与 `HELLO OK`，`engine_version` 等于 `engine/Cargo.toml` 的版本，`runtimes` 含 `llama.cpp@b12360`。
 
 其余目标在 GitHub 构建：用户推送 main 后，Actions → Build → Run workflow，分支选 main。
 - 每行产出 artifact `installer-<target-id>` 或 `engine-pack-<pack>-<target-id>`，并在 runner 上跑同一份 check-engine。
-- `publish_packs`：packs 任务把缺失的 GPU 引擎包补传到 engine-packs-v3，并产出 artifact `engine-packs-catalog-fragment`。用它回填 catalog 的 sha256 与 size_bytes。
+- `publish_packs`：packs 任务先检查每个 Windows pack 的导入表，再把缺失的 GPU 引擎包补传到 engine-packs-v3，并产出 artifact `engine-packs-catalog-fragment`。用它回填 catalog 的 sha256 与 size_bytes。
 - `channel`：steam / msstore 出商店构建，只产出 artifact。
 - `job`：bench-macos 只跑 Apple Silicon 基准。
 
-正式发布只在用户打 tag 时发生：
-1. 用户推 tag：`git tag v3.0.0 && git push origin v3.0.0`。版本号取自 tag。带后缀的 tag（`v3.0.0-beta.1`）标为预发布。
-2. 12 行全部成功后：release 任务建草稿 Release，重跑只覆盖草稿，已发布的拒绝覆盖；packs 任务补传缺失的 GPU 引擎包。
-3. 用户检查草稿后发布。
+正式发布分两段，顺序固定：
+1. **发布 pack**：catalog 里 pack 名已带新引擎版本、sha256 为 null。在 main 上手动触发 Build 并勾选 `publish_packs`。
+2. **回填 catalog**：orchestrator 用 artifact `engine-packs-catalog-fragment` 把 sha256 与 size_bytes 写进 catalog，提交到 main，由用户推送。
+3. **打 tag**：`git tag v3.0.1 && git push origin v3.0.1`。版本号取自 tag，带后缀的 tag（`v3.0.1-beta.1`）标为预发布。release 任务先跑 `verify-packs`：catalog 的每个 pack 都必须已在 engine-packs-v3 上且 sha256 一致，否则不建草稿。12 行全部成功后建草稿 Release，重跑只覆盖草稿，已发布的拒绝覆盖。
+4. 用户检查草稿后发布。
 
-engine-packs-v3 被所有已发布版本共用，旧版本的 catalog 钉住旧 sha256，所以同名资产从不覆盖：zip 可复现，内容未变则跳过，内容变了只告警。要换包须手动删除旧资产并更新 catalog。
+tag 不发布 pack：引擎二进制不可复现，tag 上重建的 pack 与已发布的同名资产内容不同。engine-packs-v3 被所有已发布版本共用，旧版本的 catalog 钉住旧资产，所以已有资产从不替换、从不删除：同名同内容跳过，同名不同内容即失败。换引擎就升引擎版本，pack 自然换名。
 
 ## 7. 验证
 
@@ -130,6 +134,13 @@ engine-packs-v3 被所有已发布版本共用，旧版本的 catalog 钉住旧 
 - deb 依赖名：Ubuntu 24.04 的 libssl3t64 Provides `libssl3`，libgomp1 不改名；22.04 与 Debian 12 直接是 libssl3。
 - 未在本地运行：make-pack cuda（engine 会话已构建，1667 MiB）、make-pack vulkan / metal、Linux 与 win-arm64 的 make-pack cpu、bench.sh。
 
+本地已验证（Windows x64，2026-11-14，v3.0.1 的 VC++ 运行库修复）：
+- 修复前：`pe-imports.mjs check` 在基础引擎目录报 44 个未解析导入，在 CUDA 包暂存目录报 55 个，全部是 msvcp140 / msvcp140_1 / vcruntime140 / vcruntime140_1。check-engine 与 `release-assets.mjs packs`（解开修复前的 CUDA zip）都因此失败；nvcuda.dll 与包内的 cuDNN / cuBLAS 都被正确解析。
+- 修复后：build-engine.sh 从 VS 18 的 `VC/Redist/MSVC/14.52.37025/x64/Microsoft.VC145.CRT` 复制。基础引擎补 msvcp140、vcruntime140、vcruntime140_1（26 个 PE 全部解析）；CUDA 包补 msvcp140、msvcp140_1、vcruntime140、vcruntime140_1（43 个 PE 全部解析），两处的 THIRD-PARTY-NOTICES.txt 各记一行。
+- 修复后的安装包 `EchoType-3.0.1-win-x64`：许可清单 232 项（含 Microsoft Visual C++ Runtime，linux 清单不含）；check-engine 输出 `imports OK` 与 `HELLO OK engine_version=3.0.1 runtimes=llama.cpp@b12360`。
+- `verify-packs`：当前 catalog（sha256 为 null）失败；v3.0.0 的 catalog 对照线上 engine-packs-v3 通过；改掉一个 pack 的 sha256、改一个不存在的名字，各报一条错误并失败。
+- 发布守卫（离线，进程内替换 gh，不连 GitHub）：同名不同内容的资产被拒绝且不上传、退出 1；缺失的资产才走上传。
+
 GitHub runner 已验证（Build run 43528065540，main cd0c58b，手动触发，2026-11-13）：12 行全部成功。
 - 6 个安装包行的 check-engine 全部 `HELLO OK engine_version=3.0.0`（当时 Cargo.toml 为 3.0.0）：win-x64、win-arm64、linux-x64、linux-arm64 为 `providers=cpu`；mac-arm64、mac-x64 经 ad-hoc 签名 + hardenedRuntime 后为 `providers=cpu,metal`，签名后的引擎与 Metal llama-server 均能启动。
 - Linux：cpal（ALSA + PulseAudio）在 ubuntu-22.04 与 ubuntu-22.04-arm 上链接并运行。产物名为 `-linux-x86_64.AppImage`、`-linux-amd64.deb`、`-linux-arm64.AppImage`、`-linux-arm64.deb`。
@@ -141,8 +152,9 @@ GitHub runner 已验证（Build run 43528065540，main cd0c58b，手动触发，
 尚未验证：
 - 引擎子进程能否通过 TCC 弹出麦克风授权：需要真机手动确认，CI 只证明能启动。ad-hoc 签名每次构建 cdhash 都变，升级后系统会重新询问授权。
 - Apple 基准：bench-macos 的 Metal/CoreML 实测，结果作为 artifact。
-- packs 任务首次创建 engine-packs-v3 并上传（对仓库的真实写入，需勾选 `publish_packs` 或推 tag）。用户决定等引擎定稿后再传。
-- release 任务：草稿创建与重跑覆盖（需推 tag）。
+- 带版本号的 pack 首次发布（v3.0.1，勾选 `publish_packs`）与 runner 上的导入表检查：win-arm64 的 CRT 目录只能在 windows-11-arm 上验证。
+- release 任务的 `verify-packs` 门禁在 runner 上的首次运行（推 v3.0.1 tag）。
+- 干净 Windows（未装 VC++ 运行库）上实际运行安装包与 CUDA 包：导入表检查证明 DLL 齐全，但没有在干净机器上跑过。
 - msstore 渠道的 AppX 构建（需要上面三个仓库变量）。
 
 法则：手动发布不走 PR · 一份配置 · 本地与 CI 同一脚本 · 原生构建不交叉编译 · 打包后必须握手 · 共用的发布资产只增不改
