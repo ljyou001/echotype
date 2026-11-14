@@ -84,12 +84,12 @@ gh release create models-v3 --repo ljyou001/echotype --title "Models v3" --notes
 
 | 文件 | 大小 | sha256 |
 |---|---|---|
-| `engine-pack-cuda-win32-x64.zip` | pending | pending |
-| `engine-pack-cuda-linux-x64.zip` | pending | pending |
-| `engine-pack-vulkan-win32-x64.zip` | pending | pending |
-| `engine-pack-vulkan-win32-arm64.zip` | pending | pending |
-| `engine-pack-vulkan-linux-x64.zip` | pending | pending |
-| `engine-pack-vulkan-linux-arm64.zip` | pending | pending |
+| `engine-pack-cuda-win32-x64.zip` | 1666.6 MiB | `123291cf3dd5c0c2fb20b03d9a3b40314b2cd60fa98664ef1355b27b097992b0` |
+| `engine-pack-cuda-linux-x64.zip` | 1689.7 MiB | `4c2e17cd8443568cef6561d8580a3d08d413abcd60359f4a4e1b7512d5e72f3c` |
+| `engine-pack-vulkan-win32-x64.zip` | 39.3 MiB | `afe32a609dccfca0cb93141fa2c3bdfddaf9708f88750a712c11a742fd10cb1a` |
+| `engine-pack-vulkan-win32-arm64.zip` | 31.7 MiB | `a2e81e7f85b757e409f17e4fd02f35e3ea561f33eed12ff2850d510229a9bc76` |
+| `engine-pack-vulkan-linux-x64.zip` | 52.7 MiB | `dc054ff8f048d6c32d487fc6e7fa431d0c3f72ffbb234439e5d81a7c9ec99345` |
+| `engine-pack-vulkan-linux-arm64.zip` | 44.7 MiB | `c42be27735944736627fbca3f21d94b3f758285176caeded56181f6b816cf0c9` |
 
 ## 上传后
 
