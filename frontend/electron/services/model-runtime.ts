@@ -7,6 +7,7 @@
  *        已解析 provider + 配套标点）序列化成 key，与已加载 key 相同就什么都不做 → 启动只加载一次。
  *        选中的 variant 需要 GPU 引擎包而当前引擎不是它时，先请装配层换引擎（ensureEngine），重连后再加载。
  *        加载单飞；听写中或 SESSION_BUSY 时推迟到空闲；provider 回退（所选硬件不可用）记入 loaded.providerUsed。
+ *        前置条件不满足（未选、未装、缺引擎包）是 blocked，不是 error：引擎本身没有出错。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import type { AppError, HardwareTarget, Settings } from "../ipc-contract.js";
@@ -20,7 +21,11 @@ import type { ModelResolver } from "./model-resolver.js";
 import { PROVIDER_KEY } from "./model-settings.js";
 import { resolveProvider } from "./variant-selection.js";
 
-export type RuntimePhase = "idle" | "loading" | "ready" | "error";
+/**
+ * blocked = 期望的模型因 Core 的前置条件不能加载（未选模型、未安装、没有可用版本、缺引擎包），没有请求过引擎；
+ * error = 引擎加载失败或报告模型不可用。只有 error 是引擎层面的错误。
+ */
+export type RuntimePhase = "idle" | "loading" | "ready" | "blocked" | "error";
 
 export interface LoadedModel {
   modelId: string;
@@ -107,7 +112,7 @@ export class ModelRuntime {
     }
     const desired = this.desired();
     if ("error" in desired) {
-      this.set({ phase: "error", modelId: desired.modelId, providerUsed: null, progress: null, error: desired.error, loaded: null });
+      this.set({ phase: "blocked", modelId: desired.modelId, providerUsed: null, progress: null, error: desired.error, loaded: null });
       return Promise.resolve();
     }
     if (desired.key === this.loadedKey) {

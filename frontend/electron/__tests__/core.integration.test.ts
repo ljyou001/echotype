@@ -2,10 +2,12 @@
  * [INPUT]: 依赖 core/create-core、core/paths、dev/mock-engine（以子进程运行）、真实 contracts/models.catalog.json；./helpers
  * [OUTPUT]: Core 端到端集成测试：真实 supervisor + mock 引擎进程 + 全部服务，只有 Electron 适配器是假的
  * [POS]: 验证跨服务的连线：启动只加载一次模型、热键 → 粘贴 → 历史、activeModel、模型设置只经专用入口且只在必要时重载、
- *        引擎崩溃后自动恢复、未安装模型的错误码、从 GPU 引擎包拉起引擎并加载需要它的 variant、引擎包失效回落内置引擎、
- *        安装需要引擎包的 variant 时先装引擎包并换引擎。
+ *        引擎崩溃后自动恢复、缺模型不是引擎错误、从 GPU 引擎包拉起引擎并加载需要它的 variant、引擎包失效回落内置引擎、
+ *        安装需要引擎包的 variant 时先装引擎包并换引擎；用 catalog 真实值验证引擎包三态（MODEL_MANIFEST §2 规则 1–4，假 fetch，不联网）；
+ *        数据根路径解析与首次启动从 v2 目录只读导入（导入前后目录指纹一致）。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
@@ -21,6 +23,7 @@ import { MOCK_FINAL_TEXT } from "../dev/mock-engine.js";
 import { ENGINE_EXECUTABLE, type EngineCommand, type EnginePackRef } from "../engine/engine-command.js";
 import type { CatalogData } from "../services/model-catalog.js";
 import type { KeyEvent } from "../services/hotkey-service.js";
+import type { SecretCrypto } from "../services/integrations/secret-store.js";
 import type { MachineProfile } from "../services/variant-selection.js";
 import { makeTempDir, makeZip, mockEngineCommand, waitFor } from "./helpers.js";
 
@@ -56,10 +59,13 @@ interface BootOptions {
   prepare?: (paths: CorePaths) => void;
   engineCommand?: (pack: EnginePackRef | null) => EngineCommand;
   hotkeyLimitation?: AppError | null;
+  fetch?: typeof fetch;
+  legacyHome?: string; // v2 应用的目录（ECHOTYPE_V2_HOME）；缺省不导入
+  secretCrypto?: SecretCrypto;
 }
 
 function bootCore(opts: BootOptions = {}) {
-  const paths = resolveCorePaths({ ECHOTYPE_HOME: makeTempDir("echotype-core-") });
+  const paths = resolveCorePaths({ ECHOTYPE_HOME: makeTempDir("echotype-core-"), ...(opts.legacyHome ? { ECHOTYPE_V2_HOME: opts.legacyHome } : {}) });
   activeCatalog = opts.catalog ?? CATALOG;
   const bootCatalogFile = opts.catalog ? path.join(paths.home, "catalog.json") : catalogFile;
   if (opts.catalog) fs.writeFileSync(bootCatalogFile, JSON.stringify(opts.catalog));
@@ -102,13 +108,14 @@ function bootCore(opts: BootOptions = {}) {
       },
       keyboard: { paste: () => pastes.push(clipboard) },
       keySource: { start: () => {}, stop: () => {}, onKey: (cb) => keys.on("key", cb) },
-      fetch: globalThis.fetch,
+      fetch: opts.fetch ?? globalThis.fetch,
       openQuickAction: (t) => quickActions.push(t),
       publishSnapshot: (s) => snapshots.push(s),
       publishModels: () => {},
       publishPacks: () => {},
       publishLevel: () => {},
       applyTheme: (t) => themes.push(`${t.mode}/${t.accent}`),
+      secretCrypto: opts.secretCrypto,
     },
   );
   cores.push(core);
@@ -120,6 +127,7 @@ function bootCore(opts: BootOptions = {}) {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const sha256 = (buf: Buffer) => createHash("sha256").update(buf).digest("hex");
 const ready = (latest: () => AppSnapshot | undefined) => waitFor(() => latest()?.engine.state === "ready", 15_000, "engine ready");
 
 describe("Core against the mock engine", () => {
@@ -212,16 +220,20 @@ describe("Core against the mock engine", () => {
     expect(loads()).toHaveLength(2);
   });
 
-  it("reports MODEL_NOT_INSTALLED when the active model is missing", async () => {
+  it("a missing active model is not an engine error: the engine stays ready and engine.error says why", async () => {
     const { core, latest } = bootCore();
     core.start();
     await ready(latest);
     const missing = core.catalog.all().find((m) => m.kind === "asr" && m.id !== ACTIVE)!.id;
     core.updateSettings({ models: { activeId: missing } });
-    await waitFor(() => latest()?.engine.state === "error", 2_000, "error state");
-    expect(latest()!.engine.error?.code).toBe("MODEL_NOT_INSTALLED");
+    await waitFor(() => latest()?.engine.error?.code === "MODEL_NOT_INSTALLED", 2_000, "MODEL_NOT_INSTALLED");
+    expect(latest()!.engine.state).toBe("ready");
     expect(latest()!.activeModel).toBeNull();
     await expect(core.activateModel(missing)).rejects.toThrow(/\[MODEL_NOT_INSTALLED\]/);
+
+    core.updateSettings({ models: { activeId: null } });
+    await waitFor(() => latest()?.engine.error?.code === "NO_ACTIVE_MODEL", 2_000, "NO_ACTIVE_MODEL");
+    expect(latest()!.engine.state).toBe("ready");
   });
 
   const cudaOffered = CATALOG.engine_packs.some((p) => p.id === "cuda" && p.platforms["win32-x64"]);
@@ -323,7 +335,7 @@ describe("Core against the mock engine", () => {
             ],
           },
         ],
-        engine_packs: [{ id: "cuda", target: "nvidia", providers: ["cuda"], protocol: 3, platforms: { [platform]: { asset: { name: "pack.zip", release: "engine-packs-v3", sha256: null, size_bytes: 0 } } } }],
+        engine_packs: [{ id: "cuda", target: "nvidia", providers: ["cuda"], protocol: 3, platforms: { [platform]: { asset: { name: "pack.zip", release: "engine-packs-v3", sha256: sha256(zips["pack.zip"]), size_bytes: zips["pack.zip"].length } } } }],
       };
       const { core, latest } = bootCore({ catalog, machine: { gpuVendors: ["nvidia"] } });
       core.start();
@@ -366,5 +378,180 @@ describe("Core against the mock engine", () => {
     const storage = await core.modelStorage();
     expect(storage.usedBytes).toBeGreaterThan(0);
     expect(storage.freeBytes).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================
+// 引擎包的三种状态（MODEL_MANIFEST §2 规则 1–4），用 main 上 catalog 的真实值：资产名、release、sha256、体积
+// ============================================================
+describe("engine packs with the real catalog values", () => {
+  const PLATFORM = "win32-x64"; // 与 bootCore 默认的 machine 一致
+  const realPack = CATALOG.engine_packs.find((p) => p.id === "cuda")?.platforms[PLATFORM]?.asset;
+  const gpuVariant = (modelId: string) => CATALOG.models.find((m) => m.id === modelId)?.variants.find((v) => v.requires_pack === "cuda");
+  const nvidia = { gpuVendors: ["nvidia"] };
+  const published = !!realPack?.sha256 && !!gpuVariant(ACTIVE);
+  const recordingFetch = (urls: string[], respond: (url: string) => Response) =>
+    (async (input: string | URL | Request) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      urls.push(url);
+      return respond(url);
+    }) as typeof fetch;
+  const notFound = () => new Response(null, { status: 404 });
+
+  it.runIf(published)("published, not installed: auto keeps the CPU version and never requests the pack", async () => {
+    const urls: string[] = [];
+    const { core, latest } = bootCore({ machine: nvidia, fetch: recordingFetch(urls, notFound) });
+    core.start();
+    await ready(latest);
+    expect(core.packViews().find((p) => p.id === "cuda")).toMatchObject({ sizeBytes: realPack!.size_bytes, install: { status: "not_installed", error: null } });
+    const view = core.models().find((m) => m.id === ACTIVE)!;
+    expect(view.selectedVariantId).toBe("cpu-int8");
+    expect(view.variants.map((v) => v.id)).toContain(gpuVariant(ACTIVE)!.id); // 已发布：显式 provider 可选它
+    expect(view.settings[0].options).toContain("cuda");
+
+    // 另一个有 CPU 与 CUDA 两个版本、都没装的模型：auto 的下载只去 CPU 的 zip
+    const other = CATALOG.models.find((m) => m.id !== ACTIVE && m.kind === "asr" && m.requires.length === 0 && m.variants.some((v) => v.target === "cpu") && !!gpuVariant(m.id))!;
+    await expect(core.installModel(other.id)).rejects.toMatchObject({ error: { code: "DOWNLOAD_FAILED" } });
+    expect(urls.length).toBeGreaterThan(0);
+    expect(urls.filter((u) => u.includes(realPack!.name))).toEqual([]);
+    const card = core.models().find((m) => m.id === other.id)!.variants.find((v) => v.target === "cpu")!;
+    expect(card.install).toMatchObject({ status: "error", error: { code: "DOWNLOAD_FAILED" } }); // 失败落在卡片上
+    expect(core.snapshot().engine).toMatchObject({ state: "ready", error: null }); // 不进引擎状态
+  });
+
+  it.runIf(published)("published, not installed: an explicit provider downloads the pack from its real URL and checks the real sha256", async () => {
+    const urls: string[] = [];
+    const tampered = (url: string) => (url.endsWith(realPack!.name) ? new Response("not the pack", { status: 200, headers: { "content-length": "12" } }) : notFound());
+    const { core, latest } = bootCore({ machine: nvidia, fetch: recordingFetch(urls, tampered) });
+    core.start();
+    await ready(latest);
+    const variant = gpuVariant(ACTIVE)!;
+    core.updateModelSettings(ACTIVE, { provider: "cuda" });
+    expect(core.models().find((m) => m.id === ACTIVE)!.selectedVariantId).toBe(variant.id);
+
+    const err = (await core.installModel(ACTIVE).catch((e: unknown) => e)) as { error: AppError };
+    expect(err.error.code).toBe("CHECKSUM_MISMATCH");
+    expect(err.error.message).toContain(realPack!.sha256!); // 按目录里的真实 sha256 校验
+    expect(urls).toEqual([`https://github.com/ljyou001/echotype/releases/download/${realPack!.release}/${realPack!.name}`]); // 包失败后不再下载模型
+    expect(core.packs.isInstalled("cuda")).toBe(false);
+    expect(core.packViews().find((p) => p.id === "cuda")!.install).toMatchObject({ status: "error", error: { code: "CHECKSUM_MISMATCH" } });
+    expect(core.registry.state(ACTIVE, variant.id)).toMatchObject({ status: "error", error: { code: "CHECKSUM_MISMATCH" } });
+    await waitFor(() => latest()?.engine.error?.code === "MODEL_NOT_INSTALLED", 2_000, "waiting for the GPU version");
+    expect(latest()!.engine.state).toBe("ready"); // 安装失败、缺模型都不是引擎错误
+    expect(core.supervisor.status().packId).toBeNull();
+  });
+
+  it.runIf(published)("not published (sha256 null): the pack is left out of the list, its version stays listed but is never chosen, its URL is never requested", async () => {
+    const urls: string[] = [];
+    const catalog = structuredClone(CATALOG);
+    catalog.engine_packs.find((p) => p.id === "cuda")!.platforms[PLATFORM].asset.sha256 = null;
+    const { core, latest } = bootCore({ catalog, machine: nvidia, fetch: recordingFetch(urls, notFound) });
+    core.start();
+    await ready(latest);
+    const variant = gpuVariant(ACTIVE)!;
+    expect(core.packViews().map((p) => p.id)).not.toContain("cuda"); // UI：版本需要的包不在列表里 = 暂不可用
+    const view = core.models().find((m) => m.id === ACTIVE)!;
+    expect(view.variants.map((v) => v.id)).toContain(variant.id);
+    expect(view.settings[0].options).toContain("cuda");
+    core.updateModelSettings(ACTIVE, { provider: "cuda" });
+    expect(core.models().find((m) => m.id === ACTIVE)!.selectedVariantId).toBe("cpu-int8"); // 显式 cuda 拿不到 → 回落 auto
+
+    await expect(core.installPack("cuda")).rejects.toMatchObject({ error: { code: "PACK_UNAVAILABLE" } });
+    await expect(core.installModel(ACTIVE, variant.id)).rejects.toMatchObject({ error: { code: "PACK_UNAVAILABLE" } });
+    expect(core.registry.state(ACTIVE, variant.id).error?.code).toBe("PACK_UNAVAILABLE");
+    expect(urls).toEqual([]);
+    expect(core.snapshot().engine).toMatchObject({ state: "ready", error: null });
+  });
+
+  it.runIf(published)("installed: auto uses the GPU version and the engine runs from the pack", async () => {
+    const variant = gpuVariant(ACTIVE)!;
+    const { core, latest, loads } = bootCore({
+      machine: nvidia,
+      fetch: recordingFetch([], notFound),
+      prepare: (paths) => {
+        fakePack(paths, "cuda");
+        fakeInstall(paths, ACTIVE, variant.id);
+      },
+    });
+    core.start();
+    await ready(latest);
+    expect(core.models().find((m) => m.id === ACTIVE)!.selectedVariantId).toBe(variant.id);
+    expect(core.supervisor.status().packId).toBe("cuda");
+    expect(loads().at(-1)![1]).toMatchObject({ variant: { id: variant.id }, settings: { provider: "cuda" } });
+    expect(core.snapshot().activeModel).toMatchObject({ id: ACTIVE, variantId: variant.id, providerUsed: "cuda", fallback: false });
+    expect(core.packViews().find((p) => p.id === "cuda")).toMatchObject({ inUse: true, install: { status: "installed", error: null } });
+  });
+});
+
+// ============================================================
+// 数据根：~/.echotype-v3；v2 的 ~/.echotype 只读
+// ============================================================
+const FAKE_CRYPTO: SecretCrypto = {
+  backend: async () => "os-keychain",
+  encrypt: async (s) => Buffer.from(`enc:${s}`),
+  decrypt: async (b) => ({ plain: b.toString().replace(/^enc:/, ""), reencrypt: false }),
+};
+
+/** 目录树的指纹：每个条目的相对路径、类型、mtime，文件另加大小与 sha256 */
+function hashTree(root: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  const walk = (dir: string) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      const st = fs.statSync(p);
+      const rel = path.relative(root, p);
+      if (e.isDirectory()) {
+        out[rel] = `dir ${st.mtimeMs}`;
+        walk(p);
+      } else out[rel] = `file ${st.size} ${st.mtimeMs} ${sha256(fs.readFileSync(p))}`;
+    }
+  };
+  walk(root);
+  out["."] = `dir ${fs.statSync(root).mtimeMs}`;
+  return out;
+}
+
+describe("data root", () => {
+  it("defaults to ~/.echotype-v3 with Electron's userData inside; v2's ~/.echotype is only an import source", () => {
+    const user = path.resolve("/users/u");
+    const p = resolveCorePaths({}, user);
+    expect(p.home).toBe(path.join(user, ".echotype-v3"));
+    expect(p.electronDir).toBe(path.join(p.home, "electron"));
+    const owned = [p.settingsFile, p.historyFile, p.instancesFile, p.secretsFile, p.dictionaryFile, p.modelsDir, p.enginesDir, p.catalogCacheFile, p.logsDir, p.recordingsDir];
+    expect(owned.every((f) => f.startsWith(p.home + path.sep))).toBe(true);
+    expect(p.legacy).toEqual({
+      home: path.join(user, ".echotype"),
+      settingsFile: path.join(user, ".echotype", "settings.json"),
+      integrationsFile: path.join(user, ".echotype", "integrations.json"),
+    });
+    expect(resolveCorePaths({ ECHOTYPE_HOME: "/tmp/x" }, user).legacy).toBeNull(); // 临时目录不读用户真实的 v2 数据
+    expect(resolveCorePaths({ ECHOTYPE_HOME: "/tmp/x", ECHOTYPE_V2_HOME: "/tmp/v2" }, user).legacy?.home).toBe(path.resolve("/tmp/v2"));
+    expect(resolveCorePaths({ ECHOTYPE_V2_HOME: path.join(user, ".echotype-v3") }, user).legacy).toBeNull(); // 同一目录不算旧数据
+  });
+
+  it("imports v2 settings and keys on first launch without touching the v2 folder (hash before = after)", async () => {
+    const legacy = makeTempDir("echotype-v2-home-");
+    const v1 = { hotkey: { recording: { accelerator: "F8", enabled: true } }, app: { lastActiveModelId: "paraformer-offline", onboardingCompleted: true } };
+    const integrations = { instances: [{ instanceId: "c", pluginId: "clawbot", name: "OpenClaw", order: 0, enabled: true, config: { apiKey: "tok" } }], defaultIntegrationId: "c" };
+    fs.writeFileSync(path.join(legacy, "settings.json"), JSON.stringify(v1));
+    fs.writeFileSync(path.join(legacy, "integrations.json"), JSON.stringify(integrations));
+    fs.mkdirSync(path.join(legacy, "models", "paraformer-offline"), { recursive: true });
+    fs.writeFileSync(path.join(legacy, "models", "paraformer-offline", "model.onnx"), "v2 model");
+    fs.mkdirSync(path.join(legacy, "logs"));
+    fs.writeFileSync(path.join(legacy, "logs", "frontend.log"), "v2 log");
+    fs.writeFileSync(path.join(legacy, "history.jsonl"), `${JSON.stringify({ text: "v2" })}\n`);
+    const before = hashTree(legacy);
+
+    const { core, paths, latest } = bootCore({ legacyHome: legacy, secretCrypto: FAKE_CRYPTO });
+    core.start();
+    await ready(latest);
+    await waitFor(() => fs.existsSync(paths.instancesFile), 5_000, "integrations imported");
+    expect(core.settings.get().hotkey.accelerator).toBe("F8");
+    expect(core.settings.get().models.activeId).toBe("paraformer-zh");
+    expect(core.integrations.list()[0]).toMatchObject({ actionId: "ask-ai", secrets: { apiKey: true } });
+    await core.dispose();
+
+    expect(hashTree(legacy)).toEqual(before);
+    expect(fs.existsSync(path.join(paths.modelsDir, "paraformer-offline"))).toBe(false); // v2 模型格式不同，不导入
   });
 });

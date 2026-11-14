@@ -1,18 +1,23 @@
 /**
- * [INPUT]: 依赖 electron 的 contextBridge、ipcRenderer；依赖 ./ipc-contract 的 IPC 常量与 EchotypeBridge 类型
- * [OUTPUT]: 在渲染进程暴露 window.echotype（EchotypeBridge 的完整实现），此外不暴露任何东西
+ * [INPUT]: 依赖 electron 的 contextBridge、ipcRenderer；依赖 ./ipc-contract 的 IPC 常量与 EchotypeBridge 类型；
+ *          依赖 ./bridge-error 的错误翻译
+ * [OUTPUT]: 在渲染进程定义 window.echotype（EchotypeBridge 的完整实现），此外不暴露任何东西
  * [POS]: UI 层与 Core 层之间唯一的门。只使用 IPC 表里的 channel 名；不再暴露 v2 的通用 send/on。
  *        由 esbuild 打包为 dist-electron/preload.cjs（CJS，内联 IPC 常量），因此可以 import ESM 的契约文件，
  *        且在沙箱渲染进程中只 require("electron")。发行渠道由主进程经 additionalArguments 传入（--echotype-channel=）。
+ *        任何失败的调用都拒绝为页面自己的 Error，带 code 与不含包装的 message（契约 AppError 下方的约定）。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
+import { installInMainWorld, toBridgeFailure } from "./bridge-error.js";
 import { IPC, type EchotypeBridge, type Unsubscribe } from "./ipc-contract.js";
 
 const CHANNEL_ARG = "--echotype-channel="; // 与 shell/system.ts 的 CHANNEL_ARG 一致（preload 不引入主进程模块）
 const releaseChannel = process.argv.find((a) => a.startsWith(CHANNEL_ARG))?.slice(CHANNEL_ARG.length) || "github";
 
-const invoke = <T>(channel: string, ...args: unknown[]): Promise<T> => ipcRenderer.invoke(channel, ...args) as Promise<T>;
+/** 失败时拒绝为 { code, message }（普通对象才能完整过桥），页面侧由 installInMainWorld 还原为 Error */
+const invoke = <T>(channel: string, ...args: unknown[]): Promise<T> =>
+  (ipcRenderer.invoke(channel, ...args) as Promise<T>).catch((err: unknown) => Promise.reject(toBridgeFailure(err)));
 
 function subscribe<T>(channel: string, cb: (payload: T) => void): Unsubscribe {
   const listener = (_event: IpcRendererEvent, payload: T) => cb(payload);
@@ -117,4 +122,5 @@ const bridge: EchotypeBridge = {
   },
 };
 
-contextBridge.exposeInMainWorld("echotype", bridge);
+// 不用 exposeInMainWorld：它复制 Error 时丢掉 code。改在页面世界里定义 window.echotype，拒绝值还原为带 code 的 Error
+contextBridge.executeInMainWorld({ func: installInMainWorld, args: [bridge] });

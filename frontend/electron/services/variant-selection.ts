@@ -3,10 +3,12 @@
  * [OUTPUT]: 导出 MachineProfile、SelectionContext、listedVariants、hardwareSupports、providerOptions、selectVariant、
  *          resolveProvider、platformKey、AUTO_TARGET_ORDER
  * [POS]: MODEL_MANIFEST §2 的 variant 选择规则的唯一实现，纯函数。
- *        两层判定：平台层（这个 OS/架构能否得到该 variant：apple 只在 darwin-arm64，带 requires_pack 的要求本平台有包）
+ *        两层判定：平台层（这个 OS/架构能否得到该 variant：apple 只在 darwin-arm64，带 requires_pack 的要求本平台有这个包）
  *        与硬件层（这台机器有没有对应 GPU；探测失败时乐观视为有）。
- *        auto：按 nvidia → apple → cpu → vulkan 的顺序，先选已装好可运行的，再选可安装的；
- *        显式 provider：选列出该 provider 的 variant，优先已安装；该 provider 本机不再提供时回落 auto。
+ *        列出 ≠ 可选：包未发布（sha256 为 null）的 variant 照样列出、provider 照样进选项（UI 显示"暂不可用"），但永远不被选中。
+ *        auto：按 nvidia → apple → cpu → vulkan 的顺序，跳过引擎包没装好的 variant，先选已装好可运行的，再选可安装的；
+ *        因此 auto 永远不会引出引擎包下载。没有候选时为 null（不退回任意版本）。
+ *        显式 provider：选列出该 provider、且引擎包已装好或已发布的 variant，优先已安装；没有这样的 variant 时回落 auto。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import type { HardwareTarget } from "../ipc-contract.js";
@@ -23,7 +25,8 @@ export interface MachineProfile {
 
 export interface SelectionContext {
   machine: MachineProfile;
-  packOffered: (packId: string) => boolean; // 目录里本平台有这个引擎包
+  packOffered: (packId: string) => boolean; // 目录里本平台有这个引擎包（不论是否已发布）
+  packPublished: (packId: string) => boolean; // 且 sha256 非 null：可以下载
   packUsable: (packId: string) => boolean; // 已安装且健康
   variantInstalled: (modelId: string, variantId: string) => boolean;
 }
@@ -35,6 +38,11 @@ function platformSupports(v: CatalogVariant, ctx: SelectionContext): boolean {
   if (v.target === "apple") return ctx.machine.platform === "darwin" && ctx.machine.arch === "arm64";
   if (v.requires_pack) return ctx.packOffered(v.requires_pack) || ctx.packUsable(v.requires_pack);
   return true;
+}
+
+/** 能拿到：不需要引擎包，或包已装好，或包已发布（可下载） */
+function obtainable(v: CatalogVariant, ctx: SelectionContext): boolean {
+  return !v.requires_pack || ctx.packUsable(v.requires_pack) || ctx.packPublished(v.requires_pack);
 }
 
 /** 硬件层：这台机器有没有对应的 GPU */
@@ -66,12 +74,19 @@ export function providerOptions(model: CatalogModel, ctx: SelectionContext): str
 export function selectVariant(model: CatalogModel, provider: string, ctx: SelectionContext): CatalogVariant | null {
   const listed = listedVariants(model, ctx);
   if (provider !== "auto") {
-    const matching = listed.filter((v) => v.providers.includes(provider as CatalogVariant["providers"][number]));
+    const matching = listed.filter((v) => v.providers.includes(provider as CatalogVariant["providers"][number]) && obtainable(v, ctx));
     const chosen = matching.find((v) => runnable(model, v, ctx)) ?? matching[0];
     if (chosen) return chosen;
   }
-  const ordered = AUTO_TARGET_ORDER.flatMap((t) => listed.filter((v) => v.target === t && hardwareSupports(t, ctx.machine)));
-  return ordered.find((v) => runnable(model, v, ctx)) ?? ordered[0] ?? listed[0] ?? null;
+  const candidates = autoCandidates(listed, ctx);
+  return candidates.find((v) => runnable(model, v, ctx)) ?? candidates[0] ?? null;
+}
+
+/** auto 的候选：本机硬件能跑、且不需要再装引擎包（MODEL_MANIFEST §2 规则 1），按 AUTO_TARGET_ORDER 排序。 */
+function autoCandidates(listed: CatalogVariant[], ctx: SelectionContext): CatalogVariant[] {
+  return AUTO_TARGET_ORDER.flatMap((t) =>
+    listed.filter((v) => v.target === t && hardwareSupports(t, ctx.machine) && (!v.requires_pack || ctx.packUsable(v.requires_pack))),
+  );
 }
 
 /** model.load 前把 "auto" 解析成具体 provider（ENGINE_PROTOCOL §6），优先引擎 hello 报告可用的那个。 */

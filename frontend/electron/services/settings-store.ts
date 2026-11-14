@@ -2,8 +2,9 @@
  * [INPUT]: 依赖 node:fs；依赖 core/atomic-file 的原子写与读 JSON、core/emitter、core/logger；
  *          依赖 ./settings-schema 的默认值与合并规则、./settings-migration 的 v1 迁移
  * [OUTPUT]: 导出 SettingsStore（load / get / update / setModelValues / onChange）、SettingsValidationError
- * [POS]: 用户设置的唯一真相源（~/.echotype/settings.json，schemaVersion 2）。
+ * [POS]: 用户设置的唯一真相源（<home>/settings.json，schemaVersion 2）。
  *        启动时读一次盘，此后所有读取走内存缓存（热键回调绝不读盘）。写入一律 tmp + rename。
+ *        首次启动（本目录无 settings.json）从 v2 应用的 settings.json 只读导入：只读源文件，从不改写、改名或备份它。
  *        副作用（重注册热键、mic.configure、重载模型）不在这里，由 create-core 订阅 onChange 分发。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -41,9 +42,11 @@ export class SettingsStore {
     this.current = deepFreeze(createDefaultSettings(ctx));
   }
 
-  /** 读盘一次：缺失 → 默认值；v1 → 迁移并备份原文件；损坏 → 备份后用默认值。 */
-  load(): Settings {
-    const defaults = createDefaultSettings(this.ctx);
+  /**
+   * 读盘一次：存在 → 合并到默认值（v1 格式就地翻译）；损坏 → 备份后用默认值；
+   * 缺失 → 从 legacyFile（v2 应用的 settings.json）只读导入，没有可导入的就用默认值。结果只写入本目录。
+   */
+  load(legacyFile: string | null = null): Settings {
     let raw: unknown;
     try {
       raw = readJsonFile(this.file);
@@ -53,25 +56,32 @@ export class SettingsStore {
       fs.copyFileSync(this.file, backup);
       raw = undefined;
     }
-
-    let next: Settings;
-    if (raw === undefined) {
-      next = defaults;
-      this.persist(next);
-    } else if (isV1Settings(raw)) {
-      const { settings, errors } = mergeSettings(defaults, migrateV1(raw), this.ctx, { allowPerModel: true });
-      if (errors.length) this.log.warn("v1 values dropped during migration", { errors });
-      fs.copyFileSync(this.file, `${this.file}.v1.bak`);
-      this.persist(settings);
-      this.log.info("migrated settings v1 → v2", { backup: `${this.file}.v1.bak` });
-      next = settings;
-    } else {
-      const { settings, errors } = mergeSettings(defaults, raw, this.ctx, { allowPerModel: true });
-      if (errors.length) this.log.warn("invalid values in settings.json were reset", { errors });
-      next = settings;
-    }
+    const imported = raw === undefined && legacyFile ? this.readLegacy(legacyFile) : undefined;
+    const next = this.fromRaw(raw ?? imported);
+    if (raw === undefined) this.persist(next);
+    if (imported !== undefined) this.log.info("imported settings from the v2 app (read-only)", { from: legacyFile });
     this.current = deepFreeze(next);
     return this.current;
+  }
+
+  /** 只读：任何失败都当作没有可导入的设置。 */
+  private readLegacy(file: string): unknown {
+    try {
+      return readJsonFile(file);
+    } catch (err) {
+      this.log.warn("v2 settings unreadable; starting from defaults", { file, err });
+      return undefined;
+    }
+  }
+
+  /** v1（{hotkey, app}）先翻译成补丁；v1 与 schemaVersion 2 都按同一套规则合并到默认值上。 */
+  private fromRaw(raw: unknown): Settings {
+    const defaults = createDefaultSettings(this.ctx);
+    if (raw === undefined) return defaults;
+    const v1 = isV1Settings(raw);
+    const { settings, errors } = mergeSettings(defaults, v1 ? migrateV1(raw) : raw, this.ctx, { allowPerModel: true });
+    if (errors.length) this.log.warn(v1 ? "v1 values dropped during migration" : "invalid values in settings were reset", { errors });
+    return settings;
   }
 
   get(): Settings {

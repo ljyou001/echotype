@@ -1,9 +1,12 @@
 /**
  * [INPUT]: 依赖 ./model-catalog 的 EnginePack、ModelCatalog；依赖 ./asset-installer 的安装流水线；依赖 ./install-jobs；
  *          依赖 engine/engine-command 的 ENGINE_EXECUTABLE；依赖 ipc-contract 的 EnginePackView、AppError
- * [OUTPUT]: 导出 EnginePacks（scan / offered / isInstalled / usable / markOutdated / preferred / dir / views / install / remove / onChange）
- * [POS]: 可选 GPU 引擎包（MODEL_MANIFEST §5）的安装态：~/.echotype/engines/<pack id>/，内含完整的 echotype-engine。
- *        本平台（<platform>-<arch>）有资产且目录 protocol 与内置引擎一致才算"提供"。
+ * [OUTPUT]: 导出 EnginePacks（scan / offered / published / isInstalled / usable / markOutdated / preferred / dir / views / install / remove / onChange）
+ * [POS]: 可选 GPU 引擎包（MODEL_MANIFEST §5）的安装态：<home>/engines/<pack id>/，内含完整的 echotype-engine。
+ *        本平台（<platform>-<arch>）有资产且目录 protocol 与内置引擎一致才算"提供"；
+ *        资产的 sha256 为 null 即"未发布"（§2 规则 4）：不进列表（UI 据此把需要它的版本显示为暂不可用），
+ *        install 以 PACK_UNAVAILABLE 拒绝，从不请求它的 URL。列表 = 已发布或已安装的包。
+ *        已发布的包与模型走同一条安装流水线，下载后必按目录的 sha256 校验。
  *        装好的包被标记 PACK_OUTDATED（握手协议不符或反复崩溃）后不再用于拉起引擎，直到重新安装。
  *        用哪个包拉起引擎由 preferred() 决定：当前模型需要的包优先，否则第一个可用的包；没有则用内置引擎。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -52,6 +55,11 @@ export class EnginePacks {
     return !!pack && pack.protocol === this.opts.protocol && !!pack.platforms[this.opts.platformKey];
   }
 
+  /** 已发布：本平台的资产带 sha256，可以下载并校验 */
+  published(id: string): boolean {
+    return this.offered(id) && !!this.asset(id)?.sha256;
+  }
+
   isInstalled(id: string): boolean {
     return this.jobs.isInstalled(id);
   }
@@ -85,12 +93,12 @@ export class EnginePacks {
   views(inUse: string | null): EnginePackView[] {
     return this.opts.catalog
       .packs()
-      .filter((p) => this.offered(p.id) || this.isInstalled(p.id))
+      .filter((p) => this.published(p.id) || this.isInstalled(p.id))
       .map((p) => ({
         id: p.id,
         target: p.target,
         providers: p.providers,
-        sizeBytes: p.platforms[this.opts.platformKey]?.asset.size_bytes ?? 0,
+        sizeBytes: this.asset(p.id)?.size_bytes ?? 0,
         install: { ...this.jobs.state(p.id) },
         inUse: p.id === inUse,
       }));
@@ -101,9 +109,11 @@ export class EnginePacks {
   }
 
   install(id: string): Promise<void> {
-    const pack = this.opts.catalog.pack(id);
-    if (!pack || !this.offered(id)) return Promise.reject(new InstallError("PACK_UNAVAILABLE", `The ${id} engine pack is not offered for ${this.opts.platformKey}.`));
-    const asset = pack.platforms[this.opts.platformKey].asset;
+    const asset = this.asset(id);
+    if (!asset || !this.published(id)) {
+      const error = this.unavailable(id);
+      return Promise.reject(new InstallError(error.code, error.message));
+    }
     this.outdated.delete(id);
     return this.jobs.run(id, (signal, onProgress) =>
       installAsset(
@@ -120,6 +130,16 @@ export class EnginePacks {
         if (process.platform !== "win32") fs.chmodSync(this.executable(id), 0o755); // zip 不一定保留可执行位
       }),
     );
+  }
+
+  private asset(id: string): AssetRef | null {
+    return this.opts.catalog.pack(id)?.platforms[this.opts.platformKey]?.asset ?? null;
+  }
+
+  private unavailable(id: string): AppError {
+    return this.offered(id)
+      ? { code: "PACK_UNAVAILABLE", message: `The ${id} engine pack for ${this.opts.platformKey} isn't published yet.` }
+      : { code: "PACK_UNAVAILABLE", message: `The ${id} engine pack is not offered for ${this.opts.platformKey}.` };
   }
 
   /** 调用方负责先让引擎离开该包（重启到内置引擎），否则 Windows 删不掉正在运行的文件。 */

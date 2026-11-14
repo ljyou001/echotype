@@ -7,7 +7,10 @@
  *        没有麦克风：引擎以 --fake-mic 播放 zh.wav、en.wav（经 ECHOTYPE_ENGINE_ARGS 传入）。样例目录缺省为
  *        <repo>/engine/target/test-wavs（engine/scripts/fetch-test-wavs.sh 的输出），ECHOTYPE_SMOKE_WAVS 覆盖；
  *        缺文件时一行报错并给出该跑的命令，Core 不替人下载。
- *        检查：hello → 默认模型安装与加载 → 中文听写与历史 → 英文半角标点 → 配套标点模型 → 杀引擎后自动恢复 → activeModel。
+ *        检查：hello → 全新目录引擎 ready（缺模型不是引擎错误）→ auto 选 CPU 版本 → 默认模型安装与加载 → 中文听写与历史 →
+ *        英文半角标点 → 配套标点模型 → 杀引擎后自动恢复 → activeModel → 全程没有请求过任何引擎包的 URL。
+ *        ECHOTYPE_SMOKE_PACK=<包 id>（如 cuda）追加一段：显式 provider → 下载已发布的引擎包（按 catalog 的真实 sha256 校验）→
+ *        从包拉起引擎 → 下载并加载 GPU 版本 → 中文听写。
  *        文本按 EXPECT 比对：样例按 sha256 钉死，引擎整句解码 + ITN，结果确定。
  *        结尾打印每个模型的 load_ms 与 release_to_final_ms（取自 Core 日志）。输出关闭，不装全局键盘钩子。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -23,6 +26,8 @@ import { Checks, openProbeWindow, readCoreLog, sleep, until, writeSmokeSettings,
 interface CatalogVariant {
   id: string;
   target: string;
+  providers: string[];
+  requires_pack: string | null;
   asset: { name: string; sha256: string | null; size_bytes: number };
 }
 interface CatalogModel {
@@ -35,6 +40,7 @@ interface CatalogModel {
 interface Catalog {
   default_model_id: string;
   models: CatalogModel[];
+  engine_packs: Array<{ id: string; platforms: Record<string, { asset: { name: string; sha256: string | null; size_bytes: number } }> }>;
 }
 
 type ClipName = "zh" | "en";
@@ -51,14 +57,13 @@ const FULL_WIDTH = /[，。？！、；：]/;
 const DEFAULT_WAVS = path.join("engine", "target", "test-wavs");
 
 // ============================================================
-// 期望文本。zh 只比尾巴"早上9点至下午5点。"（ITN + 句号）：SenseVoice 把"开放"听成"开饭"，是模型差异，不断言；
-// 配套标点模型的 zh 整句比对（逗号来自标点模型）；en 只有默认模型（多语种）听，比对句尾（半角、"boy" 后无逗号、ITN 数字）。
-// en 末词不比：经 Core 的 SenseVoice cpu-int8 稳定听成 "code"，引擎自己的基准里是 "gold"，与"开饭"同属模型差异
+// 期望文本。zh 只比尾巴"早上9点至下午5点。"（ITN + 句号）：首词"开放/开饭"随模型而变，不断言；
+// 配套标点模型的 zh 整句比对（逗号来自标点模型）；en 只有默认模型（多语种）听，比对句尾（半角、"boy" 后无逗号、ITN 数字、末词 gold）
 // ============================================================
 const EXPECT = {
   zhTail: "早上9点至下午5点。",
   zhCompanion: "开放时间，早上9点至下午5点。",
-  enTail: /called for the boy and presented him with 50 pieces of \w+\.$/,
+  enTail: "called for the boy and presented him with 50 pieces of gold.",
 } as const;
 
 export const realSmoke: SmokeFactory = (catalogFile, layout) => {
@@ -76,15 +81,22 @@ export const realSmoke: SmokeFactory = (catalogFile, layout) => {
   const mirror = process.env.ECHOTYPE_SMOKE_ASSETS ? new AssetMirror(path.resolve(process.env.ECHOTYPE_SMOKE_ASSETS)) : null;
   const engine = resolveEngineCommand({ layout, env: process.env, execPath: process.execPath, pack: null }).command;
   const catalog = JSON.parse(fs.readFileSync(catalogFile, "utf-8")) as Catalog;
+  const requested: string[] = []; // Core 发出的每个下载 URL（镜像改写之前）
   return {
     home,
-    budgetMs: 30 * 60_000, // 首次从 GitHub 下载约 300 MB
-    adaptFetch: mirror ? (base) => mirror.adapt(base) : undefined,
-    run: (ctx) => runRealSmoke(ctx, { engine, wavs, clips, mirror, catalog, home }),
+    budgetMs: 30 * 60_000, // 首次从 GitHub 下载约 300 MB；带引擎包再加约 2.6 GB
+    adaptFetch: (base) => {
+      const inner = mirror ? mirror.adapt(base) : base;
+      return ((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+        requested.push(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+        return inner(input, init);
+      }) as typeof fetch;
+    },
+    run: (ctx) => runRealSmoke(ctx, { engine, wavs, clips, mirror, catalog, home, requested, pack: process.env.ECHOTYPE_SMOKE_PACK || null }),
     finish: (code) => {
       mirror?.close();
-      // 引擎已停，模型（约 600 MB 解压后）可以删；Chromium 在退出前仍占着 userData，所以目录本身留下
-      if (code === 0) fs.rmSync(path.join(home, "models"), { recursive: true, force: true, maxRetries: 3 });
+      // 引擎已停，模型与引擎包（解压后数 GB）可以删；Chromium 在退出前仍占着 userData，所以目录本身留下
+      if (code === 0) for (const dir of ["models", "engines"]) fs.rmSync(path.join(home, dir), { recursive: true, force: true, maxRetries: 3 });
       process.stdout.write(`${code === 0 ? "logs" : "home kept for inspection"}: ${code === 0 ? path.join(home, "logs") : home}\n`);
     },
   };
@@ -97,6 +109,8 @@ interface RunOptions {
   mirror: AssetMirror | null;
   catalog: Catalog;
   home: string;
+  requested: string[];
+  pack: string | null; // ECHOTYPE_SMOKE_PACK
 }
 
 async function runRealSmoke(ctx: SmokeContext, o: RunOptions): Promise<number> {
@@ -174,7 +188,9 @@ async function runRealSmoke(ctx: SmokeContext, o: RunOptions): Promise<number> {
     report.hello = `engine ${hello.engineVersion} · providers ${hello.providers.join(",")} · runtimes ${Object.entries(hello.runtimes).map(([k, v]) => `${k} ${v}`).join(", ")}`;
     checks.check("hello: runtimes and providers", "sherpa-onnx" in hello.runtimes && hello.providers.includes("cpu"), hello);
     await until(() => core.snapshot().engine.error?.code === "MODEL_NOT_INSTALLED", 15_000, "MODEL_NOT_INSTALLED");
-    checks.check("fresh home reports MODEL_NOT_INSTALLED", true);
+    checks.check("fresh home: engine ready, engine.error MODEL_NOT_INSTALLED (a missing model is not an engine error)", core.snapshot().engine.state === "ready", core.snapshot().engine);
+    const selected = core.models().find((m) => m.id === plan.first.id)?.selectedVariantId;
+    checks.check(`auto selects ${plan.first.id}/${cpuVariant(plan.first).id} (never a variant whose pack is not installed)`, selected === cpuVariant(plan.first).id, selected);
 
     // ---------- 默认模型：安装 → 加载 → 中文 → 历史 → 英文 ----------
     let before = readyLines();
@@ -190,7 +206,7 @@ async function runRealSmoke(ctx: SmokeContext, o: RunOptions): Promise<number> {
 
     const en = await dictate("en");
     if (plan.first.languages?.includes("en")) {
-      checks.check(`English with punct_style auto → half-width, ends with "called for the boy and presented him with 50 pieces of <word>."`, EXPECT.enTail.test(en) && !FULL_WIDTH.test(en), en);
+      checks.check(`English with punct_style auto → half-width, ends with "${EXPECT.enTail}"`, en.endsWith(EXPECT.enTail) && !FULL_WIDTH.test(en), en);
     }
 
     // ---------- 配套标点：安装标点模型与 ASR → 激活 → 中文 ----------
@@ -226,6 +242,45 @@ async function runRealSmoke(ctx: SmokeContext, o: RunOptions): Promise<number> {
       final?.id === plan.companion.id && final.variantId === cpuVariant(plan.companion).id && final.runtime === "sherpa-onnx" && final.providerUsed === "cpu" && final.fallback === false,
       final,
     );
+    const packUrls = o.requested.filter((u) => o.catalog.engine_packs.some((p) => Object.values(p.platforms).some((x) => u.endsWith(`/${x.asset.name}`))));
+    checks.check(`no engine pack URL requested (${o.requested.length} downloads, all models)`, packUrls.length === 0, packUrls);
+
+    // ---------- ECHOTYPE_SMOKE_PACK：显式 provider → 已发布的引擎包（真实 sha256）→ 从包拉起引擎 → GPU 版本 ----------
+    if (o.pack) {
+      const gpu = gpuPlan(o.catalog, plan.first, o.pack);
+      before = readyLines();
+      await js(`window.echotype.models.activate(${JSON.stringify(plan.first.id)})`);
+      await awaitLoaded(plan.first, before);
+      await js(`window.echotype.models.updateSettings(${JSON.stringify(plan.first.id)}, { provider: ${JSON.stringify(gpu.provider)} })`);
+      const chosen = core.models().find((m) => m.id === plan.first.id)?.selectedVariantId;
+      checks.check(`explicit provider ${gpu.provider} selects ${plan.first.id}/${gpu.variant.id}`, chosen === gpu.variant.id, chosen);
+
+      const started = Date.now();
+      before = readyLines();
+      await js(`window.echotype.models.install(${JSON.stringify(plan.first.id)})`); // 省略 variantId：所选版本，缺包先装包
+      const packMarker = readMarker(path.join(o.home, "engines", o.pack));
+      const modelMarker = readMarker(path.join(o.home, "models", plan.first.id, gpu.variant.id));
+      const source = (name: string) => (o.mirror?.served.includes(name) ? `mirror ${o.mirror.dir}` : "github");
+      const packDone = Date.parse(String(packMarker.installedAt));
+      report.installs.push({ model: `engine-pack/${o.pack}`, mb: gpu.asset.size_bytes / 1e6, seconds: (packDone - started) / 1000, source: source(gpu.asset.name) });
+      report.installs.push({
+        model: `${plan.first.id}/${gpu.variant.id}`,
+        mb: gpu.variant.asset.size_bytes / 1e6,
+        seconds: (Date.parse(String(modelMarker.installedAt)) - packDone) / 1000,
+        source: source(gpu.variant.asset.name),
+      });
+      checks.check(`${o.pack} pack from ${source(gpu.asset.name)}: download → sha256 ${gpu.asset.sha256!.slice(0, 12)}… (catalog) → extract`, packMarker.sha256 === gpu.asset.sha256, packMarker);
+      checks.check(`${plan.first.id}/${gpu.variant.id}: download → sha256 → extract`, gpu.variant.asset.sha256 === null || modelMarker.sha256 === gpu.variant.asset.sha256, modelMarker);
+
+      await awaitLoaded(plan.first, before);
+      sessions = 0; // 换包重启了引擎：假麦克风从 zh 重新开始
+      const s = core.supervisor.status();
+      checks.check(`engine runs from the ${o.pack} pack (hello providers ${s.providers.join(",")})`, s.packId === o.pack && s.providers.includes(gpu.provider), { packId: s.packId, providers: s.providers, version: s.engineVersion });
+      const onGpu = core.snapshot().activeModel;
+      checks.check(`load ${plan.first.id}/${gpu.variant.id} on ${gpu.provider}, no fallback`, onGpu?.variantId === gpu.variant.id && onGpu.providerUsed === gpu.provider && !onGpu.fallback, onGpu);
+      const zhGpu = await dictate("zh");
+      checks.check(`dictation zh.wav on ${gpu.provider} → final ends with "${EXPECT.zhTail}"`, zhGpu.endsWith(EXPECT.zhTail), zhGpu);
+    }
     return checks.pass(report.render());
   } catch (err) {
     return checks.fail(err, logger, report.render());
@@ -248,6 +303,20 @@ function planModels(catalog: Catalog): { first: CatalogModel; companion: Catalog
     .sort((a, b) => cpuVariant(a).asset.size_bytes - cpuVariant(b).asset.size_bytes)[0];
   if (!companion) throw new Error("the catalog has no ASR model with a companion punctuation model");
   return { first, companion, punct: byId.get(companion.punctuation!.companion_id!)! };
+}
+
+/** ECHOTYPE_SMOKE_PACK 的计划：默认模型里需要该包的版本、它的 provider、本平台的包资产（必须已发布） */
+function gpuPlan(catalog: Catalog, model: CatalogModel, packId: string) {
+  const variant = model.variants.find((v) => v.requires_pack === packId);
+  if (!variant) throw new Error(`${model.id} has no variant that needs the ${packId} pack`);
+  const platform = `${process.platform}-${process.arch}`;
+  const asset = catalog.engine_packs.find((p) => p.id === packId)?.platforms[platform]?.asset;
+  if (!asset?.sha256) throw new Error(`the ${packId} pack is not published for ${platform}`);
+  return { variant, provider: variant.providers[0], asset };
+}
+
+function readMarker(dir: string): Record<string, unknown> {
+  return JSON.parse(fs.readFileSync(path.join(dir, ".installed.json"), "utf-8")) as Record<string, unknown>;
 }
 
 function cpuVariant(model: CatalogModel): CatalogVariant {

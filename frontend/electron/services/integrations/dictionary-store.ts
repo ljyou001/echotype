@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 core/atomic-file 的读写；依赖 ipc-contract 的 DictionaryEntry
  * [OUTPUT]: 导出 DictionaryStore、dictionaryPromptSuffix
- * [POS]: 个人词典。~/.echotype/dictionary.json 存 [{term, hint?}]，启动读一次，之后读内存。
+ * [POS]: 个人词典。<home>/dictionary.json 存 [{term, hint?}]，启动读一次，之后读内存。
  *        只通过 dictionaryPromptSuffix 注入 LLM 提示（清单里 dictionary:true 的动作）；
  *        目前不下发给引擎做 ASR 热词——是否支持由 models.catalog.json 的模型能力决定，属后续项。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md

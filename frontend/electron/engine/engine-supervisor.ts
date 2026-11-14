@@ -7,6 +7,7 @@
  *        上层服务只依赖 EngineGateway：重启对它们透明，它们只需在 onConnected 时重新下发配置。
  *        generation 计数让旧进程的迟到回调全部失效，杜绝"旧进程退出触发新一轮重启"。
  *        状态记录 hello 的 providers 与 runtimes（引擎实际能跑的 provider 与推理运行时版本）。
+ *        每次 restart 都带原因写日志，事后能从日志分清重启来自托盘、UI 还是换引擎包。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
@@ -150,8 +151,9 @@ export class EngineSupervisor implements EngineGateway {
     void this.launch();
   }
 
-  /** 手动重启（托盘 / UI）：清零重试计数，失败态也能恢复。 */
-  async restart(): Promise<void> {
+  /** 重启（托盘 / UI / 换引擎包）：清零重试计数，失败态也能恢复。reason 写进日志，事后能分清是谁要求的。 */
+  async restart(reason: string): Promise<void> {
+    this.log.info("restart requested", { reason });
     await this.stop();
     this.start();
   }

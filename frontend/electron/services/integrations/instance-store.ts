@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 core/atomic-file 的读写；依赖 ipc-contract 的 SettingValue
  * [OUTPUT]: 导出 InstanceStore、StoredInstance
- * [POS]: 集成实例的持久化（~/.echotype/integrations.v3.json，{schemaVersion:3, instances}）。启动读一次，之后读内存；
+ * [POS]: 集成实例的持久化（<home>/integrations.v3.json，{schemaVersion:3, instances}）。启动读一次，之后读内存；
  *        每次变更整份原子写。文件里没有任何密钥——密钥只在 SecretStore。保证至多一个 isDefault，order 连续。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */

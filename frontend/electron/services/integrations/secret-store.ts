@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 core/atomic-file 的读写；依赖注入的异步 SecretCrypto 端口（Electron 下由 safeStorage 的 *Async API 实现）
  * [OUTPUT]: 导出 SecretStore、SecretCrypto、SecretBackend
- * [POS]: 密钥的唯一存放处。~/.echotype/secrets.bin 是 { 引用键: base64(密文) } 的 JSON，引用键形如
+ * [POS]: 密钥的唯一存放处。<home>/secrets.bin 是 { 引用键: base64(密文) } 的 JSON，引用键形如
  *        "instance:<id>:<field>" 或 "provider:<id>:<field>"。明文只在 get() 返回给 Core 内部调用方的瞬间存在，
  *        从不经过 IPC。加密不可用（Linux 无密钥环）时 set() 抛 SECRET_STORAGE_UNAVAILABLE，由 UI 提示。
  *        加解密是异步的（Electron 45 弃用了同步 safeStorage），所以 get/set/status 返回 Promise；

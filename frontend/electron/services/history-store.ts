@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 node:fs；依赖 core/atomic-file 的原子写、core/emitter、core/logger；依赖 ipc-contract 的 HistoryEntry
  * [OUTPUT]: 导出 HistoryStore（load / list / add / remove / clear / onChange）、HISTORY_CAP
- * [POS]: 听写历史的持久化（~/.echotype/history.jsonl，最多 500 条）。
+ * [POS]: 听写历史的持久化（<home>/history.jsonl，最多 500 条）。
  *        文件按时间正序逐行追加，新增一条只写一行；文件行数超出上限 100 行时整体重写一次（摊还压缩）。
  *        坏行被跳过，单行损坏不丢失整份历史。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
