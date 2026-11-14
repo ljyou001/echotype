@@ -69,8 +69,10 @@ SenseVoice decode cost on CPU int8 vs threads (10 s): 1 → 692 ms, 2 → 491, 4
    segment. **Decode units are sentences**: segments separated by less than 0.6 s of silence join one unit; a unit never spans
    more than 8 s. `dictation::segments::UnitBuilder` holds this rule; dictation and `transcribe.file` share it.
 3. **Speculation**: at each pause the engine decodes the open unit as it would be if it ended now (one replaceable slot,
-   every model; `partial` events still only for `features.partials:true` models). The slice is `[first start − 0.2 s, last end + 0.1 s]`, the same formula the closed
-   unit uses (`SegmentTrack::span`), so a speculation is reused only when the slices are equal sample for sample.
+   every model; `partial` events still only for `features.partials:true` models). The decode input is anchored on the
+   sample-accurate speech edges of the unit, not on the VAD's frame boundaries (§10): 0.3 s of captured audio before the
+   onset edge, the speech up to the offset edge, then 0.2 s of digital silence. The closed unit uses the same formula
+   (`SegmentTrack::span`, `unit_audio`), so a speculation is reused only when the inputs are equal sample for sample.
 4. **Closing a unit**: after 0.85 s of silence (0.6 s plus the VAD's onset delay, so no earlier speech can still appear), or
    at stop. If the latest speculation has the same slice → reuse it (release_to_final ≈ 0), await it if it is running;
    otherwise decode the whole unit once. Queued speculations are dropped at stop. **No remainder decode**: decoding only the
@@ -197,3 +199,31 @@ asserts identical text and one decode unit, for all 8 CPU variants.
   VAD-measured silence, so they are decoded together; Whisper (one language per decode) then drops the Chinese sentence.
   No pause threshold separates that case from en.wav's own 0.48 s pause inside one sentence.
 - Numbers: `design/BENCHMARKS.md` ("Sentence units: before and after").
+
+## 10. Text must not depend on a few milliseconds of timing (2026-11-13)
+
+Core's `smoke:real` got SenseVoice "…50 pieces of **gold**." with one release timing and "…**code**." with another (audio
+7770 vs 7760 ms), and "开饭" where the benchmark had "开放". Every run had one unit, and final == transcribe.file held.
+
+Measured (`tests/models.rs::jitter_report`): zh.wav and en.wav replayed with the clip starting 0–64 ms later (4 ms steps,
+17 offsets) × release 0.15 / 0.3 / 0.6 s after speech:
+- The release delay changes nothing (identical distributions). The start offset does: the Silero VAD decides per 32 ms
+  window, so the unit's VAD span moves with the alignment — 8 different spans over 17 offsets; en.wav's end moves 80 ms.
+- With the slice anchored on the VAD span, SenseVoice gave "开放" 12/17 and "开饭" 5/17 (zh first word), "code" 15/17 and
+  "gold" 2/17 (en last word). Paraformer zh was stable; Paraformer's (always wrong) English had 6–8 variants.
+- Zero padding around the VAD span did not help: the span itself moves.
+
+Fix: `segments::speech_edges` finds the onset/offset edges near the VAD span where the 10 ms sliding RMS first/last reaches
+the unit's peak − 35 dB. Computed at every sample, so it does not depend on the window grid: the edges were the same
+sample for all 17 offsets. Any input built from those edges is then identical for every offset → 1 text per clip for
+SenseVoice and both Paraformers, over all 17 × 3 cases (unit test `edges_do_not_depend_on_where_the_vad_frames_fall`,
+real-model test `text_is_stable_when_the_clip_starts_a_few_ms_later`).
+
+Which word the stable text lands on still depends on the padding: over 120 padding variants SenseVoice wrote "开放" in 52 %
+and "gold" in 60 % (both right in 24 %). These two words sit on SenseVoice int8's decision boundary. The chosen input —
+0.3 s captured lead, speech, 0.2 s digital silence, −35 dB — is right on both and stays right for trailing silence of
+0.1–0.3 s; a 0.1 s lead turned Moonshine's "The tribal chieftain" into "The driver, Jieftain", 0.3 s does not, and no other
+catalog model got worse. The trailing pad is synthetic, so the input is complete as soon as the VAD reports the pause.
+
+Limits: the edge threshold is relative to the unit's own peak. With a noise floor above peak − 35 dB (SNR < 35 dB) the
+edges fall back to the search bounds around the VAD span, and alignment sensitivity returns for that recording.

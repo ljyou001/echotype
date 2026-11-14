@@ -130,7 +130,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 78,
+            "release_to_final_ms_p50_10s": 84,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         },
@@ -244,7 +244,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 38,
+            "release_to_final_ms_p50_10s": 41,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -327,7 +327,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 63,
+            "release_to_final_ms_p50_10s": 74,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -480,7 +480,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 602,
+            "release_to_final_ms_p50_10s": 658,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         },
@@ -690,7 +690,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 194,
+            "release_to_final_ms_p50_10s": 228,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -985,7 +985,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 882,
+            "release_to_final_ms_p50_10s": 1148,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -1141,7 +1141,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 1222,
+            "release_to_final_ms_p50_10s": 1322,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
@@ -1207,7 +1207,7 @@
             "vram_mb": 0
           },
           "bench": {
-            "release_to_final_ms_p50_10s": 88,
+            "release_to_final_ms_p50_10s": 112,
             "host": "i9-13980HX + RTX 4090 Laptop, Windows 11, cpu, 4 threads"
           }
         }
