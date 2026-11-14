@@ -96,7 +96,7 @@ VAD 按句（停顿 ≥ 0.6 s、最长 8 s）切出解码单元，边说边解�
 
 ### 2.5 单一真相源
 - 模型元数据：`contracts/models.catalog.json`，一个模型一个对象，新增模型 = 加一个对象。
-- 用户设置：Core 的 `~/.echotype/settings.json`（schemaVersion 2，含 v1 迁移）。
+- 用户数据：Core 的 `~/.echotype-v3/`（settings.json 为 schemaVersion 2）。v2 的 `~/.echotype/` 只读，首次启动导入设置与集成密钥（含 v1 设置迁移），从不写入。
 - 引擎不持久化任何东西。
 
 ## 3. 关键决策
