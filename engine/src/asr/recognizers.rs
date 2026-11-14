@@ -112,7 +112,9 @@ pub fn build_sherpa(arch: &str, files: &Map<String, Value>, dir: &Path, o: &Sher
                 decoder: Some(f("decoder")?),
                 language: lang(&o.language),
                 task: Some(if o.task.is_empty() { "transcribe".into() } else { o.task.clone() }),
-                tail_paddings: -1,
+                // 尾部补 300 帧（3 s）而不是 sherpa 多语言模型的默认 1000 帧：编码器少算 7 s，解码快 30–38%，
+                // zh/en 样例文本与默认逐字相同；50 帧改了英文风格，500 帧让中文变繁体（ENGINE_NOTES §11）
+                tail_paddings: 300,
                 ..Default::default()
             };
             m.tokens = Some(f("tokens")?);

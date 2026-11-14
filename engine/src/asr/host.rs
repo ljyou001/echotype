@@ -253,7 +253,7 @@ pub fn load_model(p: LoadParams, progress: &dyn Fn(&str, u32), warn: &dyn Fn(&st
             progress("runtime", 100);
             progress("model", 0);
             let f = super::recognizers::resolve_files(&files, &p.model_dir, &arch);
-            let sidecar = LlamaSidecar::start(&server, &PathBuf::from(f("model")?), &PathBuf::from(f("mmproj")?), &provider)?;
+            let sidecar = LlamaSidecar::start(&server, &PathBuf::from(f("model")?), &PathBuf::from(f("mmproj")?), &provider, threads)?;
             progress("model", 100);
             (Backend::Llama(sidecar), provider)
         }

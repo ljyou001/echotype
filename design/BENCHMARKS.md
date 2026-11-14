@@ -131,6 +131,26 @@ Sample finals (10 s, tail 0):
 - sensevoice-small/cuda-fp32 [cuda]: 开饭时间早上9点至下午5点，The tribal chief then called for the boy, and presented him with 50 pieces of code.
 - whisper-large-v3-turbo/cpu-int8 [cpu]: The tribal chief then called for the boy, and presented him with 50 pieces of gold.
 
+## Slow models: threads, Whisper padding, llama.cpp CPU (2026-11-13)
+
+> Hand-maintained. Engine defaults changed: threads = performance cores up to 8 (8 here, was 4), Whisper `tail_paddings`
+> 300 frames (was sherpa's 1000). The CPU rows of the native section above are still the 4-thread run.
+> 10 s utterance, P50 of 4 runs, `release_to_final_ms` (design/ENGINE_NOTES.md §11).
+
+| model / variant | runtime | tail 0: before → after | tail 300: before → after |
+|---|---|---:|---:|
+| whisper-large-v3-turbo/cpu-int8 | sherpa-onnx | 1322 → 628 | 1354 → 352 |
+| fire-red-asr2-aed/cpu-int8 | sherpa-onnx | 1148 → 949 | 913 → 814 |
+| qwen3-asr-0.6b/cpu-int8 | sherpa-onnx | 658 → 566 | 534 → 368 |
+| parakeet-tdt-0.6b-v3/cpu-int8 | sherpa-onnx | 228 → 172 | 82 → 37 |
+| sensevoice-small/cpu-int8 | sherpa-onnx | 84 → 70 | 0 → 0 |
+| paraformer-zh/cpu-int8 | sherpa-onnx | 74 → 62 | 7 → 6 |
+| qwen3-asr-0.6b/cpu-gguf-q8 (not in the catalog) | llama.cpp CPU | – → 260 | – → 98 |
+| qwen3-asr-1.7b/cpu-gguf-q8 (not in the catalog) | llama.cpp CPU | – → 525 | – → 345 |
+
+The two `cpu-gguf-q8` rows ran with a CPU-only `llama-server` b12360 next to the engine and a local catalog copy; the base
+install does not ship `llama-server` yet (+19.2 MB zipped).
+
 ## Edge-anchored decode input (2026-11-13)
 
 > Hand-maintained. The decode input is now anchored on sample-accurate speech edges (0.3 s captured lead, speech, 0.2 s

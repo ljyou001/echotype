@@ -25,7 +25,7 @@ src/server.rs: 传输层。127.0.0.1、token 错 → 4401、第二个客户端 �
 src/engine.rs: 方法表与状态机（idle/loading/ready/error）。单 actor：状态检查按到达顺序同步完成，慢操作完成后以 Msg::Done 回 actor；换模型前等已 stop 会话的 final
 src/protocol.rs: 版本、错误码、信封解析与封装、参数读取
 src/events.rs: Emitter，线程安全的事件出口；无客户端时丢弃
-src/platform.rs: 关闭 Windows EcoQoS、默认线程数（物理核，上限 4）、hello 的 platform/arch
+src/platform.rs: 关闭 Windows EcoQoS、默认线程数（性能核数，上限 8；Windows 读 EfficiencyClass，macOS 读 hw.perflevel0）、hello 的 platform/arch
 src/logging.rs: stderr + `<log-dir>/engine.log`（2 MB 轮转 ×3）
 src/testkit.rs: 测试替身（ECHOTYPE_TESTKIT=1 时生效）：能量 VAD、音调识别器
 src/audio/: 采集、重采样、设备、wav（见 src/audio/CLAUDE.md）
