@@ -1,0 +1,17 @@
+// [INPUT]: steam-build.sh 经 steam-content.mjs render 填入 DEPOT_ID CONTENT_ROOT 两个占位符
+// [OUTPUT]: 一个 depot 的构建脚本（生成到 scripts/steam/build/depot_<name>.vdf），由 app_build.vdf 引用
+// [POS]: 每个 depot 把 ContentRoot 整棵树原样映射到安装目录根。OS depot 的根是 EchoType.exe / echotype / EchoType.app 所在层；
+//        models depot 的根含 models/ 子目录，落到安装目录的 models/，即 catalog steam 源 {steam_app_dir}/models/{asset}
+// [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"DepotBuild"
+{
+	"DepotID" "${DEPOT_ID}"
+	"ContentRoot" "${CONTENT_ROOT}"
+	"FileMapping"
+	{
+		"LocalPath" "*"
+		"DepotPath" "."
+		"Recursive" "1"
+	}
+	"FileExclusion" "*.pdb"
+}

@@ -1,0 +1,16 @@
+// [INPUT]: steam-build.sh 经 steam-content.mjs render 填入 APP_ID DESC PREVIEW SET_LIVE BUILD_OUTPUT DEPOTS 六个占位符
+// [OUTPUT]: steamcmd +run_app_build 读取的 App 构建脚本（生成到 scripts/steam/build/app_build.vdf）
+// [POS]: 一次上传 = 一个 App build，含本次配置的全部 depot。SetLive 只填 beta 分支名；default 分支在 Steamworks 网页上设为 live
+// [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
+"AppBuild"
+{
+	"AppID" "${APP_ID}"
+	"Desc" "${DESC}"
+	"Preview" "${PREVIEW}"
+	"SetLive" "${SET_LIVE}"
+	"BuildOutput" "${BUILD_OUTPUT}"
+	"Depots"
+	{
+${DEPOTS}
+	}
+}
