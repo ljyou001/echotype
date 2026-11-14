@@ -49,20 +49,20 @@ pages/
 HomePage.tsx(.css): 状态光球与提示、上一次听写失败（Notice + 下一步：选择麦克风 / 前往模型页）、录音按钮、实时文本与电平、上一次结果（弱化显示松键到出字耗时）、四张摘要卡（热键受限时警示；点击直达设置页对应分节）
 HistoryPage.tsx(.css): Core 持久化的历史，按天分组；搜索、复制、在 Quick Action 中打开（`quickAction.open`）、一键交给默认集成（回复或回执以提示条显示）、删除、清空
 ModelsPage.tsx(.css): 只负责选模型与设置：语音模型按档位稳定排序；右上角"管理模型"打开模型管理器
-model-catalog/ModelCard.tsx: 单个模型卡片：下载选中版本（缺引擎包时一并下载并注明，版本装好后显示引擎包进度）→ 启用；目录原名、语言标签、体积、~P50、许可证与商用提醒
+model-catalog/ModelCard.tsx: 单个模型卡片：下载选中版本（缺引擎包时一并下载并注明，版本装好后显示引擎包进度）→ 启用；目录原名、语言标签、体积、~P50、许可证链接
 model-catalog/ModelSettingsPanel.tsx: 由 `ModelView.settings` 驱动的通用设置渲染（select/toggle/text/number，文案取 `models.settings.<key>.label/.help/.options`，未知键退回键名）；所选硬件版本未装时就地下载
 model-catalog/ModelManager.tsx(.css): 模型管理器抽屉：GPU 运行库、每个模型按硬件分组的版本（体积、~P50、下载/取消/删除）、辅助模型、磁盘占用
 SettingsPage.tsx(.css): 通用、听写（热键、录音方式、输出三选一）、麦克风（设备、测试、保持就绪）、隐私、关于；听写与麦克风两节是页内锚点；热键受限时热键行显示警示
 settings/AppearanceSection.tsx: 外观：主题（跟随系统/浅色/深色）与主题色色块，保存到 settings.ui.theme，本窗口先行生效
 settings/AboutSection.tsx: 关于：版本与发行渠道、许可证入口、源代码与问题反馈链接
-settings/LicensesDialog.tsx: 许可证列表：模型许可证（id 链接 + 商用说明）与开源组件
+settings/LicensesDialog.tsx: 许可证列表：模型许可证（名称 + 许可证链接）与开源组件；不显示商用判断（那是发行方内部的事）
 IntegrationsPage.tsx(.css): 两个标签页。动作：拖拽排序、启停、设默认、配置、删除、“待设置”标记；词典：见 DictionaryPanel。样式含动作选择器、密钥字段、隐私提示、词典行
 integrations/IntegrationDialogs.tsx: 新增（按组选动作 → 配置）与配置弹窗，表单完全由目录字段生成：动作字段 + 服务商、服务商字段、模型（获取模型 / 自填）、测试连接、隐私提示与 hint；secrets 只提交改动
 integrations/FieldInput.tsx: 目录字段 → 控件的唯一渲染器（text/textarea/enum/boolean/directory/secret）；secret 只写，已保存显示“已保存 · 更换 · 移除”
 integrations/DictionaryPanel.tsx: 个人词典行内编辑，失焦/删除时整份存回 Core
 DebugPage.tsx(.css): 引擎状态事实表（含平台架构、IPC 版本、引擎包）、重启引擎、打开日志目录、按键监听、快照 JSON
 Onboarding.tsx(.css): 三步引导：权限 → 麦克风（自动开测试）→ 下载模型（只列本机能跑的；首个装好的自动启用）
-QuickActionWindow.tsx(.css): `#/quick-action` 小窗。文本经 `quickAction.getText`，窗口再次可见时刷新；点动作或回车运行默认动作，结果流式显示（纯文本）；完成后可替换上屏、复制、重新生成；需确认的动作先弹确认框；有结果时 `resize`；无文字结果的动作显示回执后自动关窗；标题栏指针拖动经 `move`
+QuickActionWindow.tsx(.css): `#/quick-action` 小窗。文本经 `quickAction.getText`，窗口再次可见时刷新；点动作或回车运行默认动作，结果流式显示（纯文本）；完成后可替换上屏、复制、重新生成；需确认的动作先弹确认框；有结果时 `resize`；无文字结果的动作显示回执后自动关窗；标题栏用系统原生拖动（-webkit-app-region），不调 `move`，避免缩放屏上越拖越大
 
 
 styles/
