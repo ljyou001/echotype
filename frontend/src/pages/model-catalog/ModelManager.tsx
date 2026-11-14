@@ -1,11 +1,12 @@
 /**
  * [INPUT]: 依赖 store/appStore 的 models、packs、snapshot.activeModel、run；依赖 bridge().models（getStorage/cancelInstall/remove）
  *          与 bridge().enginePacks；依赖 hooks/useVariantInstaller；依赖 components 的 Drawer、ConfirmDialog、Badge、ProgressBar；
- *          依赖 utils/models、utils/runMode、utils/format
+ *          依赖 utils/models、utils/runMode、utils/errors、utils/format
  * [OUTPUT]: 导出 ModelManager 组件
  * [POS]: 模型管理器抽屉，从 Models 页右上角打开。集中管理"装什么"：GPU 运行库（引擎包）、每个模型按硬件分组的版本
  *        （CPU / NVIDIA GPU / Apple Silicon / Vulkan）、体积、实测延迟、下载/取消/删除，以及磁盘占用。
  *        版本需要的引擎包没装时，下载会连同引擎包一起下，并在行内说明。Models 页本身只负责选模型与设置。
+ *        不可用的版本分两种说法：引擎包拿不到 → "暂未提供"；这台电脑没有对应硬件 → "这台电脑不可用"。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { useEffect, useMemo, useState } from "react";
@@ -17,9 +18,10 @@ import { Badge, ProgressBar } from "../../components/controls";
 import { ConfirmDialog, Drawer } from "../../components/Modal";
 import { useVariantInstaller } from "../../hooks/useVariantInstaller";
 import { useAppStore } from "../../store/appStore";
+import { errorText } from "../../utils/errors";
 import { formatBytes } from "../../utils/format";
-import { TARGET_ORDER, TIER_ORDER, isBusy, isVariantAvailable, variantBuild } from "../../utils/models";
-import { targetLabel } from "../../utils/runMode";
+import { TARGET_ORDER, TIER_ORDER, isBusy, isVariantAvailable, packUnavailable, variantBuild } from "../../utils/models";
+import { packNeedText, packUnavailableText, runtimeName, targetLabel } from "../../utils/runMode";
 import "./ModelManager.css";
 
 type Storage = Awaited<ReturnType<ReturnType<typeof bridge>["models"]["getStorage"]>>;
@@ -120,7 +122,7 @@ function PackRow({ pack, onRemove }: { pack: EnginePackView; onRemove: (r: Pendi
   const { t, i18n } = useTranslation();
   const run = useAppStore((s) => s.run);
   const { status, pct, error } = pack.install;
-  const name = t("manager.runtimeName", { target: targetLabel(t, pack.target) });
+  const name = runtimeName(t, pack.target);
   const size = formatBytes(pack.sizeBytes, i18n.language);
 
   return (
@@ -131,7 +133,7 @@ function PackRow({ pack, onRemove }: { pack: EnginePackView; onRemove: (r: Pendi
       <div className="mm-row__main">
         <span className="mm-row__name">
           {name}
-          <span className="mm-row__muted"> · {size}</span>
+          {size && <span className="mm-row__muted"> · {size}</span>}
           {pack.inUse && (
             <Badge tone="success" dot>
               {t("manager.inUse")}
@@ -139,7 +141,7 @@ function PackRow({ pack, onRemove }: { pack: EnginePackView; onRemove: (r: Pendi
           )}
         </span>
         <span className="mm-row__note">{t("manager.runtimeNote")}</span>
-        {status === "error" && error && <span className="field__error">{error.message}</span>}
+        {status === "error" && error && <span className="field__error">{errorText(t, error)}</span>}
       </div>
       <RowAction
         status={status}
@@ -181,7 +183,14 @@ function ModelBlock({ model, packs, onRemove }: { model: ModelView; packs: Engin
       </div>
       <div className="mm-list">
         {variants.map((v) => (
-          <VariantRow key={v.id} model={model} variant={v} available={isVariantAvailable(model, v, packs)} onRemove={onRemove} />
+          <VariantRow
+            key={v.id}
+            model={model}
+            variant={v}
+            available={isVariantAvailable(model, v, packs)}
+            packMissing={packUnavailable(v, packs)}
+            onRemove={onRemove}
+          />
         ))}
       </div>
     </div>
@@ -192,11 +201,13 @@ function VariantRow({
   model,
   variant,
   available,
+  packMissing,
   onRemove,
 }: {
   model: ModelView;
   variant: VariantView;
   available: boolean;
+  packMissing: boolean; // 不可用的原因是引擎包拿不到（尚未发布），而不是这台电脑没有对应硬件
   onRemove: (r: PendingRemoval) => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -226,18 +237,12 @@ function VariantRow({
           {size}
           {variant.benchP50Ms !== null && ` · ${t("models.info.benchShort", { ms: variant.benchP50Ms })}`}
         </span>
-        {available && pack && status !== "installed" && (
-          <span className="mm-row__pack-note">
-            {t("manager.alsoDownloadsRuntime", {
-              name: t("manager.runtimeName", { target: targetLabel(t, pack.target) }),
-              size: formatBytes(pack.sizeBytes, i18n.language),
-            })}
-          </span>
-        )}
-        {status === "error" && error && <span className="field__error">{error.message}</span>}
+        {available && pack && status !== "installed" && <span className="mm-row__pack-note">{packNeedText(t, pack, i18n.language)}</span>}
+        {packMissing && status !== "installed" && <span className="mm-row__pack-note">{packUnavailableText(t, variant.target)}</span>}
+        {status === "error" && error && <span className="field__error">{errorText(t, error)}</span>}
       </div>
       {!available && status !== "installed" ? (
-        <span className="mm-row__unavailable">{t("manager.notOnThisComputer")}</span>
+        <span className="mm-row__unavailable">{t(packMissing ? "manager.notAvailableYet" : "manager.notOnThisComputer")}</span>
       ) : (
         <RowAction
           status={status}

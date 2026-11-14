@@ -60,6 +60,15 @@
   border-bottom-right-radius: var(--radius-lg);
 }
 
+.debug__error:not(:last-child) {
+  border-radius: 0;
+}
+
+.debug__error-label {
+  flex-basis: 100%;
+  font-weight: 600;
+}
+
 .debug__key-actions {
   display: flex;
   gap: var(--space-2);

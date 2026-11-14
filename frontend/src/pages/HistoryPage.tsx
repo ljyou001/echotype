@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 bridge().history（list/remove/clear）、bridge().output.copy 与 bridge().quickAction.open；依赖 store/appStore 的 lastFinal 与 run/showToast；
+ * [INPUT]: 依赖 bridge().history（list/remove/clear）、bridge().output.copy 与 bridge().quickAction.open；依赖 store/appStore 的 lastFinal 与 run/showToast/reportError；
  *          依赖 store/integrationsStore 的默认集成；依赖 hooks/useIntegrationRun 运行默认集成；
  *          依赖 components 的 PageHeader、EmptyState、ConfirmDialog；依赖 utils/format
  * [OUTPUT]: 导出 HistoryPage 组件
@@ -31,14 +31,15 @@ export function HistoryPage() {
   const loadIntegrations = useIntegrationsStore((s) => s.load);
   const defaultIntegration = useIntegrationsStore((s) => pickDefaultIntegration(s.instances));
   const showToast = useAppStore((s) => s.showToast);
+  const reportError = useAppStore((s) => s.reportError);
   const { state: runState, run: runIntegration } = useIntegrationRun();
 
-  // 默认集成的运行结果：有文字回复显示回复，否则显示回执，失败显示原因
+  // 默认集成的运行结果：有文字回复显示回复，否则显示回执，失败按 code 显示原因
   useEffect(() => {
     if (runState.status === "done") {
       showToast(runState.text || t(`integrations.quickAction.notes.${runState.note ?? "sent"}`, { defaultValue: t("integrations.quickAction.notes.sent") }));
     } else if (runState.status === "error" && runState.error && runState.error.code !== "CANCELLED") {
-      showToast(t(`integrations.errors.${runState.error.code}`, { defaultValue: runState.error.message }), "error");
+      reportError(runState.error);
     }
   }, [runState.status]); // eslint-disable-line react-hooks/exhaustive-deps
 

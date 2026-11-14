@@ -1,15 +1,16 @@
 /**
- * [INPUT]: 依赖 bridge().quickAction（getText/close/resize/move）与 bridge().output（type/copy）；依赖 hooks/useIntegrationRun；
+ * [INPUT]: 依赖 bridge().quickAction（getText/close/resize）与 bridge().output（type/copy）；依赖 hooks/useIntegrationRun；
  *          依赖 store/integrationsStore 的目录与实例；依赖 components/Modal 的 ConfirmDialog；依赖 react-i18next
  * [OUTPUT]: 导出 QuickActionWindow 组件
  * [POS]: 独立的 Quick Action 小窗（#/quick-action），由 main.tsx 直接挂载，不连主窗口的快照 store。
  *        显示上一次听写文本（可编辑），点一个动作交给 Core 运行；回车执行默认动作，Esc 关闭。
  *        结果区流式显示 Core 推来的增量（纯文本，不渲染 HTML），完成后可"替换上屏 / 复制 / 重新生成"。
  *        需确认的动作（CLI 代理）先弹确认框。有结果或错误时调用 resize 撑高窗口（Core 据此保持窗口不因失焦关闭）。
- *        没有可读结果的动作（发送、打开网页）成功后短暂显示回执并自动关窗。标题栏拖动经 move 交给 Core。
+ *        没有可读结果的动作（发送、打开网页）成功后短暂显示回执并自动关窗。
+ *        标题栏用系统原生拖动（-webkit-app-region），不调 move：缩放屏上逐帧 setPosition 会让窗口越拖越大。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { FiAlertTriangle, FiCheck, FiCopy, FiCornerDownLeft, FiRefreshCw, FiSquare, FiX } from "react-icons/fi";
 import { MdDragIndicator } from "react-icons/md";
@@ -232,28 +233,12 @@ function friendlyError(t: (key: string, opts?: Record<string, unknown>) => strin
 }
 
 // ============================================================
-// 标题栏：指针拖动 → bridge.quickAction.move(delta)
+// 标题栏：系统原生拖动（CSS -webkit-app-region: drag）
+// 不走 quickAction.move：Windows 缩放非 100% 时，逐帧 setPosition 的取整会把窗口越拖越大
 // ============================================================
 function DragHeader({ title, onClose, closeLabel }: { title: string; onClose: () => void; closeLabel: string }) {
-  const last = useRef<{ x: number; y: number } | null>(null);
-
-  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest("button")) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    last.current = { x: e.screenX, y: e.screenY };
-  };
-  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
-    if (!last.current) return;
-    const dx = e.screenX - last.current.x;
-    const dy = e.screenY - last.current.y;
-    if (dx === 0 && dy === 0) return;
-    last.current = { x: e.screenX, y: e.screenY };
-    bridge().quickAction.move({ dx, dy });
-  };
-  const onPointerUp = () => (last.current = null);
-
   return (
-    <div className="qa__header" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
+    <div className="qa__header">
       <MdDragIndicator className="qa__grip" />
       <h1 className="qa__title">{title}</h1>
       <button type="button" className="btn btn--ghost btn--icon btn--sm" onClick={onClose} aria-label={closeLabel}>

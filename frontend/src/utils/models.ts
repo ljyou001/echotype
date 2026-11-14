@@ -1,9 +1,11 @@
 /**
  * [INPUT]: 依赖 ipc-contract 的 ModelView、VariantView、EnginePackView、InstallStatus、HardwareTarget 类型
- * [OUTPUT]: 导出 TIER_ORDER、TARGET_ORDER、selectedVariant()、blockingPack()、isReady()、hasAnyInstalled()、isBusy()、modelSizeBytes()、
- *          isGpuVariant()、variantBuild()、providerOptions()、isVariantAvailable()
+ * [OUTPUT]: 导出 TIER_ORDER、TARGET_ORDER、selectedVariant()、blockingPack()、packUnavailable()、isReady()、hasAnyInstalled()、
+ *          isBusy()、modelSizeBytes()、isGpuVariant()、variantBuild()、providerOptions()、providerUnavailable()、isVariantAvailable()
  * [POS]: ModelView 的纯函数视图层。模型页、模型管理器、引导页、状态栏都经它回答"装好了没、多大、哪个版本"，
  *        不各自在 variants 里翻找。
+ *        引擎包"没提供"的唯一判据：版本 requiresPack 指向的包不在 packs 里（契约：本平台不提供、或未发布即 sha256 为 null，
+ *        Core 都不列出它）。这样的版本不能下载，对应的 provider 选项置灰。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import type { EnginePackView, HardwareTarget, InstallStatus, ModelView, VariantView } from "../../electron/ipc-contract";
@@ -24,6 +26,10 @@ export function blockingPack(v: VariantView, packs: EnginePackView[]): EnginePac
   const pack = packs.find((p) => p.id === v.requiresPack);
   return pack && pack.install.status !== "installed" ? pack : undefined;
 }
+
+/** 版本需要的引擎包在本机拿不到（本平台不提供或尚未发布）：既不能下载，也不该让用户去点 */
+export const packUnavailable = (v: VariantView, packs: EnginePackView[]): boolean =>
+  !!v.requiresPack && !packs.some((p) => p.id === v.requiresPack);
 
 /** 选中的版本已装好、所需引擎包也装好，模型才能启用 */
 export function isReady(m: ModelView, packs: EnginePackView[]): boolean {
@@ -54,9 +60,15 @@ export function providerOptions(m: ModelView): string[] {
   return (m.settings.find((d) => d.key === "provider")?.options ?? []).filter((o) => o !== "auto");
 }
 
+/** provider 选项该置灰：列出它的版本全都卡在拿不到的引擎包上 */
+export function providerUnavailable(m: ModelView, provider: string, packs: EnginePackView[]): boolean {
+  const listing = m.variants.filter((v) => (v.providers as string[]).includes(provider));
+  return listing.length > 0 && listing.every((v) => packUnavailable(v, packs));
+}
+
 /** 这台电脑能装能跑的版本：所需引擎包在本平台有提供，且它的 provider 在本机可选范围内 */
 export function isVariantAvailable(m: ModelView, v: VariantView, packs: EnginePackView[]): boolean {
-  if (v.requiresPack && !packs.some((p) => p.id === v.requiresPack)) return false;
+  if (packUnavailable(v, packs)) return false;
   const options = providerOptions(m);
   return v.providers.some((p) => options.includes(p));
 }

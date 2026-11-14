@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 bridge().integrations（run/cancel/onEvent）；依赖 utils/integrations 的 parseBridgeError；依赖 ipc-contract 的 IntegrationRunEvent
+ * [INPUT]: 依赖 bridge().integrations（run/cancel/onEvent）；依赖 utils/errors 的 toAppError；依赖 ipc-contract 的 IntegrationRunEvent
  * [OUTPUT]: 导出 useIntegrationRun（状态、run、cancel、reset）与 RunState
  * [POS]: 一次集成运行的客户端状态机，Quick Action 与 History 共用。Core 在 run() 的返回之后立刻推事件，
  *        所以先订阅、把"尚不知道 runId"期间到达的事件缓冲起来，run() 返回拿到 runId 后再按序重放；其他 runId 的事件忽略。
@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { bridge } from "../bridge";
-import { parseBridgeError } from "../utils/integrations";
+import { toAppError } from "../utils/errors";
 import type { AppError, IntegrationRunEvent } from "../../electron/ipc-contract";
 
 export interface RunState {
@@ -58,7 +58,7 @@ export function useIntegrationRun() {
       const replay = bufferRef.current.filter((e) => e.runId === runId);
       if (replay.length) setState((s) => replay.reduce(reduce, s));
     } catch (err) {
-      setState({ ...IDLE, status: "error", instanceId, error: parseBridgeError(err) });
+      setState({ ...IDLE, status: "error", instanceId, error: toAppError(err) });
     } finally {
       awaitingRef.current = false;
       bufferRef.current = [];

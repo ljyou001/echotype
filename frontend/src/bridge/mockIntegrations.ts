@@ -1,5 +1,6 @@
 /**
- * [INPUT]: 依赖 contracts/integrations.catalog.json（动作与服务商的唯一数据源）；依赖 ipc-contract 的 Integration* / Dictionary 类型
+ * [INPUT]: 依赖 contracts/integrations.catalog.json（动作与服务商的唯一数据源）；依赖 ipc-contract 的 Integration* / Dictionary 类型；
+ *          依赖 ./mockErrors 的 bridgeError（拒绝带 code）
  * [OUTPUT]: 导出 createMockIntegrations()：EchotypeBridge 的 integrations 与 dictionary 两个子系统（内存版）
  * [POS]: mockBridge 的集成子系统，行为对齐 Core 的 IntegrationService：目录视图剥掉执行描述、provider 级密钥按服务商共享、
  *        密钥只回传"已保存"布尔值、run 返回后才异步推 start/delta/done。运行结果是假的：transform 流式回显、
@@ -18,6 +19,7 @@ import type {
   IntegrationRunEvent,
   SettingValue,
 } from "../../electron/ipc-contract";
+import { bridgeError } from "./mockErrors";
 
 type MockAction = IntegrationActionView & { http?: { allowHosts: string[] }; open?: unknown; uri?: unknown; cli?: unknown; prompt?: unknown };
 type MockProvider = IntegrationProviderView & { baseUrl?: string; baseUrlFrom?: string };
@@ -122,7 +124,7 @@ export function createMockIntegrations(): Pick<EchotypeBridge, "integrations" | 
 
   const getAction = (id: string) => {
     const a = actions.get(id);
-    if (!a) throw new Error("[INVALID_REQUEST] Unknown integration type.");
+    if (!a) throw bridgeError("INVALID_REQUEST", "Unknown integration type.");
     return a;
   };
 
@@ -133,7 +135,7 @@ export function createMockIntegrations(): Pick<EchotypeBridge, "integrations" | 
       save: async (input: IntegrationInstanceInput) => {
         const a = getAction(input.actionId);
         const p = a.needsProvider ? providers.get(input.providerId ?? "") : undefined;
-        if (a.needsProvider && !p) throw new Error("[INVALID_REQUEST] Choose a provider first.");
+        if (a.needsProvider && !p) throw bridgeError("INVALID_REQUEST", "Choose a provider first.");
         const id = input.id ?? `mock-${++seq}-${Date.now()}`;
         const prev = items.find((i) => i.id === id);
         const declared = [...a.fields, ...(p?.fields ?? [])].filter((f) => f.type !== "secret");
@@ -156,9 +158,9 @@ export function createMockIntegrations(): Pick<EchotypeBridge, "integrations" | 
       listModels: async (draft) => {
         await sleep(300);
         const p = providers.get(draft.providerId ?? "");
-        if (!p) throw new Error("[INVALID_REQUEST] Choose a provider first.");
+        if (!p) throw bridgeError("INVALID_REQUEST", "Choose a provider first.");
         const typed = draft.secrets?.apiKey;
-        if (!p.local && !(typeof typed === "string" && typed.trim()) && !secrets.has(`provider:${p.id}:apiKey`)) throw new Error("[AUTH_FAILED] 401 Unauthorized");
+        if (!p.local && !(typeof typed === "string" && typed.trim()) && !secrets.has(`provider:${p.id}:apiKey`)) throw bridgeError("AUTH_FAILED", "401 Unauthorized");
         return [p.suggestedModel ?? "model-small", "model-large", "model-reasoning"].map((id) => ({ id }));
       },
       test: async (draft) => {
@@ -170,11 +172,11 @@ export function createMockIntegrations(): Pick<EchotypeBridge, "integrations" | 
       },
       run: async ({ instanceId, text, confirmed }) => {
         const inst = items.find((i) => i.id === instanceId);
-        if (!inst) throw new Error("[NOT_FOUND] That integration no longer exists.");
+        if (!inst) throw bridgeError("NOT_FOUND", "That integration no longer exists.");
         const a = getAction(inst.actionId);
-        if (!text.trim()) throw new Error("[INVALID_REQUEST] There is no text to send.");
-        if (status(inst) !== "ok") throw new Error("[NOT_CONFIGURED] Finish setting up this integration first.");
-        if (a.confirm && !confirmed) throw new Error("[CONFIRM_REQUIRED] This action needs your confirmation.");
+        if (!text.trim()) throw bridgeError("INVALID_REQUEST", "There is no text to send.");
+        if (status(inst) !== "ok") throw bridgeError("NOT_CONFIGURED", "Finish setting up this integration first.");
+        if (a.confirm && !confirmed) throw bridgeError("CONFIRM_REQUIRED", "This action needs your confirmation.");
         const runId = `run-${++seq}`;
         let cancelled = false;
         aborts.set(runId, () => (cancelled = true));

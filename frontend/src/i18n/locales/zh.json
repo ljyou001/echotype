@@ -50,7 +50,7 @@
     "connected": "已连接",
     "disconnected": "未连接",
     "starting": "启动中",
-    "noModel": "未选模型",
+    "noModel": "未加载模型",
     "finalizing": "转写中",
     "stopped": "已停止"
   },
@@ -310,8 +310,7 @@
       "noneUsableWithPack": "需要 GPU。在「管理模型」里安装 GPU 运行库后即可使用。"
     },
     "license": {
-      "open": "查看许可证",
-      "checkCommercial": "商用前请先确认许可证。"
+      "open": "查看许可证"
     },
     "packs": {
       "removeTitle": "删除 {{name}} 引擎？",
@@ -586,13 +585,7 @@
       "viewLicenses": "查看许可证",
       "licensesTitle": "许可证",
       "modelLicenses": "语音模型",
-      "modelLicensesHint": "每个模型有各自的许可证，商用前请先确认。",
       "componentLicenses": "开源组件",
-      "commercial": {
-        "yes": "可商用",
-        "no": "仅限非商用",
-        "unclear": "商用前请确认"
-      },
       "source": "源代码",
       "sourceDescription": "EchoType 是开源软件。",
       "reportIssue": "反馈问题"
@@ -653,6 +646,37 @@
     "unknown": {
       "title": "模型错误",
       "message": "出了点问题。"
+    },
+    "codes": {
+      "fallback": "出了点问题，请重试。",
+      "INTERNAL": "出了点问题，请重试。",
+      "DOWNLOAD_FAILED": "下载失败。请检查网络后重试。",
+      "CHECKSUM_MISMATCH": "下载的文件已损坏，请重试。",
+      "ASSET_FILES_MISSING": "下载的文件不完整，请重试。",
+      "EXTRACT_FAILED": "下载的文件无法解压，请重试。",
+      "DISK_FULL": "磁盘空间不足。请清理出一些空间后重试。",
+      "ASSET_UNAVAILABLE": "这个下载暂未提供。",
+      "INSTALL_FAILED": "安装没有完成，请重试。",
+      "PACK_UNAVAILABLE": "这台电脑暂时还用不了 GPU 运行库。",
+      "PACK_NOT_INSTALLED": "此模型需要 GPU 运行库，请在「管理模型」里安装。",
+      "PACK_OUTDATED": "GPU 运行库版本过旧，请在「管理模型」里重新安装。",
+      "MODEL_NOT_FOUND": "这个模型已不再提供。",
+      "VARIANT_NOT_FOUND": "这个版本已不再提供。",
+      "NO_VARIANT": "这个模型没有能在这台电脑上运行的版本。",
+      "MODEL_NOT_INSTALLED": "请先下载这个模型。",
+      "MODEL_NOT_LOADED": "模型还在加载，请稍后再试。",
+      "MODEL_LOAD_FAILED": "模型加载失败。请重试，或换一个版本。",
+      "NO_ACTIVE_MODEL": "先选一个模型，才能开始听写。",
+      "PROVIDER_UNAVAILABLE": "这台电脑用不了所选的运行设备。",
+      "ENGINE_CRASHED": "语音引擎停止运行了，请在首页重启。",
+      "ENGINE_STOPPED": "语音引擎没有运行，请在首页启动。",
+      "DEVICE_UNAVAILABLE": "打不开麦克风，请确认麦克风已连接。",
+      "SESSION_BUSY": "已经在听写了。",
+      "SESSION_START_FAILED": "没能开始听写，请重试。",
+      "SESSION_STOP_FAILED": "没能结束听写，请重试。",
+      "DECODE_FAILED": "没能转成文字，请重试。",
+      "INVALID_SETTINGS": "这个设置值无效。",
+      "NOT_FOUND": "找不到这一项，它可能已被删除。"
     }
   },
   "onboarding": {
@@ -740,7 +764,8 @@
     "snapshotCopied": "快照已复制",
     "enginePacks": "引擎包",
     "runMode": "运行方式",
-    "fallback": "已回退到 CPU"
+    "fallback": "已回退到 CPU",
+    "lastError": "最近一次错误"
   },
   "manager": {
     "open": "管理模型",
@@ -753,17 +778,18 @@
     "speechModels": "语音模型",
     "installedSize": "占用 {{size}}",
     "inUse": "使用中",
-    "alsoDownloadsRuntime": "会一并下载 {{name}}（{{size}}）。",
     "notOnThisComputer": "这台电脑不可用",
     "removeVariantTitle": "删除 {{name}} · {{version}}？",
     "removeVariantMessage": "将释放 {{size}}，之后可随时重新下载。",
     "removeVariantInUse": "这是正在使用的版本。删除后要等其他版本或模型就绪才能继续听写。将释放 {{size}}。",
-    "installingRuntime": "正在安装{{name}} · {{pct}}%",
-    "needsRuntime": "还需要{{name}}（{{size}}）才能运行。",
-    "installingRuntimeStage": "正在安装{{name}}…"
+    "installingRuntime": "正在安装 {{name}} · {{pct}}%",
+    "needsRuntime": "需要 {{name}}，只需下载一次。",
+    "installingRuntimeStage": "正在安装 {{name}}…",
+    "needsRuntime_sized": "需要 {{name}}（{{size}}，只需下载一次）。",
+    "runtimeUnavailable": "{{name}}暂未提供。",
+    "notAvailableYet": "暂未提供"
   },
   "statusBar": {
-    "noModel": "未加载模型",
     "chooseModel": "选择模型",
     "fallback": "{{target}}不可用，正在用 {{provider}} 运行"
   },

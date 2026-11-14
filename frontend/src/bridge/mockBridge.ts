@@ -5,8 +5,10 @@
  *        模型 variant 安装、模型专属设置、GPU 引擎包（装好后重启引擎）、运行方式（activeModel，含回退）、
  *        磁盘占用、许可证列表、集成（委托 ./mockIntegrations）、热键与听写失败（hotkey.error / dictation.error）、
  *        quickAction.open（文本经 localStorage 交给新开的 #/quick-action 窗口，因为每个窗口各有一份 mock）。
+ *        失败一律 reject 带 code 的 Error（./mockErrors），对齐契约；下载失败时安装态同时记成 error，像 Core 一样。
  *        由 bridge/index.ts 在 window.echotype 缺失时动态加载。场景用 URL 参数 ?mock= 切换；
- *        运行中可在控制台用 window.echotypeMock.setHotkeyError(code|null) / setDictationError(code|null) 切换失败状态。
+ *        运行中可在控制台用 window.echotypeMock.setHotkeyError(code|null) / setDictationError(code|null) /
+ *        failDownloads(code|null) 切换失败状态。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import type {
@@ -21,6 +23,7 @@ import type {
   Provider,
   Settings,
 } from "../../electron/ipc-contract";
+import { bridgeError } from "./mockErrors";
 import { createMockIntegrations } from "./mockIntegrations";
 import {
   DISK_TOTAL_BYTES,
@@ -36,8 +39,9 @@ import { MOCK_LICENSES } from "./mockLicenses";
 // ready: 已完成引导，默认模型就绪 | fresh: 首次运行，未装模型 | error: 引擎崩溃 | loading: 卡在加载
 // fallback: 选了 NVIDIA GPU 版本，但显卡不可用，引擎回退到 CPU
 // wayland: Linux Wayland 会话，全局热键受限 | nomic: 打不开麦克风，听写失败，直到在设置里换一个麦克风
-export type MockScenario = "ready" | "fresh" | "error" | "loading" | "fallback" | "wayland" | "nomic";
-const SCENARIOS: MockScenario[] = ["ready", "fresh", "error", "loading", "fallback", "wayland", "nomic"];
+// offline: 下载一律失败（DOWNLOAD_FAILED，message 是一条 404，只该出现在诊断页）
+export type MockScenario = "ready" | "fresh" | "error" | "loading" | "fallback" | "wayland" | "nomic" | "offline";
+const SCENARIOS: MockScenario[] = ["ready", "fresh", "error", "loading", "fallback", "wayland", "nomic", "offline"];
 
 export function readMockScenario(): MockScenario {
   const value = new URLSearchParams(window.location.search).get("mock");
@@ -65,6 +69,7 @@ const MOCK_ERRORS: Record<string, string> = {
   HOTKEY_WAYLAND_LIMITED: "On Wayland, the global hotkey only works while an X11 (XWayland) app is focused.",
   DEVICE_UNAVAILABLE: "No audio input device could be opened.",
   DECODE_FAILED: "The engine could not decode the audio.",
+  DOWNLOAD_FAILED: "HTTP 404 for https://github.com/ljyou001/echotype/releases/download/engine-packs-v3/engine-pack-cuda-win32-x64.zip",
 };
 const mockError = (code: string): AppError => ({ code, message: MOCK_ERRORS[code] ?? `Mock failure (${code}).` });
 
@@ -131,6 +136,7 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
   let partialTimer: number | undefined;
   let levelTimer: number | undefined;
   let micUnavailable = scenario === "nomic";
+  let downloadFailure: string | null = scenario === "offline" ? "DOWNLOAD_FAILED" : null;
 
   let pushQueued = false;
   const pushSnapshot = () => {
@@ -322,6 +328,9 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
         state.dictation = { ...state.dictation, error: code ? mockError(code) : null };
         pushSnapshot();
       },
+      failDownloads: (code: string | null = "DOWNLOAD_FAILED") => {
+        downloadFailure = code;
+      },
     },
   });
 
@@ -369,7 +378,14 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
 
     models: {
       list: () => resolved(registry.list()),
-      install: async (id, variantId) => registry.install(id, variantId),
+      install: async (id, variantId) => {
+        if (downloadFailure) {
+          const error = mockError(downloadFailure);
+          registry.fail(id, variantId, error);
+          throw bridgeError(error.code, error.message);
+        }
+        registry.install(id, variantId);
+      },
       cancelInstall: async (id, variantId) => registry.cancelInstall(id, variantId),
       remove: async (id, variantId) => {
         registry.remove(id, variantId);
@@ -380,16 +396,16 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
         }
       },
       activate: async (id) => {
-        if (!registry.isReady(id)) throw new Error("Download this model before you use it.");
+        if (!registry.isReady(id)) throw bridgeError("MODEL_NOT_INSTALLED", "Download this model before you use it.");
         state.settings.models.activeId = id;
         emitModels();
         loadActiveModel();
       },
       updateSettings: async (id, patch) => {
         const view = registry.get(id);
-        if (!view) throw new Error(`Unknown model: ${id}`);
+        if (!view) throw bridgeError("MODEL_NOT_FOUND", `Unknown model: ${id}`);
         const unknown = Object.keys(patch).filter((k) => !view.settings.some((s) => s.key === k));
-        if (unknown.length > 0) throw new Error(`Unknown setting for ${view.name}: ${unknown.join(", ")}`);
+        if (unknown.length > 0) throw bridgeError("INVALID_SETTINGS", `Unknown setting for ${view.name}: ${unknown.join(", ")}`);
         const perModel = state.settings.models.perModel;
         perModel[id] = { ...perModel[id], ...patch };
         emitModels();
@@ -407,7 +423,14 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
 
     enginePacks: {
       list: () => resolved(packs.list()),
-      install: async (id) => packs.install(id),
+      install: async (id) => {
+        if (downloadFailure) {
+          const error = mockError(downloadFailure);
+          packs.fail(id, error);
+          throw bridgeError(error.code, error.message);
+        }
+        packs.install(id);
+      },
       remove: async (id) => packs.remove(id),
       onPacksChanged: (cb) => packsChanged.on(cb),
     },
