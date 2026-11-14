@@ -1,261 +1,175 @@
+<div align="center">
+
+<img src="assets/icon.png" width="112" alt="EchoType">
+
 # EchoType
 
-<div align="center">
-<img src="assets/icon.png" width="128" alt="EchoType Logo">
+**按住一个键说话，松开，文字就出现在你正在输入的地方。**
 
-**🎤 集成 AI 的现代化语音转文字应用**
+在本机运行的语音输入，支持 Windows、macOS 和 Linux。
 
-快速 · 离线 · 智能 · 跨平台
-
-[📥 下载](https://github.com/ljyou001/echotype/releases) · [📖 文档](#文档) · [🛠 开发](#开发)
+[下载 v3.0.0](https://github.com/ljyou001/echotype/releases/tag/v3.0.0) · [快速上手](#快速上手) · [从源码构建](#从源码构建) · [更新日志](RELEASE_NOTES_v3.0.0.md)
 
 [English](README.md) | 简体中文
 
 </div>
 
----
+![EchoType 首页](assets/screenshot/main_ui.png)
 
-## 📖 项目简介
+## 能做什么
 
-EchoType 是对原 EchoType 项目的完全重写，采用现代化的 Electron 前端与 Python 后端架构。它提供实时的语音转文字转录功能，支持多种 AI 模型，并能与外部 AI 服务进行集成。
+- **按住说话，松开出字。** 按住热键说话，松开后文字直接打在光标处，在哪个应用里都行。
+- **轻按打开快捷操作。** 轻按同一个键，刚才说的话会出现在一个小窗口里。可以让 AI 润色、发到 Slack，或者直接拿去搜索。
+- **快。** 用 CPU 跑 SenseVoice 或 Paraformer：说完稍停一下再松键，0–10 ms 出字；话音刚落就松键，也不到 100 ms（i9-13980HX 实测）。
+- **准，和松键时机无关。** 按住说话的结果和整段录音转写的结果一致，数字也会自动写成阿拉伯数字（"9点"、"50 pieces"）。
+- **隐私。** 语音识别全部在你的电脑上完成。只有你主动运行集成时，文字才会发出去。
 
-### 核心特性
+## 截图
 
-- **🎤 实时语音识别**: 支持多种模型的即时语音转文字
-- **🤖 AI 集成**: 直接集成 OpenClaw、ChatGPT、Claude 等服务
-- **⚡ 快捷操作**: 快捷键触发的快捷操作窗口，实现即时 AI 交互
-- **🌍 多语言支持**: 基于 i18n 框架，支持中英文
-- **🔒 隐私优先**: 使用本地 AI 模型，完全离线处理
-- **🎨 现代化 UI**: 使用 React 和 TypeScript 构建，界面简洁直观
+| 模型与模型管理器 | 快捷操作 |
+|:---:|:---:|
+| ![模型与模型管理器](assets/screenshot/models_ui.png) | ![快捷操作](assets/screenshot/quick_action_ui.png) |
+| **集成** | **历史记录** |
+| ![集成](assets/screenshot/integrations_ui.png) | ![历史记录](assets/screenshot/history_ui.png) |
+| **设置** | **深色主题** |
+| ![设置](assets/screenshot/settings_ui.png) | ![深色主题](assets/screenshot/main_ui_dark.png) |
 
-## 📸 界面截图
+## 下载
 
-| 主界面 | 模型管理 | 快捷操作 |
-|:---:|:---:|:---:|
-| ![主界面](assets/screenshot/main_ui.png) | ![模型管理](assets/screenshot/models_ui.png) | ![集成](assets/screenshot/integrations_ui.png) |
-| *现代化仪表盘* | *模型轻松切换* | *AI 集成系统* |
+到 [GitHub Releases（v3.0.0）](https://github.com/ljyou001/echotype/releases/tag/v3.0.0) 下载最新版本。
 
-## 🏗 技术架构
+| 平台 | 文件 |
+|---|---|
+| Windows（x64、ARM64） | `EchoType-3.0.0-win-<arch>.exe`（安装包）或 `.zip`（免安装） |
+| macOS（Apple Silicon、Intel） | `EchoType-3.0.0-mac-<arch>.dmg` 或 `.zip` |
+| Linux（x64、ARM64） | `.AppImage` 或 `.deb` |
 
-### 前端 (Electron + React)
-- **框架**: Electron, React, TypeScript
-- **状态管理**: Zustand
-- **样式**: 现代化的自定义 CSS 设计系统
-- **构建工具**: Vite
+每个文件的校验值见 `SHA256SUMS.txt`。Windows 安装包约 165 MB，模型另外下载，只下你选的那几个。
 
-### 后端 (Python)
-- **框架**: FastAPI (支持 WebSocket)
-- **模型**: Sherpa-ONNX (Paraformer) 和 Qwen3-ASR
-- **音频处理**: 实时音频流处理
-- **API**: RESTful API 与 WebSocket 实时通信
+**安装包还没有代码签名。** Windows 上点**更多信息 → 仍要运行**；macOS 上第一次打开时，右键点应用，选**打开**。
 
-## 🚀 快速上手
+### 已知问题
 
-### 环境要求
+- v3 目前只在 Windows x64 上实测过。macOS、Linux 和 ARM64 版本通过了自动检查，但还没有在真机上测试。
+- Linux 的 Wayland 环境下，系统会限制全局热键，遇到时应用会给出提示。
 
-- **Node.js**: v18 或更高版本
-- **Python**: 3.9 或更高版本
-- **操作系统**: Windows 10/11 或 macOS 10.14+
+## 快速上手
 
-### 安装步骤
+1. **安装并打开 EchoType。**
+2. **选一个模型。** 打开**模型**页，下载一个，再点**使用此模型**。第一次用可以先选 SenseVoice Small。**管理模型**里能看到每个模型的所有版本，以及可选的 GPU 运行库。
+3. **设置热键。** 默认是右 Ctrl（macOS 上是右 Option），可以在**设置 → 听写 → 热键**里修改。
+4. **开始听写。** 按住热键说话，松开出字；轻按一下打开快捷操作。想按一下开始、再按一下结束？把**录音方式**改成**单击切换**。
 
-1. **克隆仓库**
-   ```bash
-   git clone https://github.com/ljyou001/echotype.git
-   cd echotype
-   ```
+## 模型
 
-2. **安装后端依赖**
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate  # Windows
-   # source .venv/bin/activate  # macOS/Linux
-   pip install -r requirements-backend.txt
-   ```
+模型管理器提供 9 个语音模型：
 
-3. **安装前端依赖**
-   ```bash
-   cd frontend
-   npm install
-   ```
+- SenseVoice Small
+- Paraformer Small
+- Paraformer
+- Qwen3 ASR 0.6B
+- Qwen3 ASR 1.7B
+- FireRedASR 2 AED
+- Parakeet TDT 0.6B v3
+- Moonshine v2 Base（英文）
+- Whisper Large v3 Turbo
 
-4. **下载 AI 模型**
-   - 模型存储在 `models/` 目录下
-   - Paraformer (离线): ~200MB
-   - Qwen3-ASR (离线): ~1.2GB
+需要标点模型的会自动装上。下载会校验文件完整性，中断后可以接着下。
 
-### 开发环境运行
+**默认用 CPU，想快再加 GPU。** 所有模型装好就能用 CPU 跑。GPU 加速是可选的一次性下载：Windows 和 Linux x64 支持 NVIDIA CUDA，Windows 和 Linux 支持 Vulkan。Apple Silicon 版内置 Qwen3 的 Metal 加速。
 
-**选项 1: 使用启动器 (推荐)**
+标点和语言设置放在各个模型里。标点跟着你说的语言走，也可以手动固定一种。
+
+## 快捷操作与集成
+
+轻按热键打开快捷操作，里面是你刚才说的话，选一个动作就行；按回车运行默认动作。
+
+- **AI 改写**：整理、翻译、改写成邮件或聊天消息、整理成要点，或者直接问 AI。支持 OpenAI、Anthropic Claude、Google Gemini、DeepSeek、通义千问、Kimi、智谱 GLM、OpenRouter，也支持通过 Ollama、LM Studio 或 llama.cpp server 运行的本地模型。
+- **发送**到 Slack、Discord、飞书、Todoist、Obsidian、Webhook、Claude Code 或 Codex CLI。
+- **打开**：Google、必应、百度、ChatGPT、Claude、Perplexity、Gemini、通义千问、豆包、文心一言、Google 翻译、DeepL、有道翻译，或任意网页。
+
+在**集成**页添加动作、调整顺序。
+
+## 隐私
+
+- 语音识别全部在你的电脑上完成。
+- 只有你运行某个集成时，文字才会离开电脑，而且只发给这个集成写明的服务。
+- API key 用系统的安全存储加密保存。
+- 历史记录只存在你的电脑上，可以随时搜索、复制或清空。
+
+## 你的数据
+
+EchoType v3 的所有数据都放在 `~/.echotype-v3`：设置、历史记录、模型、GPU 运行库和日志。
+
+**从 v2 升级？** 第一次启动时，v3 会导入你 v2 的设置和集成，但从不修改 v2 的目录 `~/.echotype`。v2 的模型格式不同，请在模型管理器里重新下载需要的模型。
+
+## 从源码构建
+
+需要 Node.js 20 及以上、npm，以及 Rust 1.85 及以上。
+
 ```bash
-python launcher.py
+git clone https://github.com/ljyou001/echotype.git
+cd echotype
 ```
 
-**选项 2: 手动启动**
+先编译引擎。第一次编译会下载约 1 GB 的 sherpa-onnx 库。
 
-终端 1 (后端):
 ```bash
-.venv\Scripts\activate
-python -m backend
+cd engine
+cargo build --release
+cd ..
 ```
 
-终端 2 (前端):
+以开发模式运行应用。它会拉起 `engine/target/release` 下的引擎。
+
 ```bash
 cd frontend
+npm install
+node node_modules/electron/install.js
 npm run dev
 ```
 
-### 生产环境构建
+npm 11 默认不跑依赖的安装脚本，所以要用 `node node_modules/electron/install.js` 下载 Electron。
 
-```bash
-cd frontend
-npm run build
-```
+- `npm run dev:mock` 用模拟引擎运行应用，不用编译 Rust。
+- Qwen3 模型跑在 llama.cpp 上。想在开发版里试，先在 `engine/` 下运行 `bash scripts/make-pack.sh cpu <platform> target/release`，`<platform>` 例如 `win32-x64`。
+- 测试：在 `frontend/` 下运行 `npm run test:core` 和 `npm run smoke:core`，在 `engine/` 下运行 `cargo test --release`。
+- 打包：`npm run package` 在本机打出 Windows x64 安装包。其余平台在 GitHub Actions 上构建（[build.yml](.github/workflows/build.yml)）。
 
-构建后的应用程序将位于 `frontend/dist-electron/` 目录。
+## 架构
 
-## 📚 文档说明
+EchoType 分三层，每一层只依赖下一层：
 
-### 用户指南
-- [快速入门](QUICKSTART.md) - 5 分钟上手
-- [配置指南](design/SETTINGS_EXPLAINED.md) - 详细设置说明
-- [快捷键配置](design/HOTKEY_IMPLEMENTATION.md) - 自定义快捷键
-- [模型切换](design/MODEL_SWITCHING_GUIDE.md) - 在 AI 模型间切换
+**UI → Core → Engine**
 
-### 集成指南
-- [OpenClaw 集成](design/OPENCLAW_INTEGRATION.md) - 连接 OpenClaw AI 智能体
-- [快捷操作](design/QUICK_ACTION_INTEGRATION_SYSTEM.md) - 使用快捷操作系统
-- [集成系统](design/QUICK_ACTION_INTEGRATION_IMPLEMENTATION.md) - 添加自定义集成
+- **UI**（`frontend/src`）：React 18 + Zustand。只渲染 Core 推来的状态，从不直接连引擎。
+- **Core**（`frontend/electron`）：Electron 主进程。听写状态机、热键、文字输出、设置、模型安装和集成都在这里。
+- **Engine**（`engine/`）：`echotype-engine`，基于 sherpa-onnx 和 llama.cpp 的原生 Rust 进程。负责麦克风、语音活动检测、语音识别和标点，通过本地 WebSocket 和 Core 通信。
 
-### 技术文档
-- [后端规范](design/BACKEND_SPEC.md) - 后端 API 与架构
-- [前端规范](design/FRONTEND_ELECTRON_SPEC_V2.md) - 前端架构
-- [模型架构](design/MODEL_SETTINGS_ARCHITECTURE.md) - AI 模型系统
-- [日志系统](design/LOGGING_SYSTEM.md) - 调试与日志
-- [i18n 指南](design/I18N_GUIDE.md) - 国际化
+延伸阅读：
 
-### 开发指南
-- [打包指南](design/PACKAGING.md) - 构建可分发安装包
-- [部署指南](design/DEPLOYMENT.md) - 部署到生产环境
-- [测试程序](design/TESTING_PROCEDURES.md) - 测试应用程序
-- [故障排除](design/TROUBLESHOOTING.md) - 常见问题与解决方案
+- [架构设计](design/ARCHITECTURE_V3.md)
+- [引擎协议](contracts/ENGINE_PROTOCOL.md)（英文）
+- [模型清单规范](contracts/MODEL_MANIFEST.md)（英文）
+- [集成方案](design/INTEGRATIONS_V3.md)
+- [延迟基准](design/BENCHMARKS.md)（英文）
 
-## 🎯 功能特性
+## 参与贡献
 
-### 语音识别
-- **多模型支持**: 支持 Sherpa-ONNX (Paraformer) 和 Qwen3-ASR
-- **实时处理**: 低延迟即时转录
-- **高准确度**: 采用先进 AI 模型，识别更精准
-- **完全离线**: 使用本地模型，无需联网
+欢迎贡献。请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)；第一次贡献时，请签署[贡献者许可协议](CLA.md)。
 
-### 快捷操作
-- **热键触发**: 可自定义快捷键触发 (默认: Ctrl+Shift+Space)
-- **AI 集成**: 将转录文字发送至 ChatGPT, Claude, OpenClaw 等
-- **回复展示**: 直接在快捷操作窗口查看 AI 响应
-- **智能定位**: 窗口跟随光标，智能调整位置
+## 许可证
 
-### 集成服务
-- **OpenClaw**: 支持 WebSocket 和 HTTP API 的 AI 智能体
-- **ChatGPT**: 直接集成 OpenAI 的 ChatGPT
-- **Claude**: Anthropic 的 Claude AI 助手
-- **Perplexity**: AI 驱动的搜索引擎
-- **自定义集成**: 易于扩展新的集成服务
+EchoType 以 **GNU Affero General Public License v3.0 or later（AGPL-3.0-or-later）** 开源，详见 [LICENSE](LICENSE)。贡献受 [CLA](CLA.md) 约束。
 
-### 用户界面
-- **现代设计**: 界面清爽，动画流畅
-- **深色模式**: 已准备好深色模式支持
-- **响应式布局**: 适配不同屏幕尺寸
-- **无障碍支持**: 支持键盘导航和屏幕阅读器
+每个语音模型都有自己的许可证。**设置 → 关于**里列出了所有模型的许可证和开源组件。
 
-### 系统集成
-- **系统托盘**: 后台运行，支持托盘图标
-- **开机自启**: 可选开机自动运行
-- **全局热键**: 系统级热键支持
-- **桌面通知**: 重要事件实时通知
+## 致谢
 
-## 🛠 开发相关
+- [CapsWriter-Offline](https://github.com/HaujetZhao/CapsWriter-Offline)：EchoType 的起点
+- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) 和 [llama.cpp](https://github.com/ggml-org/llama.cpp)：引擎的基础
+- 模型管理器里每个语音模型的作者
 
-### 项目结构
+## 反馈
 
-```
-echotype/
-├── backend/                 # Python 后端
-│   ├── common/             # 共享工具类
-│   ├── qwen3/              # Qwen3 模型适配器
-│   ├── sherpa_adapter/     # Sherpa-ONNX 适配器
-│   ├── app.py              # FastAPI 应用
-│   ├── manager.py          # 模型管理器
-│   └── server.py           # WebSocket 服务器
-├── frontend/               # Electron 前端
-│   ├── electron/           # Electron 主进程
-│   ├── src/                # React 应用
-│   │   ├── components/     # React 组件
-│   │   ├── services/       # 业务逻辑
-│   │   ├── store/          # 状态管理
-│   │   └── i18n/           # 国际化
-│   ├── assets/             # 静态资源
-│   └── dist/               # 构建输出
-├── models/                 # AI 模型文件
-│   ├── paraformer-offline/ # Paraformer 模型
-│   └── Qwen3-ASR-0.6B/     # Qwen3 模型
-├── design/                 # 文档设计
-├── test/                   # 测试文件
-└── scripts/                # 脚本工具
-```
-
-### 技术栈
-
-**前端**:
-- Electron 28+
-- React 18
-- TypeScript 5
-- Vite 5
-- Zustand (状态管理)
-- i18next (国际化)
-
-**后端**:
-- Python 3.9+
-- FastAPI
-- WebSocket
-- Sherpa-ONNX
-- FunASR
-- NumPy
-
-## 🤝 参与贡献
-
-欢迎贡献代码！在提交 PR 之前请阅读贡献指南。
-
-1. Fork 本仓库
-2. 创建特性分支
-3. 提交更改
-4. 进行充分测试
-5. **签署 [贡献者许可协议 (CLA)](CLA.md)** (如果是首次贡献，详见 [CONTRIBUTING.md](CONTRIBUTING.md))
-6. 提交 Pull Request
-
-## 📄 开源协议
-
-本项目采用 **GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)** 开源协议。详情请参阅 [LICENSE](LICENSE) 文件。贡献受 [贡献者许可协议 (CLA)](CLA.md) 约束。
-
-## 🙏 鸣谢
-
-- 原项目 [CapsWriter-Offline](https://github.com/HaujetZhao/CapsWriter-Offline)
-- [Sherpa-ONNX](https://github.com/k2-fsa/sherpa-onnx) 提供离线语音识别支持
-- [FunASR](https://github.com/alibaba-damo-academy/FunASR) 提供 Paraformer 模型
-- [Qwen](https://github.com/QwenLM/Qwen) 提供 Qwen3-ASR 模型
-- [OpenClaw](https://github.com/openclaw/openclaw) 提供 AI 智能体集成
-
-## 📞 支持与反馈
-
-- **问题反馈**: [GitHub Issues](https://github.com/ljyou001/echotype/issues)
-- **社区交流**: [GitHub Discussions](https://github.com/ljyou001/echotype/discussions)
-- **技术文档**: [Design Docs](design/)
-
----
-
-<div align="center">
-
-**⭐ 如果这个项目对你有帮助，请点个 Star！**
-
-Made with ❤️ by ljyou001
-
-</div>
+发现问题或有想法？欢迎[提交 Issue](https://github.com/ljyou001/echotype/issues)。
