@@ -1,8 +1,9 @@
 /**
- * [INPUT]: 依赖 store/appStore 的快照、模型、引擎包、run；依赖 bridge().system（restartEngine/openLogsFolder/platform/arch）与 ipcVersion；
- *          依赖 components 的 PageHeader、Section、Badge；依赖 utils/status
+ * [INPUT]: 依赖 store/appStore 的快照、模型、引擎包、lastError、run；依赖 bridge().system（restartEngine/openLogsFolder/platform/arch）与 ipcVersion；
+ *          依赖 components 的 PageHeader、Section、Badge；依赖 utils/status 与 utils/format
  * [OUTPUT]: 导出 DebugPage 组件
  * [POS]: 诊断页。展示引擎状态、运行方式（版本 · provider · runtime，含回退）、引擎版本、加载进度与错误码；提供重启引擎、打开日志目录；
+ *        最近一次被拒的操作原样显示 code + message（提示条只给友好文案，细节只在这里）；
  *        保留 v2 的按键监听器（验证左右修饰键与特殊键）；只读展示当前快照 JSON，方便提交问题。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -13,6 +14,7 @@ import { bridge } from "../bridge";
 import { Badge } from "../components/controls";
 import { PageHeader, Section } from "../components/layout";
 import { selectActiveModel, useAppStore } from "../store/appStore";
+import { formatRelativeTime } from "../utils/format";
 import { hasAnyInstalled } from "../utils/models";
 import { STATUS_TONE, statusOf } from "../utils/status";
 import "./DebugPage.css";
@@ -30,10 +32,11 @@ const CODE_LABELS: Record<string, string> = {
 };
 
 export function DebugPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const snapshot = useAppStore((s) => s.snapshot!);
   const models = useAppStore((s) => s.models);
   const packs = useAppStore((s) => s.packs);
+  const lastError = useAppStore((s) => s.lastError);
   const activeModel = useAppStore(selectActiveModel);
   const run = useAppStore((s) => s.run);
   const showToast = useAppStore((s) => s.showToast);
@@ -94,6 +97,15 @@ export function DebugPage() {
           <div className="debug__error" role="alert">
             <code>{engine.error.code}</code>
             <span>{engine.error.message}</span>
+          </div>
+        )}
+        {lastError && (
+          <div className="debug__error">
+            <span className="debug__error-label">
+              {t("debug.lastError")} · {formatRelativeTime(lastError.at, i18n.language)}
+            </span>
+            <code>{lastError.code}</code>
+            <span>{lastError.message}</span>
           </div>
         )}
       </Section>

@@ -50,7 +50,7 @@
     "connected": "Connected",
     "disconnected": "Disconnected",
     "starting": "Starting",
-    "noModel": "No model",
+    "noModel": "No model loaded",
     "finalizing": "Transcribing",
     "stopped": "Stopped"
   },
@@ -646,6 +646,37 @@
     "unknown": {
       "title": "Model error",
       "message": "Something went wrong."
+    },
+    "codes": {
+      "fallback": "Something went wrong. Try again.",
+      "INTERNAL": "Something went wrong. Try again.",
+      "DOWNLOAD_FAILED": "Download failed. Check your connection and try again.",
+      "CHECKSUM_MISMATCH": "The download was damaged. Try again.",
+      "ASSET_FILES_MISSING": "The download is incomplete. Try again.",
+      "EXTRACT_FAILED": "Couldn't unpack the download. Try again.",
+      "DISK_FULL": "Not enough disk space. Free up some space and try again.",
+      "ASSET_UNAVAILABLE": "This download isn't available yet.",
+      "INSTALL_FAILED": "Couldn't finish installing. Try again.",
+      "PACK_UNAVAILABLE": "The GPU runtime isn't available for this computer yet.",
+      "PACK_NOT_INSTALLED": "This model needs the GPU runtime. Install it from Manage models.",
+      "PACK_OUTDATED": "The GPU runtime is out of date. Reinstall it from Manage models.",
+      "MODEL_NOT_FOUND": "This model is no longer available.",
+      "VARIANT_NOT_FOUND": "This version of the model is no longer available.",
+      "NO_VARIANT": "No version of this model runs on this computer.",
+      "MODEL_NOT_INSTALLED": "Download this model first.",
+      "MODEL_NOT_LOADED": "The model is still loading. Try again in a moment.",
+      "MODEL_LOAD_FAILED": "Couldn't load the model. Try again, or choose another version.",
+      "NO_ACTIVE_MODEL": "Choose a model to start dictating.",
+      "PROVIDER_UNAVAILABLE": "The selected hardware isn't available on this computer.",
+      "ENGINE_CRASHED": "The speech engine stopped. Restart it from Home.",
+      "ENGINE_STOPPED": "The speech engine isn't running. Start it from Home.",
+      "DEVICE_UNAVAILABLE": "Couldn't open a microphone. Make sure one is connected.",
+      "SESSION_BUSY": "Dictation is already running.",
+      "SESSION_START_FAILED": "Couldn't start dictation. Try again.",
+      "SESSION_STOP_FAILED": "Couldn't finish dictation. Try again.",
+      "DECODE_FAILED": "Couldn't turn that into text. Try again.",
+      "INVALID_SETTINGS": "That setting isn't valid.",
+      "NOT_FOUND": "That item no longer exists."
     }
   },
   "onboarding": {
@@ -733,7 +764,8 @@
     "snapshotCopied": "Snapshot copied",
     "enginePacks": "Engine packs",
     "runMode": "Run mode",
-    "fallback": "fell back to CPU"
+    "fallback": "fell back to CPU",
+    "lastError": "Last error"
   },
   "manager": {
     "open": "Manage models",
@@ -746,17 +778,18 @@
     "speechModels": "Speech models",
     "installedSize": "{{size}} on disk",
     "inUse": "In use",
-    "alsoDownloadsRuntime": "Also downloads the {{name}} ({{size}}).",
     "notOnThisComputer": "Not available on this computer",
     "removeVariantTitle": "Remove {{name}} · {{version}}?",
     "removeVariantMessage": "Frees up {{size}}. You can download it again any time.",
     "removeVariantInUse": "This is the version in use. Dictation stops until another version or model is ready. Frees up {{size}}.",
     "installingRuntime": "Installing the {{name}} · {{pct}}%",
-    "needsRuntime": "Needs the {{name}} ({{size}}) to run.",
-    "installingRuntimeStage": "Installing the {{name}}…"
+    "needsRuntime": "Needs the {{name}}, a one-time download.",
+    "installingRuntimeStage": "Installing the {{name}}…",
+    "needsRuntime_sized": "Needs the {{name}} ({{size}}, one-time download).",
+    "runtimeUnavailable": "The {{name}} isn't available yet.",
+    "notAvailableYet": "Not available yet"
   },
   "statusBar": {
-    "noModel": "No model loaded",
     "chooseModel": "Choose a model",
     "fallback": "{{target}} unavailable — running on {{provider}}"
   },

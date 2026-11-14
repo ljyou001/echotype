@@ -1,6 +1,7 @@
 /**
  * [INPUT]: 依赖 bridge().system（权限查询与跳转）、bridge().models、bridge().audio；依赖 store/appStore 的快照、模型、
- *          updateSettings、run；依赖 hooks 的 useAudioInputs、useMicTest；依赖 components 的 LevelMeter、ProgressBar、Badge
+ *          updateSettings、run；依赖 hooks 的 useAudioInputs、useMicTest；依赖 components 的 LevelMeter、ProgressBar、Badge；
+ *          依赖 utils/runMode 的引擎包文案与 utils/errors 的错误文案
  * [OUTPUT]: 导出 Onboarding 组件
  * [POS]: 首次运行引导，三步：权限 → 麦克风 → 下载模型。settings.ui.onboardingCompleted 为 false 时替代主界面。
  *        模型列表来自 Core（不硬编码 id），语言用标签展示；版本缺引擎包时一并下载并注明；
@@ -20,9 +21,10 @@ import { useAudioInputs } from "../hooks/useAudioInputs";
 import { useMicTest } from "../hooks/useMicTest";
 import { useVariantInstaller } from "../hooks/useVariantInstaller";
 import { useAppStore } from "../store/appStore";
+import { errorText } from "../utils/errors";
 import { formatBytes } from "../utils/format";
 import { TIER_ORDER, isBusy, isReady, modelSizeBytes, selectedVariant } from "../utils/models";
-import { targetLabel } from "../utils/runMode";
+import { packNeedText } from "../utils/runMode";
 import "./Onboarding.css";
 
 type Step = 0 | 1 | 2;
@@ -267,21 +269,14 @@ function ModelStep() {
               </div>
               <p className="onboarding__row-desc">{m.description}</p>
               <LanguageTags codes={m.languages} />
-              {pack && !installing && (
-                <p className="onboarding__pack-note">
-                  {t("manager.alsoDownloadsRuntime", {
-                    name: t("manager.runtimeName", { target: targetLabel(t, pack.target) }),
-                    size: formatBytes(pack.sizeBytes, i18n.language),
-                  })}
-                </p>
-              )}
+              {pack && !installing && <p className="onboarding__pack-note">{packNeedText(t, pack, i18n.language)}</p>}
               {installing && (
                 <div className="onboarding__progress">
                   <ProgressBar pct={status === "downloading" ? pct : null} label={t(`models.install.${status}`)} />
                   <span>{status === "downloading" && pct !== null ? t("models.install.downloadingPct", { pct }) : t(`models.install.${status}`)}</span>
                 </div>
               )}
-              {status === "error" && error && <p className="field__error">{error.message}</p>}
+              {status === "error" && error && <p className="field__error">{errorText(t, error)}</p>}
             </div>
             <div className="onboarding__row-action">
               {status === "installed" && !pack ? (

@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 store/integrationsStore 的目录、实例与 save；依赖 bridge().integrations（listModels/test）；依赖 ./FieldInput；
- *          依赖 components 的 Modal；依赖 utils/integrations 的 pickText、GROUP_ORDER、parseBridgeError
+ *          依赖 components 的 Modal；依赖 utils/integrations 的 pickText、GROUP_ORDER；依赖 utils/errors 的 toAppError
  * [OUTPUT]: 导出 AddIntegrationDialog（选动作 → 配置）与 EditIntegrationDialog
  * [POS]: 集成的新增与配置弹窗。表单完全由目录字段生成：动作字段 + （transform）provider 选择、provider 字段、模型下拉。
  *        provider 级密钥（apiKey）按 provider 共享，"已保存"状态由同 provider 的其他实例推断；其余密钥按实例。
@@ -13,7 +13,8 @@ import { FiAlertTriangle, FiCheck, FiLock } from "react-icons/fi";
 import { bridge } from "../../bridge";
 import { Modal } from "../../components/Modal";
 import { pickDefaultIntegration, useIntegrationsStore } from "../../store/integrationsStore";
-import { GROUP_ORDER, parseBridgeError, pickText } from "../../utils/integrations";
+import { toAppError } from "../../utils/errors";
+import { GROUP_ORDER, pickText } from "../../utils/integrations";
 import { FieldInput, type SecretState } from "./FieldInput";
 import type {
   IntegrationActionView,
@@ -174,7 +175,7 @@ function InstanceDialog({ action, instance, onClose, onBack }: { action: Integra
       setModels(list.map((m) => m.id));
       setModelsState({ loading: false, error: list.length === 0 ? t("integrations.form.noModels") : null });
     } catch (err) {
-      setModelsState({ loading: false, error: describe(t, parseBridgeError(err)) });
+      setModelsState({ loading: false, error: describe(t, toAppError(err)) });
     }
   };
 
@@ -184,7 +185,7 @@ function InstanceDialog({ action, instance, onClose, onBack }: { action: Integra
       const res = await bridge().integrations.test(toInput());
       setTestState({ loading: false, ok: res.ok, error: res.ok ? null : describe(t, res.error ?? { code: "INTERNAL", message: "" }) });
     } catch (err) {
-      setTestState({ loading: false, ok: false, error: describe(t, parseBridgeError(err)) });
+      setTestState({ loading: false, ok: false, error: describe(t, toAppError(err)) });
     }
   };
 
@@ -201,7 +202,7 @@ function InstanceDialog({ action, instance, onClose, onBack }: { action: Integra
       }
       onClose();
     } catch (err) {
-      setSaveError(describe(t, parseBridgeError(err)));
+      setSaveError(describe(t, toAppError(err)));
       setSaving(false);
     }
   };

@@ -6,11 +6,12 @@
  *        变成会横向滚动的顶栏。底部状态栏：引擎状态一行，当前模型与运行方式两行
  *        （如 "Qwen3 ASR 0.6B" / "NVIDIA GPU · CUDA · llama.cpp"），逐行省略、悬停看全文；
  *        回退到 CPU 时整块染成警示色。点击跳到模型页。
+ *        没加载模型时是中性状态："未加载模型"（灰点）+ 一行"选择模型 ›"，不是红色的出错。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { FiAlertTriangle, FiClock, FiCpu, FiGrid, FiHome, FiSettings, FiTerminal } from "react-icons/fi";
+import { FiAlertTriangle, FiChevronRight, FiClock, FiCpu, FiGrid, FiHome, FiSettings, FiTerminal } from "react-icons/fi";
 import logoUrl from "@assets/icon-white.png";
 import { useAppStore, type PageKey } from "../store/appStore";
 import { describeRunMode } from "../utils/runMode";
@@ -84,15 +85,16 @@ function RunMode({ loading }: { loading: boolean }) {
   const models = useAppStore((s) => s.models);
 
   let name: string;
-  let mode: string;
+  let mode = "";
   let tooltip: string;
   let fallback = false;
   if (active) {
     ({ name, mode, tooltip, fallback } = describeRunMode(t, active));
   } else {
+    // 没加载模型：上面的状态行已经写了"未加载模型"，这里只给一个去选模型的入口
     const pending = loading ? models.find((m) => m.id === activeId) : undefined;
-    name = pending ? pending.name : t("statusBar.noModel");
-    mode = pending ? t("status.loading") : t("statusBar.chooseModel");
+    name = pending ? pending.name : t("statusBar.chooseModel");
+    if (pending) mode = t("status.loading");
     tooltip = name;
   }
 
@@ -106,8 +108,9 @@ function RunMode({ loading }: { loading: boolean }) {
       <span className="run-mode__name">
         {fallback && <FiAlertTriangle />}
         <span className="run-mode__text">{name}</span>
+        {!active && !loading && <FiChevronRight />}
       </span>
-      <span className="run-mode__mode">{mode}</span>
+      {mode && <span className="run-mode__mode">{mode}</span>}
     </button>
   );
 }

@@ -1,10 +1,12 @@
 /**
  * [INPUT]: 依赖 zustand 的 create；依赖 bridge() 访问 Core；依赖 ipc-contract 的快照与模型类型；
- *          依赖 i18n/config 的 resolveAppLanguage 同步界面语言；依赖 utils/theme 的 applyTheme 同步皮肤
- * [OUTPUT]: 导出 useAppStore、connectStore()、PageKey、PageAnchor、Toast，
+ *          依赖 i18n/config 的 resolveAppLanguage 同步界面语言；依赖 utils/theme 的 applyTheme 同步皮肤；
+ *          依赖 utils/errors 把 bridge 拒绝转成按 code 取的文案
+ * [OUTPUT]: 导出 useAppStore、connectStore()、PageKey、PageAnchor、Toast、LastError，
  *           以及选择器 selectSettings / selectActiveModel / selectDictationError / selectHotkeyError
  * [POS]: UI 层唯一的状态容器。镜像 Core 推送的 AppSnapshot、ModelView[] 与 EnginePackView[]，
- *        外加纯本地 UI 状态（当前页与页内锚点、提示条）。
+ *        外加纯本地 UI 状态（当前页与页内锚点、提示条、最近一次错误）。
+ *        动作失败一律经 reportError：提示条只显示 errors.codes.<CODE> 的文案，原始 code + message 存进 lastError 给诊断页。
  *        模型专属设置只经 updateModelSettings → bridge.models.updateSettings，从不经全局 updateSettings。
  *        快照里的 ui.language 与 ui.theme 变化时，同步 i18n 与 <html> 上的皮肤。
  *        业务状态只读：所有动作都调用 bridge，等 Core 推回新快照，本地不自造业务真相。
@@ -22,6 +24,7 @@ import type {
 } from "../../electron/ipc-contract";
 import { bridge } from "../bridge";
 import i18n, { resolveAppLanguage } from "../i18n/config";
+import { errorText, toAppError } from "../utils/errors";
 import { applyTheme } from "../utils/theme";
 
 export type PageKey = "home" | "history" | "models" | "integrations" | "settings" | "debug";
@@ -44,9 +47,12 @@ interface AppState {
   page: PageKey;
   anchor: PageAnchor | null;
   toast: Toast | null;
+  lastError: LastError | null; // 最近一次被拒的 bridge 调用，原样留给诊断页
   setPage: (page: PageKey, anchor?: PageAnchor) => void;
   showToast: (message: string, kind?: Toast["kind"]) => void;
   dismissToast: () => void;
+  /** 记下原始错误，提示条只显示按 code 取的文案 */
+  reportError: (err: unknown) => void;
 
   // ---------- 动作：全部转发给 Core ----------
   updateSettings: (patch: DeepPartial<Settings>) => Promise<void>;
@@ -54,7 +60,9 @@ interface AppState {
   run: (task: () => Promise<unknown>) => Promise<void>;
 }
 
-const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
+export interface LastError extends AppError {
+  at: number;
+}
 
 let toastSeq = 0;
 
@@ -65,17 +73,23 @@ export const useAppStore = create<AppState>((set, get) => ({
   page: "home",
   anchor: null,
   toast: null,
+  lastError: null,
 
   setPage: (page, anchor) => set({ page, anchor: anchor ?? null }),
   showToast: (message, kind = "info") => set({ toast: { id: ++toastSeq, kind, message } }),
   dismissToast: () => set({ toast: null }),
+  reportError: (err) => {
+    const error = toAppError(err);
+    set({ lastError: { ...error, at: Date.now() } });
+    get().showToast(errorText(i18n.t, error), "error");
+  },
 
   updateSettings: async (patch) => {
     try {
       const settings = await bridge().updateSettings(patch);
       set((s) => (s.snapshot ? { snapshot: { ...s.snapshot, settings } } : {}));
     } catch (err) {
-      get().showToast(errorMessage(err), "error");
+      get().reportError(err);
     }
   },
 
@@ -85,7 +99,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const view = await bridge().models.updateSettings(id, patch);
       set((s) => ({ models: s.models.map((m) => (m.id === id ? view : m)) }));
     } catch (err) {
-      get().showToast(errorMessage(err), "error");
+      get().reportError(err);
     }
   },
 
@@ -93,7 +107,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       await task();
     } catch (err) {
-      get().showToast(errorMessage(err), "error");
+      get().reportError(err);
     }
   },
 }));
