@@ -93,13 +93,14 @@ The engine session owns this table: a row exists only after a real load + decode
   "providers": ["cuda"],
   "protocol": 3,                         // must equal the bundled engine's protocol
   "platforms": {
-    "win32-x64": { "asset": { "name": "engine-pack-cuda-win32-x64.zip", "release": "engine-packs-v3", "sha256": "…", "size_bytes": 0 } },
-    "linux-x64": { "asset": { "name": "engine-pack-cuda-linux-x64.zip", "release": "engine-packs-v3", "sha256": "…", "size_bytes": 0 } }
+    "win32-x64": { "asset": { "name": "engine-pack-cuda-win32-x64-3.0.1.zip", "release": "engine-packs-v3", "sha256": "…", "size_bytes": 0 } },
+    "linux-x64": { "asset": { "name": "engine-pack-cuda-linux-x64-3.0.1.zip", "release": "engine-packs-v3", "sha256": "…", "size_bytes": 0 } }
   }
 }
 ```
-- A pack is a complete engine build plus its GPU libraries: `echotype-engine`, sherpa-onnx shared CUDA libs, ONNX Runtime GPU, the NVIDIA runtime DLLs it needs (cudart, cuBLAS, cuDNN, cuFFT — redistributable), and the CUDA `llama-server`.
-- Core installs it to `~/.echotype-v3/engines/<pack id>/`. While a pack is installed and its `hello.protocol` matches, Core spawns the engine from the pack folder instead of the bundled one. On mismatch or crash loop, Core falls back to the bundled engine and reports `PACK_OUTDATED`.
+- A pack is a complete engine build plus its GPU libraries: `echotype-engine`, sherpa-onnx shared CUDA libs, ONNX Runtime GPU, the NVIDIA runtime DLLs it needs (cudart, cuBLAS, cuDNN, cuFFT — redistributable), and the CUDA `llama-server`. On Windows it also carries the Visual C++ runtime DLLs that its binaries import, app-local.
+- A pack belongs to exactly one engine version. Its asset name ends in that version: `engine-pack-<id>-<platform>-<engine version>.zip`. Each app release adds new pack assets to `engine-packs-v3` and never replaces or deletes the assets that an older release's catalog pins. (v3.0.0 pins the unversioned names.)
+- Core installs it to `~/.echotype-v3/engines/<pack id>/` and records the asset `sha256` it installed. Core spawns the engine from the pack folder instead of the bundled one only while the recorded `sha256` equals this catalog's `sha256` for the platform and `hello.protocol` matches. Otherwise (an older pack after an app update, a protocol mismatch or a crash loop), Core falls back to the bundled engine, reports `PACK_OUTDATED`, and the Model Manager offers the matching pack as an update.
 - The macOS base engine already includes CoreML + Metal; Apple Silicon needs no pack.
 - Packs appear in the Model Manager next to the models.
 

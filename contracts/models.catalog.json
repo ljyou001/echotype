@@ -1349,18 +1349,18 @@
       "platforms": {
         "win32-x64": {
           "asset": {
-            "name": "engine-pack-cuda-win32-x64.zip",
+            "name": "engine-pack-cuda-win32-x64-3.0.1.zip",
             "release": "engine-packs-v3",
-            "sha256": "5badd57ab6c911ef68f2b47091e5788a62fa44e74a8e96be78d73d0a688e7c33",
-            "size_bytes": 1747563328
+            "sha256": null,
+            "size_bytes": 0
           }
         },
         "linux-x64": {
           "asset": {
-            "name": "engine-pack-cuda-linux-x64.zip",
+            "name": "engine-pack-cuda-linux-x64-3.0.1.zip",
             "release": "engine-packs-v3",
-            "sha256": "612c9101628e4f09512b93529b490db10cd4993c8eb7d7ed088c9d7e840ad593",
-            "size_bytes": 1771742456
+            "sha256": null,
+            "size_bytes": 0
           }
         }
       },
@@ -1376,34 +1376,34 @@
       "platforms": {
         "win32-x64": {
           "asset": {
-            "name": "engine-pack-vulkan-win32-x64.zip",
+            "name": "engine-pack-vulkan-win32-x64-3.0.1.zip",
             "release": "engine-packs-v3",
-            "sha256": "6e020d7f0cdc5e9c57382ef5d89cbb60dddebca32908dd49a9b734d5a018272b",
-            "size_bytes": 41238240
+            "sha256": null,
+            "size_bytes": 0
           }
         },
         "win32-arm64": {
           "asset": {
-            "name": "engine-pack-vulkan-win32-arm64.zip",
+            "name": "engine-pack-vulkan-win32-arm64-3.0.1.zip",
             "release": "engine-packs-v3",
-            "sha256": "ec44fa74874e6867344dc1b04acfe0c43d37e10b2ebc5a00bc462509bc9bbf0a",
-            "size_bytes": 33231958
+            "sha256": null,
+            "size_bytes": 0
           }
         },
         "linux-x64": {
           "asset": {
-            "name": "engine-pack-vulkan-linux-x64.zip",
+            "name": "engine-pack-vulkan-linux-x64-3.0.1.zip",
             "release": "engine-packs-v3",
-            "sha256": "af26356bcec5fb8de04748279742e340b94d35a601cb1b0a9b905f3c6017eca6",
-            "size_bytes": 55228436
+            "sha256": null,
+            "size_bytes": 0
           }
         },
         "linux-arm64": {
           "asset": {
-            "name": "engine-pack-vulkan-linux-arm64.zip",
+            "name": "engine-pack-vulkan-linux-arm64-3.0.1.zip",
             "release": "engine-packs-v3",
-            "sha256": "c1002f17c0860f171775eb345fef3de6827770b5355278213b9dc0919c371bdc",
-            "size_bytes": 46833476
+            "sha256": null,
+            "size_bytes": 0
           }
         }
       },
