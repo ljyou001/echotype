@@ -27,7 +27,7 @@ ipc-contract.ts: Core ⇄ UI 契约（orchestrator 所有，本层只读）
 - `npm run smoke:real`：真实 Electron + Core + 真实 Rust 引擎 + 真实模型下载（开发专用，需要引擎二进制）。
   样例 zh.wav、en.wav 缺省取 `<repo>/engine/target/test-wavs`，先跑一次 `bash engine/scripts/fetch-test-wavs.sh`；缺文件时 smoke 一行报错并给出这条命令。
   `ECHOTYPE_SMOKE_WAVS=<目录>` 换样例目录；`ECHOTYPE_SMOKE_ASSETS=<目录>` 用本地 zip 代替 GitHub；`ECHOTYPE_ENGINE_PATH` 指定引擎；
-  `ECHOTYPE_SMOKE_PACK=cuda` 追加一段：显式 provider 下载已发布的引擎包（真实 sha256）→ 从包拉起引擎 → GPU 版本听写
+  `ECHOTYPE_SMOKE_PACK=cuda` 追加一段：显式 provider 下载已发布的引擎包（真实 sha256）→ 从包拉起引擎 → GPU 版本听写（该包在目录里未发布时一行报错）
 - `npm run dev:mock`：开发态整套应用跑在 mock 引擎上；`ECHOTYPE_HOME=<dir>` 把用户数据指向别处
 - 用户数据根目录 `~/.echotype-v3/`（`ECHOTYPE_HOME` 覆盖），Electron 的 userData 在其下 `electron/`。v2 的 `~/.echotype/` 只读：本目录没有 settings.json 时导入设置与集成密钥，从不写入；`ECHOTYPE_HOME` 被覆盖时不导入，`ECHOTYPE_V2_HOME=<目录>` 指定导入来源
 - 真实引擎：开发态 `<repo>/engine/target/release/echotype-engine(.exe)`，`ECHOTYPE_ENGINE_PATH` 可覆盖；打包态 `resources/engine/`；装了 GPU 引擎包则从 `<home>/engines/<id>/` 拉起

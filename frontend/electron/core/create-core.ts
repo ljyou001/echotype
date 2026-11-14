@@ -4,7 +4,7 @@
  * [POS]: Core 层的组合根，不 import electron。启动时先拉起引擎，读历史、导入 v2 数据、装键盘钩子与之并行。main.ts 注入 Electron 适配器后得到一个可运行的 Core；
  *        smoke 与测试注入假适配器得到同一个 Core。服务之间的连线（谁在何时通知谁）只写在这里：
  *        热键 → 听写 · 热键错误变化 → 快照 · 听写空闲 → 补做被推迟的模型加载 · 设置变化 → 热键/麦克风/模型/开机启动/外观主题 ·
- *        引擎包装卸或失效 → 换引擎二进制 · 装需要引擎包的 variant → 先装引擎包（失败记在该 variant 的卡片上，不进引擎状态） ·
+ *        引擎包装卸或失效 → 换引擎二进制 · 装需要引擎包的 variant → 包没装或过期时先装或更新引擎包（失败记在该 variant 的卡片上，不进引擎状态） ·
  *        状态变化 → ≤ 30 Hz 推送 AppSnapshot · 安装进度 → ≤ 10 Hz 推送列表。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -294,7 +294,7 @@ export class Core {
 
   /**
    * 省略 variantId = 按当前 provider 设置选中的版本（auto 从不选引擎包没装的版本，MODEL_MANIFEST §2）。
-   * 显式的版本或显式 provider 需要的引擎包未安装时先装引擎包（并换引擎）；包未发布则直接失败，不请求 URL。
+   * 显式的版本或显式 provider 需要的引擎包未安装或已过期（MODEL_MANIFEST §5）时先装或更新引擎包（并换引擎）；包未发布则直接失败，不请求 URL。
    * 任何失败都记在该版本的卡片上（install.error），不进引擎或应用状态。
    */
   async installModel(id: string, variantId?: string): Promise<void> {
@@ -308,7 +308,7 @@ export class Core {
       );
     }
     const pack = variant.requires_pack;
-    if (pack && !this.packs.isInstalled(pack)) {
+    if (pack && !this.packs.usable(pack)) { // 没装，或装的是别的版本的构建（§5）：先装或更新引擎包
       try {
         await this.installPack(pack);
       } catch (err) {
@@ -316,7 +316,7 @@ export class Core {
         this.registry.fail(model.id, variant.id, error.error);
         throw error;
       }
-      if (!this.packs.isInstalled(pack)) return; // 引擎包下载被取消：模型也不装
+      if (!this.packs.usable(pack)) return; // 引擎包下载被取消：模型也不装
     }
     try {
       await this.registry.install(model.id, variant.id);

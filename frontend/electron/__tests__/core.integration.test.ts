@@ -4,6 +4,7 @@
  * [POS]: 验证跨服务的连线：启动只加载一次模型、热键 → 粘贴 → 历史、activeModel、模型设置只经专用入口且只在必要时重载、
  *        引擎崩溃后自动恢复、缺模型不是引擎错误、从 GPU 引擎包拉起引擎并加载需要它的 variant、引擎包失效回落内置引擎、
  *        安装需要引擎包的 variant 时先装引擎包并换引擎；用 catalog 真实值验证引擎包三态（MODEL_MANIFEST §2 规则 1–4，假 fetch，不联网）；
+ *        引擎包版本（§5：sha256 一致才用，不一致、v3.0.0 布局、新包未发布时回落内置引擎并提供更新）；
  *        数据根路径解析与首次启动从 v2 目录只读导入（导入前后目录指纹一致）。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -46,12 +47,36 @@ function fakeInstall(paths: CorePaths, modelId: string, variantId: string) {
   fs.writeFileSync(path.join(dir, ".installed.json"), JSON.stringify({ model: modelId, variant: variantId }));
 }
 
-function fakePack(paths: CorePaths, id: string) {
+/** 已装引擎包装的构建（.installed.json 的 asset 与 sha256）。缺省 = 当前目录钉住的构建；字段缺省即不写（v3.0.0 的布局） */
+interface PackBuild {
+  asset?: string;
+  sha256?: string | null;
+}
+const PACK_PLATFORM = "win32-x64"; // 与 bootCore 默认的 machine 一致
+
+function catalogBuild(id: string): PackBuild {
+  const asset = activeCatalog.engine_packs.find((p) => p.id === id)?.platforms[PACK_PLATFORM]?.asset;
+  return { asset: asset?.name, sha256: asset?.sha256 ?? null };
+}
+
+function fakePack(paths: CorePaths, id: string, build: PackBuild = catalogBuild(id)) {
   const dir = path.join(paths.enginesDir, id);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, ENGINE_EXECUTABLE), "fake");
-  fs.writeFileSync(path.join(dir, ".installed.json"), JSON.stringify({ pack: id }));
+  fs.writeFileSync(path.join(dir, ".installed.json"), JSON.stringify({ pack: id, platform: PACK_PLATFORM, ...build }));
 }
+
+/** v3.0.0 的 cuda 包（a56f9c5 的目录）：资产名不带引擎版本 */
+const CUDA_300: PackBuild = { asset: "engine-pack-cuda-win32-x64.zip", sha256: "123291cf3dd5c0c2fb20b03d9a3b40314b2cd60fa98664ef1355b27b097992b0" };
+/** CI 回填之前，目录里本版本的包 sha256 为 null：已发布的路径用替身值，测试与发布进度无关 */
+const STAND_IN_SHA = "5".repeat(64);
+function withPacks(publish: boolean): CatalogData {
+  const c = structuredClone(CATALOG);
+  for (const p of c.engine_packs) for (const plat of Object.values(p.platforms)) plat.asset.sha256 = publish ? (plat.asset.sha256 ?? STAND_IN_SHA) : null;
+  return c;
+}
+const PUBLISHED = withPacks(true);
+const UNPUBLISHED = withPacks(false);
 
 interface BootOptions {
   catalog?: CatalogData;
@@ -284,6 +309,7 @@ describe("Core against the mock engine", () => {
 
   it.runIf(cudaOffered)("falls back to the bundled engine and reports PACK_OUTDATED when the pack engine cannot start", async () => {
     const { core, latest } = bootCore({
+      catalog: PUBLISHED,
       machine: { gpuVendors: ["nvidia"] },
       prepare: (paths) => fakePack(paths, "cuda"),
       engineCommand: (pack) =>
@@ -294,7 +320,7 @@ describe("Core against the mock engine", () => {
     core.start();
     await ready(latest);
     expect(core.supervisor.status().packId).toBeNull();
-    expect(core.packViews().find((p) => p.id === "cuda")?.install.error?.code).toBe("PACK_OUTDATED");
+    expect(core.packViews().find((p) => p.id === "cuda")?.install).toMatchObject({ status: "not_installed", error: { code: "PACK_OUTDATED" } }); // 提供重装
   });
 
   it("installing a variant whose pack is missing installs the pack first and switches the engine to it", async () => {
@@ -382,25 +408,26 @@ describe("Core against the mock engine", () => {
 });
 
 // ============================================================
-// 引擎包的三种状态（MODEL_MANIFEST §2 规则 1–4），用 main 上 catalog 的真实值：资产名、release、sha256、体积
+// 引擎包的三种状态（MODEL_MANIFEST §2 规则 1–4），用 main 上 catalog 的真实资产名、release 与体积；
+// sha256 取目录的真实值，CI 还没回填（null）时用替身值
 // ============================================================
-describe("engine packs with the real catalog values", () => {
-  const PLATFORM = "win32-x64"; // 与 bootCore 默认的 machine 一致
-  const realPack = CATALOG.engine_packs.find((p) => p.id === "cuda")?.platforms[PLATFORM]?.asset;
-  const gpuVariant = (modelId: string) => CATALOG.models.find((m) => m.id === modelId)?.variants.find((v) => v.requires_pack === "cuda");
-  const nvidia = { gpuVendors: ["nvidia"] };
-  const published = !!realPack?.sha256 && !!gpuVariant(ACTIVE);
-  const recordingFetch = (urls: string[], respond: (url: string) => Response) =>
-    (async (input: string | URL | Request) => {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      urls.push(url);
-      return respond(url);
-    }) as typeof fetch;
-  const notFound = () => new Response(null, { status: 404 });
+const gpuVariant = (modelId: string) => CATALOG.models.find((m) => m.id === modelId)?.variants.find((v) => v.requires_pack === "cuda");
+const nvidia = { gpuVendors: ["nvidia"] };
+const recordingFetch = (urls: string[], respond: (url: string) => Response) =>
+  (async (input: string | URL | Request) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    urls.push(url);
+    return respond(url);
+  }) as typeof fetch;
+const notFound = () => new Response(null, { status: 404 });
 
+describe("engine packs with the real catalog values", () => {
+  const PLATFORM = PACK_PLATFORM;
+  const realPack = PUBLISHED.engine_packs.find((p) => p.id === "cuda")?.platforms[PLATFORM]?.asset;
+  const published = !!realPack && !!gpuVariant(ACTIVE);
   it.runIf(published)("published, not installed: auto keeps the CPU version and never requests the pack", async () => {
     const urls: string[] = [];
-    const { core, latest } = bootCore({ machine: nvidia, fetch: recordingFetch(urls, notFound) });
+    const { core, latest } = bootCore({ catalog: PUBLISHED, machine: nvidia, fetch: recordingFetch(urls, notFound) });
     core.start();
     await ready(latest);
     expect(core.packViews().find((p) => p.id === "cuda")).toMatchObject({ sizeBytes: realPack!.size_bytes, install: { status: "not_installed", error: null } });
@@ -422,7 +449,7 @@ describe("engine packs with the real catalog values", () => {
   it.runIf(published)("published, not installed: an explicit provider downloads the pack from its real URL and checks the real sha256", async () => {
     const urls: string[] = [];
     const tampered = (url: string) => (url.endsWith(realPack!.name) ? new Response("not the pack", { status: 200, headers: { "content-length": "12" } }) : notFound());
-    const { core, latest } = bootCore({ machine: nvidia, fetch: recordingFetch(urls, tampered) });
+    const { core, latest } = bootCore({ catalog: PUBLISHED, machine: nvidia, fetch: recordingFetch(urls, tampered) });
     core.start();
     await ready(latest);
     const variant = gpuVariant(ACTIVE)!;
@@ -443,9 +470,7 @@ describe("engine packs with the real catalog values", () => {
 
   it.runIf(published)("not published (sha256 null): the pack is left out of the list, its version stays listed but is never chosen, its URL is never requested", async () => {
     const urls: string[] = [];
-    const catalog = structuredClone(CATALOG);
-    catalog.engine_packs.find((p) => p.id === "cuda")!.platforms[PLATFORM].asset.sha256 = null;
-    const { core, latest } = bootCore({ catalog, machine: nvidia, fetch: recordingFetch(urls, notFound) });
+    const { core, latest } = bootCore({ catalog: UNPUBLISHED, machine: nvidia, fetch: recordingFetch(urls, notFound) });
     core.start();
     await ready(latest);
     const variant = gpuVariant(ACTIVE)!;
@@ -466,6 +491,7 @@ describe("engine packs with the real catalog values", () => {
   it.runIf(published)("installed: auto uses the GPU version and the engine runs from the pack", async () => {
     const variant = gpuVariant(ACTIVE)!;
     const { core, latest, loads } = bootCore({
+      catalog: PUBLISHED,
       machine: nvidia,
       fetch: recordingFetch([], notFound),
       prepare: (paths) => {
@@ -480,6 +506,82 @@ describe("engine packs with the real catalog values", () => {
     expect(loads().at(-1)![1]).toMatchObject({ variant: { id: variant.id }, settings: { provider: "cuda" } });
     expect(core.snapshot().activeModel).toMatchObject({ id: ACTIVE, variantId: variant.id, providerUsed: "cuda", fallback: false });
     expect(core.packViews().find((p) => p.id === "cuda")).toMatchObject({ inUse: true, install: { status: "installed", error: null } });
+  });
+});
+
+// ============================================================
+// 引擎包版本（MODEL_MANIFEST §5）：只用记录的 sha256 等于目录 sha256 的包；其余回落内置引擎、报 PACK_OUTDATED、提供更新
+// ============================================================
+describe("engine pack versions (MODEL_MANIFEST §5)", () => {
+  const variant = gpuVariant(ACTIVE);
+  const ok = !!variant && !!PUBLISHED.engine_packs.find((p) => p.id === "cuda")?.platforms[PACK_PLATFORM];
+  /** 装着 GPU 版本与某个构建的 cuda 包；bootCore 还装着 CPU 版本 */
+  const boot = (catalog: CatalogData, build: PackBuild | undefined, urls: string[] = []) =>
+    bootCore({
+      catalog,
+      machine: nvidia,
+      fetch: recordingFetch(urls, notFound),
+      prepare: (paths) => {
+        fakePack(paths, "cuda", build);
+        fakeInstall(paths, ACTIVE, variant!.id);
+      },
+    });
+  const packView = (core: Core) => core.packViews().find((p) => p.id === "cuda");
+
+  it.runIf(ok)("matching sha256: the engine runs from the pack", async () => {
+    const { core, latest } = boot(PUBLISHED, undefined);
+    core.start();
+    await ready(latest);
+    expect(core.supervisor.status().packId).toBe("cuda");
+    expect(core.snapshot().activeModel).toMatchObject({ variantId: variant!.id, providerUsed: "cuda" });
+    expect(packView(core)?.install).toEqual({ status: "installed", pct: 100, error: null });
+  });
+
+  it.runIf(ok)("a different sha256 (a v3.0.0 pack after the update): bundled engine, auto runs the CPU version, the pack is offered as an update", async () => {
+    const { core, latest } = boot(PUBLISHED, CUDA_300);
+    core.start();
+    await ready(latest);
+    expect(core.packs.isInstalled("cuda")).toBe(true);
+    expect(core.packs.usable("cuda")).toBe(false);
+    expect(core.supervisor.status().packId).toBeNull(); // 过期的包从不被拉起
+    expect(core.snapshot().activeModel).toMatchObject({ variantId: "cpu-int8", providerUsed: "cpu" });
+    expect(packView(core)?.install).toMatchObject({ status: "not_installed", error: { code: "PACK_OUTDATED" } }); // 模型管理器据此提供更新
+
+    core.updateModelSettings(ACTIVE, { provider: "cuda" }); // 用户坚持用 GPU：等更新，不是引擎故障
+    await waitFor(() => latest()?.engine.error?.code === "PACK_OUTDATED", 2_000, "PACK_OUTDATED");
+    expect(latest()!.engine.state).toBe("ready");
+    expect(core.supervisor.status().packId).toBeNull();
+  });
+
+  it.runIf(ok)("v3.0.0 layout without sha256: the asset name decides (it carries the engine version)", async () => {
+    const old = boot(PUBLISHED, { asset: CUDA_300.asset });
+    old.core.start();
+    await ready(old.latest);
+    expect(old.core.packs.usable("cuda")).toBe(false);
+    expect(old.core.supervisor.status().packId).toBeNull();
+
+    const same = boot(PUBLISHED, { asset: catalogBuild("cuda").asset });
+    same.core.start();
+    await ready(same.latest);
+    expect(same.core.packs.usable("cuda")).toBe(true);
+    expect(same.core.supervisor.status().packId).toBe("cuda");
+  });
+
+  it.runIf(ok)("the new pack is not published yet: the old pack is outdated and hidden, the app keeps working on the bundled engine", async () => {
+    const urls: string[] = [];
+    const { core, latest } = boot(UNPUBLISHED, CUDA_300, urls);
+    core.start();
+    await ready(latest);
+    expect(core.supervisor.status().packId).toBeNull();
+    expect(core.snapshot().activeModel).toMatchObject({ variantId: "cpu-int8", providerUsed: "cpu" });
+    expect(packView(core)).toBeUndefined(); // UI：需要它的版本显示"暂不可用"
+    expect(core.models().find((m) => m.id === ACTIVE)!.variants.map((v) => v.id)).toContain(variant!.id);
+
+    core.updateModelSettings(ACTIVE, { provider: "cuda" });
+    expect(core.models().find((m) => m.id === ACTIVE)!.selectedVariantId).toBe("cpu-int8"); // 拿不到 → 回落 auto
+    await expect(core.installPack("cuda")).rejects.toMatchObject({ error: { code: "PACK_UNAVAILABLE" } });
+    expect(urls).toEqual([]);
+    expect(core.snapshot().engine).toMatchObject({ state: "ready", error: null });
   });
 });
 
