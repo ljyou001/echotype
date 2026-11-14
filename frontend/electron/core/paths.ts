@@ -14,7 +14,7 @@ export interface CorePaths {
   settingsFile: string;
   historyFile: string;
   integrationsFile: string; // v2 遗留，仅用于一次性迁移
-  instancesFile: string; // v3 集成实例（不含密钥）
+  instancesFile: string; // 集成实例（schema 3，不含密钥）
   secretsFile: string; // safeStorage 加密的密钥
   dictionaryFile: string; // 个人词典
   modelsDir: string;

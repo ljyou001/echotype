@@ -5,7 +5,7 @@ Electron + React 18 + Zustand 5 + TypeScript 5 · 原生 Engine (Rust) + sherpa-
 frontend/ - UI 层与 Core 层 (2 子目录: src=UI 层 React 视图, electron=Core 层 主进程大脑)
 engine/ - Engine 层，独立原生推理进程 echotype-engine（Rust）：麦克风、VAD、ASR、标点；GPU 引擎包由 engine/scripts/make-pack.sh 组装
 contracts/ - 三层之间的契约：引擎协议、模型清单规范、模型目录
-design/ - 设计文档。现行架构以 design/ARCHITECTURE_V3.md 为准，其余为历史记录
+design/ - 设计文档。现行架构以 design/ARCHITECTURE_V4.md 为准，其余为历史记录
 scripts/ - 构建与发布脚本 (3 子目录: ci=Actions 调用的引擎构建、握手检查、许可清单、发布资产, models=模型 zip 打包, windows=AppX 与测试证书)
 </directory>
 
@@ -29,5 +29,7 @@ frontend/package.json - 前端依赖与 electron-builder 配置
 - 开发：`cd frontend && npm run dev`（Core 拉起 `engine/target` 下的引擎；`ECHOTYPE_ENGINE=mock` 用模拟引擎）
 - 测试：`npm run test:core`（vitest）· `npm run smoke:core`（mock 引擎）· `npm run smoke:real`（真实引擎 + 真实模型安装 + 假麦克风，用法见 frontend/electron/CLAUDE.md）· `cd engine && cargo test --release`
 - 用户数据：`~/.echotype/{settings.json, history.jsonl, models/, logs/}`
+- 版本：EchoType 4.0.0（app 与 engine 同号，发布 tag `v4.x.y`；v2.0.0 之后的 Python 后端版本记为 v3）。资产 release：`models-v4`、`engine-packs-v4`。契约各自编号，与产品版本无关：引擎协议 3、ipcVersion 2、catalog schema 2、Model Manifest v2.2
+- 提交与发布：不开分支、不开 PR，只在本地 `main` 提交，由用户 push。Windows x64 在本机用 electron-builder 打包；其余目标在 GitHub `main` 上手动触发 `.github/workflows/build.yml`
 
 [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md

@@ -1,14 +1,14 @@
-# EchoType v3 Integrations 调研与方案
+# EchoType v4 Integrations 调研与方案
 
 > 状态：P0 与排名前 9 项已实现（Core：frontend/electron/services/integrations/；清单：contracts/integrations.catalog.json；规范：contracts/INTEGRATIONS_MANIFEST.md）。实现与本文的差异见文末 §11。原为提案· 日期：2026-11-13 · 作者：integrations 会话
-> 前置阅读：`design/ARCHITECTURE_V3.md`、`CLAUDE.md`、`frontend/electron/ipc-contract.ts`
+> 前置阅读：`design/ARCHITECTURE_V4.md`、`CLAUDE.md`、`frontend/electron/ipc-contract.ts`
 > 契约变更（§7）只写在本文，由 orchestrator 会话落到 `ipc-contract.ts`。
 
 ## 0. 结论速览
 
 1. **现有 integrations 大部分不是"集成"，只是"复制文本 + 打开网页"。** 13 个插件里 12 个只拼 URL 或开浏览器，只有 OpenClaw 真正调 API。用户感觉"旧"，根因是没有一个插件在网络上*返回结果*，Quick Action 窗口大多数时候只是个跳板。
 2. **听写类产品的共识是：价值在"听写后的文本处理"，不在"跳转到别的网页"。** Wispr Flow、Superwhisper、Typeless 的核心卖点都是 AI 清理/改写、Command Mode、按应用切换风格、个人词典。
-3. **v3 应把 integrations 重做成"Core 里执行的声明式 Action"**，三类：**Transform**（LLM 改写，结果流式回 Quick Action）、**Send**（HTTP/URI/CLI 投递）、**Open**（打开网页，保留为最低成本兜底）。
+3. **v4 应把 integrations 重做成"Core 里执行的声明式 Action"**，三类：**Transform**（LLM 改写，结果流式回 Quick Action）、**Send**（HTTP/URI/CLI 投递）、**Open**（打开网页，保留为最低成本兜底）。
 4. **LLM 只需要两种协议适配器**：OpenAI-compatible（覆盖 OpenAI、Gemini、DeepSeek、Qwen、Kimi、智谱、OpenRouter、Ollama、LM Studio、llama-server）和 Anthropic Messages。**模型名一律运行时拉取 `/models`，清单里只放"推荐默认值"**，因为各家模型名在 2026 年变化极快（见 §2.2）。
 5. **MCP client 值得做，但放 P2**，且只做用户显式配置的服务器 + 逐次确认。
 6. **密钥只在 Core**，用 Electron `safeStorage` 加密落盘；UI 永远拿不到明文；删除通用 `http-request` 代理。
@@ -57,7 +57,7 @@
 
 ### 1.5 过时 / 要淘汰的清单
 
-| 项 | 原因 | v3 去向 |
+| 项 | 原因 | v4 去向 |
 |---|---|---|
 | 通用 `http-request` IPC（`integrations.httpRequest`） | CORS 绕过的 SSRF 跳板，无流式 | 删除；换成按 integration id 执行的 `integrations.run` |
 | `integrations.json` 明文 key | 泄漏面 | 非密钥配置进 `settings.json` 同目录的新文件；密钥进 `safeStorage` 加密的 `secrets.bin` |
@@ -355,7 +355,7 @@ UI: integrations.run({ instanceId, text, sessionId })
 
 - Electron `safeStorage.encryptString / decryptString`：Windows 用 DPAPI，macOS 用 Keychain，Linux 用 libsecret / kwallet。**Linux 在没有可用密钥环时会回落到 `basic_text`（明文级别）**——Core 必须在启动时检查 `safeStorage.isEncryptionAvailable()` 与（Linux）`getSelectedStorageBackend()`，若为 `basic_text` 或不可用：UI 显示警告，并允许用户选择"仍然保存（仅限本机文件权限保护）"或"不保存、每次会话输入"。官方文档：[Electron safeStorage](https://www.electronjs.org/docs/latest/api/safe-storage)（本次未抓取页面，行为描述基于已知文档，实现前核对）。
 - 文件：`~/.echotype/secrets.bin`，内容为 `{ [instanceId.fieldKey]: base64(ciphertext) }` 的 JSON，文件权限 0600。**密文绑定当前 OS 用户**，拷贝到别的机器无法解密——这是预期行为，在"导出配置"里排除。
-- 不再有 `integrations.json` 里的明文密钥。**迁移**：Core 首次启动 v3 时读取旧 `integrations.json`，把 `apiKey` 迁入 `safeStorage`，旧文件备份为 `integrations.v2.bak.json` 后**脱敏**（删除 key 字段）。迁移只覆盖仍在清单里的插件（OpenClaw → 通用 openai-compat 实例）；其余"开网页"类转成 `open` 实例。
+- 不再有 `integrations.json` 里的明文密钥。**迁移**：Core 首次启动 v4 时读取旧 `integrations.json`，把 `apiKey` 迁入 `safeStorage`，旧文件备份为 `integrations.v2.bak.json` 后**脱敏**（删除 key 字段）。迁移只覆盖仍在清单里的插件（OpenClaw → 通用 openai-compat 实例）；其余"开网页"类转成 `open` 实例。
 
 ### 5.2 UI 看到什么
 
@@ -514,7 +514,7 @@ interface IntegrationInstanceView {
 
 按层给出文件清单，保证后续可拆成不重叠的会话。**路径为建议值，以 core-v3 / ui-v3 实际目录结构为准。**
 
-### P0 — 随 v3 发布（目标：Transform 管线 + 主流 provider + 五个 Send + Open 迁移）
+### P0 — 随 v4 发布（目标：Transform 管线 + 主流 provider + 五个 Send + Open 迁移）
 
 | 项 | Core（`frontend/electron/`） | UI（`frontend/src/`） | 契约/其他 |
 |---|---|---|---|
@@ -571,7 +571,7 @@ interface IntegrationInstanceView {
 3. **ui-integrations**：`IntegrationsPage` 与 `QuickActionWindow` 及子组件、i18n 文案。
 4. （可选）**catalog-content**：只改 `contracts/integrations.catalog.json`（provider 与动作数据），与 2/3 不重叠，需联网核实各 provider 当前 base URL 与建议模型。
 
-2 与 3 只通过契约耦合；3 在 2 完成前可用 mock bridge 开发（沿用 v3 的 `ECHOTYPE_ENGINE=mock` 思路，新增 `ECHOTYPE_INTEGRATIONS=mock`）。
+2 与 3 只通过契约耦合；3 在 2 完成前可用 mock bridge 开发（沿用 `ECHOTYPE_ENGINE=mock` 的思路，新增 `ECHOTYPE_INTEGRATIONS=mock`）。
 
 ## 9. 风险与未决问题
 
@@ -582,7 +582,7 @@ interface IntegrationInstanceView {
 5. **CLI Runner 的权限**：`claude -p` 默认可调用工具；清单里要固定 `--allowedTools`/权限模式等参数的策略，具体 flag 以 [官方 headless 文档](https://code.claude.com/docs/en/headless) 为准，实现前核对。
 6. **来源质量**：Notion、Linear、Slack、Discord、Telegram、OpenRouter、LM Studio、llama-server、钉钉、Electron `safeStorage` 本次未取得官方页面，实施前必须逐个对官方文档核实（已在表中标注）。
 7. **竞品功能的第三方来源**：Wispr/Typeless/豆包的功能描述多来自评测与对比页（含竞品自述），仅用于方向判断，不作为事实依据。
-8. **与 ARCHITECTURE_V3 的衔接**：该文档把 integrations 标为"先只写方案，ui 合并后再实现"；本方案要求 core 与 ui 在实现时分别新增目录，需 orchestrator 确认 `frontend/electron/integrations/` 的命名是否与 core-v3 的目录规范一致。
+8. **与 ARCHITECTURE_V4 的衔接**：该文档把 integrations 标为"先只写方案，ui 合并后再实现"；本方案要求 core 与 ui 在实现时分别新增目录，需 orchestrator 确认 `frontend/electron/integrations/` 的命名是否与 core-v3 的目录规范一致。
 
 ## 10. 来源汇总
 

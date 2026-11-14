@@ -3,10 +3,11 @@
 > L3 contract | Parent: contracts/CLAUDE.md
 > Owners: engine session implements the server side. Core session implements the client side.
 > Rule: change this file only through the orchestrator session. Bump `protocol` on breaking change.
+> Version: `protocol` 3 is the wire revision. It is independent of the app version (EchoType 4.x) and of `engine_version`.
 
 ## 1. Transport
 
-- WebSocket. Text frames carry JSON. Binary frames are not used in v3.
+- WebSocket. Text frames carry JSON. Binary frames are not used in protocol 3.
 - Bind `127.0.0.1` only. Start with `--port 0`; the OS picks a free port.
 - Core generates a random token. Core passes it in env `ECHOTYPE_ENGINE_TOKEN`.
 - Core connects to `ws://127.0.0.1:<port>/?token=<token>`. The engine rejects a wrong token with close code 4401.
@@ -17,7 +18,7 @@
 1. Core spawns the engine: `echotype-engine --port 0 --models-dir <dir> --log-dir <dir>` — the bundled one, or the one inside an installed engine pack (MODEL_MANIFEST §5).
    The engine owns any sidecar it starts (e.g. `llama-server` next to its own binary) and kills it on unload or exit.
 2. After bind, the engine prints exactly one line to **stdout**, then flushes:
-   `{"event":"engine_ready","port":49731,"protocol":3,"engine_version":"3.0.0"}`
+   `{"event":"engine_ready","port":49731,"protocol":3,"engine_version":"4.0.0"}`
 3. All other output goes to stderr and to the log file. stdout carries nothing else.
 4. Core sends `ping` every 5 s. Three missed `pong` mean a dead engine. Core then kills it and restarts it with backoff 1 s → 2 s → 4 s → 8 s (max 5 tries).
 5. On stdin EOF or on `shutdown`, the engine releases the mic and exits with code 0.

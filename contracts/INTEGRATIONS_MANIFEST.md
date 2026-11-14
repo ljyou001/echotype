@@ -1,6 +1,6 @@
 # Integrations 清单规范（integrations.catalog.json）
 
-> L2 | 父级: contracts/CLAUDE.md · 设计背景见 design/INTEGRATIONS_V3.md
+> L2 | 父级: contracts/CLAUDE.md · 设计背景见 design/INTEGRATIONS_V4.md
 
 `contracts/integrations.catalog.json` 是全部集成 provider 与动作的唯一元数据源。新增一个集成只加一个对象，不加代码。
 Core 的 `services/integrations/catalog.ts` 是唯一读取点；UI 只拿到投影后的 `IntegrationCatalogView`（不含执行描述）。

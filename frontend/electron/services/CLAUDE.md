@@ -36,7 +36,7 @@ catalog.ts: contracts/integrations.catalog.json 的唯一读取点。校验并�
 template.ts: 模板唯一解释器。{{x}} / {{x|url}} / {{x|json}}，替换一次不递归；renderDeep 渲染 JSON 对象字面量；getPath 点路径；parseHeaderLines
 secret-store.ts: ~/.echotype/secrets.bin（引用键 → base64 密文）。加密经异步 SecretCrypto 端口（Electron 下是 safeStorage 的 *Async API），get/set/status 返回 Promise；解密要求重新加密时就地重写密文；backend 为 none 时拒绝写入
 instance-store.ts: ~/.echotype/integrations.v3.json。不含密钥；保证至多一个 isDefault、order 连续
-migrate-v2.ts: v2 integrations.json → v3 的一次性迁移。LEGACY_PLUGIN_ACTIONS 是本层唯一允许写死 id 的表；OpenClaw → 自定义 OpenAI 兼容；旧文件备份为 .v2.bak.json 并抹掉密钥；seedDefaults 给全新安装
+migrate-v2.ts: v2 integrations.json → 集成实例（schema 3）的一次性迁移。LEGACY_PLUGIN_ACTIONS 是本层唯一允许写死 id 的表；OpenClaw → 自定义 OpenAI 兼容；旧文件备份为 .v2.bak.json 并抹掉密钥；seedDefaults 给全新安装
 dictionary-store.ts: ~/.echotype/dictionary.json，去重、限长、限条数；dictionaryPromptSuffix 把词典追加到提示词。尚未下发引擎做 ASR 热词
 runners/llm.ts: openai 与 anthropic 两种协议的流式 chat 与 /models 列表；丢弃 reasoning 增量；错误码 AUTH_FAILED/RATE_LIMITED/NETWORK/PROVIDER_ERROR
 runners/sse.ts: SSE 事件解析（跨块、CRLF、[DONE]）
