@@ -120,7 +120,7 @@ export function registerIpc(ctx: IpcContext): void {
   handle(IPC.dictionarySave, (entries) => core.integrations.dictionarySave(entries));
 
   // 系统
-  handle(IPC.systemRestartEngine, () => core.supervisor.restart());
+  handle(IPC.systemRestartEngine, () => core.supervisor.restart("requested by the UI"));
   handle(IPC.systemOpenExternal, (url) => openExternalSafe(url));
   handle(IPC.systemOpenLogs, async () => {
     await shell.openPath(ctx.logsDir);

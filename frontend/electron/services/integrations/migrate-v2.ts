@@ -1,15 +1,13 @@
 /**
- * [INPUT]: 依赖 node:fs；依赖 core/atomic-file；依赖 ./instance-store 的 StoredInstance
+ * [INPUT]: 依赖 core/atomic-file 的 readJsonFile；依赖 ./instance-store 的 StoredInstance
  * [OUTPUT]: 导出 migrateV2、seedDefaults、LEGACY_PLUGIN_ACTIONS、MigrationResult
- * [POS]: v2 integrations.json（{instances, defaultIntegrationId}，插件 id + 明文 config）→ 集成实例（schema 3）的一次性迁移。
+ * [POS]: v2 integrations.json（{instances, defaultIntegrationId}，插件 id + 明文 config）→ 集成实例（schema 3）的一次性导入。
  *        LEGACY_PLUGIN_ACTIONS 是本层唯一允许写死 id 的映射表（同 settings-migration 的先例）。
- *        明文密钥作为 secrets 列表交还给调用方写入 SecretStore；旧文件改名为 integrations.v2.bak.json 并抹掉其中的密钥字段。
+ *        只读源文件：明文密钥作为 secrets 列表交还给调用方写入 SecretStore；v2 文件原样留在 v2 的目录里，从不改写或改名。
  *        OpenClaw 的 WebSocket 协议不再支持，迁为"自定义 OpenAI 兼容"的 HTTP 端点。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
-import fs from "node:fs";
-import path from "node:path";
-import { readJsonFile, writeFileAtomicSync } from "../../core/atomic-file.js";
+import { readJsonFile } from "../../core/atomic-file.js";
 import type { SettingValue } from "../../ipc-contract.js";
 import type { StoredInstance } from "./instance-store.js";
 
@@ -88,18 +86,6 @@ export function migrateV2(file: string, validActionIds: ReadonlySet<string>): Mi
     result.instances.push({ ...base, actionId, providerId: null, model: null, settings });
   }
   return result;
-}
-
-/** v2 文件改名为 .v2.bak.json，并抹掉其中全部 apiKey/token。 */
-export function backupAndScrubV2(file: string): void {
-  try {
-    const raw = readJsonFile<{ instances?: LegacyInstance[] }>(file);
-    if (raw?.instances) for (const inst of raw.instances) if (inst.config) for (const k of ["apiKey", "token", "password"]) delete inst.config[k];
-    writeFileAtomicSync(path.join(path.dirname(file), "integrations.v2.bak.json"), `${JSON.stringify(raw, null, 2)}\n`);
-    fs.rmSync(file, { force: true });
-  } catch {
-    // 备份失败不阻断启动；旧文件原样保留
-  }
 }
 
 /** 全新安装的默认集成（与 v2 UI 播种的三个等价）。 */

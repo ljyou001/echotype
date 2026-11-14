@@ -33,7 +33,7 @@ function tooltipOf(s: AppSnapshot): string {
   if (s.dictation.phase === "finalizing") return "EchoType — Transcribing…";
   switch (s.engine.state) {
     case "ready":
-      return "EchoType — Ready";
+      return s.activeModel ? "EchoType — Ready" : "EchoType — No model loaded";
     case "loading":
       return "EchoType — Loading model…";
     case "starting":

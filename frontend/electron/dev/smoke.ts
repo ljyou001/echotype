@@ -1,10 +1,10 @@
 /**
- * [INPUT]: 依赖 electron 的 nativeTheme；依赖 ./smoke-kit 的 Smoke 骨架；读取模型目录以伪造一个已安装模型
+ * [INPUT]: 依赖 electron 的 app、nativeTheme；依赖 ./smoke-kit 的 Smoke 骨架；读取模型目录以伪造一个已安装模型
  * [OUTPUT]: 导出 mockSmoke（SmokeFactory：临时用户目录 + 假模型 + 关闭输出的设置 + 端到端检查）
  * [POS]: `npm run smoke:core` 的执行体：真实 Electron 主进程 + 真实 preload + 真实 IPC + mock 引擎。
  *        在一个隐藏窗口里通过 window.echotype（v2）走一遍：快照与 activeModel、模型列表与设置、引擎包、存储、许可证、渠道、
  *        设备、热键校验、听写、历史、hotkey/dictation 错误槽、quickAction.open（会短暂显示 Quick Action 窗口）、
- *        推送、错误码、perModel 只经 models.updateSettings、ui.theme 到 nativeTheme、
+ *        推送、userData 位于 <home>/electron、桥接错误（页面里是带 code 的 Error，message 不含包装）、perModel 只经 models.updateSettings、ui.theme 到 nativeTheme、
  *        集成（目录、密钥不回传、无通用 http 代理）。
  *        设置里关闭直接输入与剪贴板，smoke 绝不往用户当前聚焦的应用里粘贴；不安装全局键盘钩子。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -12,7 +12,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { nativeTheme } from "electron";
+import { app, nativeTheme } from "electron";
 import { Checks, openProbeWindow, sleep, until, writeSmokeSettings, type SmokeContext, type SmokeFactory } from "./smoke-kit.js";
 
 /** 工厂在 resolveCorePaths 之前调用：设置 ECHOTYPE_HOME，并在其中伪造已安装的默认模型。 */
@@ -31,10 +31,10 @@ export const mockSmoke: SmokeFactory = (catalogFile) => {
   for (const rel of Object.values(variant.files)) fs.writeFileSync(path.join(dir, rel), "smoke");
   fs.writeFileSync(path.join(dir, ".installed.json"), JSON.stringify({ model: model.id, variant: variant.id, asset: "smoke", sha256: null }));
   writeSmokeSettings(home);
-  return { home, budgetMs: 90_000, run: runSmoke };
+  return { home, budgetMs: 90_000, run: (ctx) => runSmoke(ctx, home) };
 };
 
-async function runSmoke(ctx: SmokeContext): Promise<number> {
+async function runSmoke(ctx: SmokeContext, home: string): Promise<number> {
   const { core, logger } = ctx;
   const checks = new Checks("SMOKE");
   const check = checks.check.bind(checks);
@@ -42,6 +42,7 @@ async function runSmoke(ctx: SmokeContext): Promise<number> {
   try {
     await until(() => core.snapshot().engine.state === "ready", 30_000, "engine ready");
     check("engine spawned, handshaked, model loaded", true);
+    check("Electron userData is <home>/electron", app.getPath("userData") === path.join(home, "electron"), app.getPath("userData"));
 
     const probe = await js<Record<string, unknown>>(`(async () => {
       const b = window.echotype;
@@ -98,11 +99,17 @@ async function runSmoke(ctx: SmokeContext): Promise<number> {
     })`);
     check("updateSettings → snapshot push", phase === "idle", phase);
 
-    const rejected = await js<string>(`window.echotype.updateSettings({ hotkey: { accelerator: "A" } }).then(() => "accepted", (e) => e.message)`);
-    check("invalid settings rejected with a code", /\[INVALID_SETTINGS\]/.test(rejected), rejected);
+    // 契约：失败的桥接调用拒绝为页面自己的 Error，带 code，message 不含 Electron 的包装与 [CODE]
+    const failure = (call: string) =>
+      js<{ isError: boolean; code: unknown; message: string } | null>(`${call}.then(() => null, (e) => ({ isError: e instanceof Error, code: e.code, message: e.message }))`);
+    const clean = (f: { isError: boolean; message: string } | null) => !!f && f.isError && !/^\[|Error invoking remote method/.test(f.message);
+    const rejected = await failure(`window.echotype.updateSettings({ hotkey: { accelerator: "A" } })`);
+    check("invalid settings reject with an Error carrying code INVALID_SETTINGS and a clean message", clean(rejected) && rejected?.code === "INVALID_SETTINGS", rejected);
+    const noPack = await failure(`window.echotype.enginePacks.install("no-such-pack")`);
+    check("an unavailable pack rejects with code PACK_UNAVAILABLE", clean(noPack) && noPack?.code === "PACK_UNAVAILABLE", noPack);
 
-    const perModel = await js<string>(`window.echotype.updateSettings({ models: { perModel: { x: { punctuation: false } } } }).then(() => "accepted", (e) => e.message)`);
-    check("updateSettings rejects models.perModel", /perModel/.test(perModel), perModel);
+    const perModel = await failure(`window.echotype.updateSettings({ models: { perModel: { x: { punctuation: false } } } })`);
+    check("updateSettings rejects models.perModel", perModel?.code === "INVALID_SETTINGS" && /perModel/.test(perModel.message), perModel);
 
     const view = await js<{ values: Record<string, unknown> }>(`(async () => {
       const m = (await window.echotype.models.list()).find((x) => x.isActive);

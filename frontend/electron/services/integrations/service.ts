@@ -22,7 +22,7 @@ import type { Logger } from "../../core/logger.js";
 import type { CatalogAction, CatalogProvider, IntegrationCatalog } from "./catalog.js";
 import { dictionaryPromptSuffix, type DictionaryStore } from "./dictionary-store.js";
 import type { InstanceStore, StoredInstance } from "./instance-store.js";
-import { backupAndScrubV2, migrateV2, seedDefaults } from "./migrate-v2.js";
+import { migrateV2, seedDefaults } from "./migrate-v2.js";
 import { runCli, type CliSpawn } from "./runners/cli.js";
 import { runHttp } from "./runners/http.js";
 import { listModels, streamChat, type LlmEndpoint } from "./runners/llm.js";
@@ -52,7 +52,7 @@ export interface IntegrationDeps {
   instances: InstanceStore;
   secrets: SecretStore;
   dictionary: DictionaryStore;
-  legacyFile: string; // v2 integrations.json
+  legacyFile: string | null; // v2 应用的 integrations.json（只读）；null = 不导入
   ports: IntegrationPorts;
   logger: Logger;
 }
@@ -69,14 +69,14 @@ export class IntegrationService {
   }
 
   // ============================================================
-  // 启动：读盘；首次运行时迁移 v2 或播种
+  // 启动：读盘；首次运行时从 v2 只读导入，或播种
   // ============================================================
   /** 密钥先于实例落盘：迁移中途退出时实例文件尚不存在，下次启动会重新迁移，不丢密钥。 */
   async start(): Promise<void> {
     const { instances, catalog, secrets } = this.d;
     instances.load();
     if (instances.exists()) return;
-    const migrated = migrateV2(this.d.legacyFile, new Set(catalog.actions.keys()));
+    const migrated = this.d.legacyFile ? migrateV2(this.d.legacyFile, new Set(catalog.actions.keys())) : null;
     if (!migrated) {
       instances.replaceAll(seedDefaults().filter((i) => catalog.actions.has(i.actionId)));
       return;
@@ -89,8 +89,7 @@ export class IntegrationService {
       }
     }
     instances.replaceAll(migrated.instances);
-    backupAndScrubV2(this.d.legacyFile);
-    this.log.info("migrated v2 integrations", { instances: migrated.instances.length, secrets: migrated.secrets.length });
+    this.log.info("imported v2 integrations (read-only)", { instances: migrated.instances.length, secrets: migrated.secrets.length });
   }
 
   // ============================================================

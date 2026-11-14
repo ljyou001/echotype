@@ -1,10 +1,10 @@
 /**
  * [INPUT]: 依赖 engine/ 的 supervisor、命令与协议版本；services/ 全部服务；./snapshot 的节流与投影；./paths、./logger、./atomic-file
  * [OUTPUT]: 导出 Core（服务装配 + 跨服务操作）、CoreConfig、CoreAdapters、CoreError
- * [POS]: Core 层的组合根，不 import electron。main.ts 注入 Electron 适配器后得到一个可运行的 Core；
+ * [POS]: Core 层的组合根，不 import electron。启动时先拉起引擎，读历史、导入 v2 数据、装键盘钩子与之并行。main.ts 注入 Electron 适配器后得到一个可运行的 Core；
  *        smoke 与测试注入假适配器得到同一个 Core。服务之间的连线（谁在何时通知谁）只写在这里：
  *        热键 → 听写 · 热键错误变化 → 快照 · 听写空闲 → 补做被推迟的模型加载 · 设置变化 → 热键/麦克风/模型/开机启动/外观主题 ·
- *        引擎包装卸或失效 → 换引擎二进制 · 装需要引擎包的 variant → 先装引擎包 ·
+ *        引擎包装卸或失效 → 换引擎二进制 · 装需要引擎包的 variant → 先装引擎包（失败记在该 variant 的卡片上，不进引擎状态） ·
  *        状态变化 → ≤ 30 Hz 推送 AppSnapshot · 安装进度 → ≤ 10 Hz 推送列表。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -146,6 +146,7 @@ export class Core {
       variantInstalled: (m, v) => this.registry.isInstalled(m, v),
       variantState: (m, v) => this.registry.state(m, v),
       packOffered: (id) => this.packs.offered(id),
+      packPublished: (id) => this.packs.published(id),
       packUsable: (id) => this.packs.usable(id),
     });
     this.registry = new ModelRegistry({
@@ -183,7 +184,7 @@ export class Core {
       instances: new InstanceStore(paths.instancesFile),
       secrets: new SecretStore(paths.secretsFile, adapters.secretCrypto ?? NO_SECRET_CRYPTO, logger),
       dictionary: new DictionaryStore(paths.dictionaryFile),
-      legacyFile: paths.integrationsFile,
+      legacyFile: paths.legacy?.integrationsFile ?? null,
       logger,
       ports: {
         fetch: adapters.fetch,
@@ -243,15 +244,15 @@ export class Core {
   }
 
   start(): void {
-    this.settings.load();
+    this.settings.load(this.config.paths.legacy?.settingsFile ?? null);
     this.adapters.applyTheme?.(this.settings.get().ui.theme);
     this.packs.scan();
     this.registry.scan();
+    this.supervisor.start(); // 引擎最先拉起（只依赖设置与安装态）：它的启动与下面的读盘、键盘钩子并行
     this.history.load();
-    void this.integrations.start().catch((err) => this.log.error("integrations failed to start", err)); // 只有 v2 密钥迁移是异步的
+    void this.integrations.start().catch((err) => this.log.error("integrations failed to start", err)); // 只有 v2 密钥导入是异步的
     this.hotkey.setAccelerator(this.settings.get().hotkey.accelerator);
     this.hotkey.start();
-    this.supervisor.start();
     this.pushes.snapshot.request();
     void refreshRemoteCatalog({ catalog: this.catalog, cacheFile: this.config.paths.catalogCacheFile, fetch: this.adapters.fetch, logger: this.log });
     this.log.info("core started", { home: this.config.paths.home, channel: this.catalog.channel, machine: this.config.machine });
@@ -291,7 +292,11 @@ export class Core {
     return this.settings.update(patch);
   }
 
-  /** 省略 variantId = 按当前 provider 设置选中的版本。该版本需要的 GPU 引擎包未安装时先装引擎包（并换引擎）。 */
+  /**
+   * 省略 variantId = 按当前 provider 设置选中的版本（auto 从不选引擎包没装的版本，MODEL_MANIFEST §2）。
+   * 显式的版本或显式 provider 需要的引擎包未安装时先装引擎包（并换引擎）；包未发布则直接失败，不请求 URL。
+   * 任何失败都记在该版本的卡片上（install.error），不进引擎或应用状态。
+   */
   async installModel(id: string, variantId?: string): Promise<void> {
     const model = this.requireModel(id);
     const variant = variantId ? model.variants.find((v) => v.id === variantId) : this.resolver.selectedVariant(model);
@@ -299,10 +304,20 @@ export class Core {
       throw new CoreError(
         variantId
           ? { code: "VARIANT_NOT_FOUND", message: `${model.name} has no version “${variantId}”.` }
-          : { code: "NO_VARIANT", message: `No version of ${model.name} runs on this computer.` },
+          : { code: "NO_VARIANT", message: `No version of ${model.name} runs on this computer without an engine pack.` },
       );
     }
-    if (variant.requires_pack && !this.packs.isInstalled(variant.requires_pack)) await this.installPack(variant.requires_pack);
+    const pack = variant.requires_pack;
+    if (pack && !this.packs.isInstalled(pack)) {
+      try {
+        await this.installPack(pack);
+      } catch (err) {
+        const error = asCoreError(err, "INSTALL_FAILED");
+        this.registry.fail(model.id, variant.id, error.error);
+        throw error;
+      }
+      if (!this.packs.isInstalled(pack)) return; // 引擎包下载被取消：模型也不装
+    }
     try {
       await this.registry.install(model.id, variant.id);
     } catch (err) {
@@ -329,7 +344,7 @@ export class Core {
     this.settings.update({ models: { activeId: id } });
     await this.runtime.sync();
     const st = this.runtime.status();
-    if (st.phase === "error" && st.modelId === id && st.error) throw new CoreError(st.error);
+    if ((st.phase === "error" || st.phase === "blocked") && st.modelId === id && st.error) throw new CoreError(st.error);
   }
 
   /** 模型专属设置的唯一入口：按该模型的 settings[] 校验，写入 perModel；当前模型的生效值变化会触发重载。 */
@@ -355,7 +370,7 @@ export class Core {
       if (isAbort(err)) return;
       throw asCoreError(err, "INSTALL_FAILED");
     }
-    await this.supervisor.restart();
+    await this.supervisor.restart(`engine pack ${id} installed`);
   }
 
   /** 引擎正在用该包时先停下，删除后按剩余的包或内置引擎重新拉起。 */
@@ -406,14 +421,14 @@ export class Core {
 
   private ensureEngine(packId: string | null): boolean {
     if (!packId || this.supervisor.status().packId === packId || !this.packs.usable(packId)) return true;
-    void this.supervisor.restart();
+    void this.supervisor.restart(`switch to the ${packId} engine pack`);
     return false;
   }
 
   /** 引擎包握手失败或反复崩溃：标记 PACK_OUTDATED，改用内置引擎（MODEL_MANIFEST §5）。 */
   private fallBackFromPack(packId: string, error: AppError | null): void {
     this.packs.markOutdated(packId, error?.message ?? "engine failed to start");
-    setTimeout(() => void this.supervisor.restart(), 0);
+    setTimeout(() => void this.supervisor.restart(`engine pack ${packId} failed; back to the bundled engine`), 0);
   }
 
   private applySettingsChange(next: Settings, prev: Settings): void {

@@ -3,11 +3,12 @@
  *          依赖 shell/ 的窗口、托盘、IPC、系统能力与平台适配器；
  *          依赖 dev/ 的 smoke 工厂（仅 ECHOTYPE_SMOKE=1 走 mock 引擎、ECHOTYPE_SMOKE=real 走真实引擎）
  * [OUTPUT]: 无导出。Electron 主进程入口
- * [POS]: 纯装配：解析运行时布局 → 探测本机（GPU、渠道、Wayland）→ 创建日志与 Core（注入 Electron 适配器）→ 注册 IPC →
- *        托盘与窗口 → 退出时优雅关停引擎。
+ * [POS]: 纯装配：解析运行时布局与数据根（userData = <home>/electron，先于单例锁）→ 探测本机（GPU、渠道、Wayland）→
+ *        创建日志与 Core（注入 Electron 适配器）→ 注册 IPC → 托盘与窗口 → 退出时优雅关停引擎。
  *        不含业务逻辑；任何"做什么"都在 core/ 与 services/，任何"怎么显示"都在 shell/。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,8 +39,11 @@ const layout: RuntimeLayout = {
 };
 const catalogFile = resolveCatalogPath(layout);
 const SMOKES: Record<string, SmokeFactory> = { "1": mockSmoke, real: realSmoke };
-const smoke = app.isPackaged ? null : (SMOKES[process.env.ECHOTYPE_SMOKE ?? ""]?.(catalogFile, layout) ?? null);
-if (smoke) app.setPath("userData", smoke.home); // 临时 ECHOTYPE_HOME，且与正在运行的 EchoType 互不抢单例锁
+const smoke = app.isPackaged ? null : (SMOKES[process.env.ECHOTYPE_SMOKE ?? ""]?.(catalogFile, layout) ?? null); // 先于路径解析：smoke 设置临时 ECHOTYPE_HOME
+const paths = resolveCorePaths();
+// userData 放进数据根目录，须在 ready 与单例锁之前：Chromium 存储、safeStorage 密钥与单例锁都不与 v2 的 %APPDATA%\EchoType 共用
+fs.mkdirSync(paths.electronDir, { recursive: true }); // setPath 要求目录已存在
+app.setPath("userData", paths.electronDir);
 
 // ============================================================
 // 进程调优（沿用 v2）：隐藏窗口不降频，主进程略高优先级，热键回调更及时
@@ -57,7 +61,6 @@ if (!app.requestSingleInstanceLock()) app.quit();
 else void main();
 
 async function main(): Promise<void> {
-  const paths = resolveCorePaths();
   const logger = createFileLogger({ dir: paths.logsDir, mirrorToConsole: !app.isPackaged });
   await app.whenReady();
   Menu.setApplicationMenu(null);
@@ -167,7 +170,7 @@ async function main(): Promise<void> {
     {
       toggleWindow: () => mainWindow.toggle(),
       toggleDictation: () => core.dictation.toggle(),
-      restartEngine: () => void core.supervisor.restart(),
+      restartEngine: () => void core.supervisor.restart("tray menu"),
       quit: () => app.quit(),
     },
     logger,

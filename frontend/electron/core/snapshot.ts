@@ -5,6 +5,8 @@
  *          deriveActiveModel（状态栏的"模型 · 硬件 · 运行时 · 是否回退"）
  * [POS]: AppSnapshot 推送的节流器与引擎状态的投影规则。
  *        进程层（supervisor）与模型层（runtime）各自只知道一半，这里把两者折叠成 UI 看到的一个状态。
+ *        engine.state = "error" 只表示引擎出错（进程失败、模型加载失败）。未选模型、模型或引擎包未安装时引擎是 ready，
+ *        engine.error 给出原因、activeModel 为 null；安装失败只落在模型或引擎包卡片的 install.error。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import type { AppSnapshot } from "../ipc-contract.js";
@@ -54,6 +56,7 @@ export function deriveEngineSnapshot(sup: SupervisorStatus, rt: RuntimeStatus): 
       return { ...base, state: "starting", error: sup.error };
     case "running":
       if (rt.phase === "ready") return { ...base, state: "ready", error: null };
+      if (rt.phase === "blocked") return { ...base, state: "ready", error: rt.error }; // 引擎健康，只是没有模型可加载；error 说明原因，activeModel 为 null
       if (rt.phase === "error") return { ...base, state: "error", error: rt.error };
       return { ...base, state: "loading", error: null };
   }

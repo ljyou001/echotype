@@ -1,8 +1,8 @@
 /**
  * [INPUT]: 依赖 ./model-catalog 的目录与类型、./asset-installer 的安装流水线与目录维护、./install-jobs 的任务簿；
- *          依赖 core/emitter、core/logger
- * [OUTPUT]: 导出 ModelRegistry（scan / isInstalled / installedVariants / variantDir / state / install / cancelInstall / remove / onChange）
- * [POS]: 模型 variant 的磁盘安装态的唯一管理者：~/.echotype/models/<model id>/<variant id>/。
+ *          依赖 core/emitter、core/logger；依赖 ipc-contract 的 AppError
+ * [OUTPUT]: 导出 ModelRegistry（scan / isInstalled / installedVariants / variantDir / state / fail / install / cancelInstall / remove / onChange）
+ * [POS]: 模型 variant 的磁盘安装态的唯一管理者：<home>/models/<model id>/<variant id>/。
  *        它不和引擎说话，也不懂用户设置——"选哪个 variant"由调用方（model-resolver）决定后传入；
  *        requires（配套标点模型）的 variant 由注入的 pickVariant 选择，并先于本体安装。
  *        同一资产（如一个 GGUF 包）支撑多个 variant 时，已装好的兄弟 variant 就地复制，不再下载第二遍。
@@ -11,6 +11,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import type { AppError } from "../ipc-contract.js";
 import type { Unsubscribe } from "../core/emitter.js";
 import type { Logger } from "../core/logger.js";
 import { cleanupStaging, cloneInstalled, installAsset, InstallError, readMarker, removeDir, type AssetLocation } from "./asset-installer.js";
@@ -71,6 +72,11 @@ export class ModelRegistry {
 
   state(modelId: string, variantId: string): InstallState {
     return this.jobs.state(keyOf(modelId, variantId));
+  }
+
+  /** 该 variant 的前置步骤（所需引擎包）失败：错误记在它自己的卡片上。 */
+  fail(modelId: string, variantId: string, error: AppError): void {
+    this.jobs.fail(keyOf(modelId, variantId), error);
   }
 
   onChange(cb: () => void): Unsubscribe {

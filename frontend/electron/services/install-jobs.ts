@@ -1,8 +1,9 @@
 /**
  * [INPUT]: 依赖 ./asset-installer 的 InstallError、InstallStage；依赖 core/emitter、core/logger；依赖 ipc-contract 的 InstallStatus、AppError
- * [OUTPUT]: 导出 InstallJobs（state / setInstalled / run / cancel / onChange）、InstallState、INSTALLED、NOT_INSTALLED
+ * [OUTPUT]: 导出 InstallJobs（state / setInstalled / setError / fail / run / cancel / onChange）、InstallState、INSTALLED、NOT_INSTALLED
  * [POS]: 模型 variant 与引擎包共用的安装任务簿：每个 key 一份安装态，同 key 并发合并为一次，
- *        取消回到 not_installed（不是错误），失败记录 AppError。model-registry 与 engine-packs 只描述"装什么"，
+ *        取消回到 not_installed（不是错误），失败记录 AppError（安装失败只落在该条目的卡片上，不进引擎或应用状态）。
+ *        model-registry 与 engine-packs 只描述"装什么"，
  *        "怎么跟踪"只写在这里。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -46,6 +47,11 @@ export class InstallJobs {
   /** 改写已安装条目的错误（如引擎包 PACK_OUTDATED），状态保持 installed。 */
   setError(key: string, error: AppError | null): void {
     this.set(key, { ...this.state(key), error });
+  }
+
+  /** 在本条目的卡片上记一次失败（安装它的前置步骤失败，如所需引擎包装不上）：status = error。 */
+  fail(key: string, error: AppError): void {
+    this.set(key, { status: "error", pct: null, error });
   }
 
   running(key: string): Promise<void> | null {

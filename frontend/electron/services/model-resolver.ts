@@ -21,6 +21,7 @@ export interface ResolverDeps {
   variantInstalled: (modelId: string, variantId: string) => boolean;
   variantState: (modelId: string, variantId: string) => InstallState;
   packOffered: (packId: string) => boolean;
+  packPublished: (packId: string) => boolean;
   packUsable: (packId: string) => boolean;
 }
 
@@ -28,8 +29,8 @@ export class ModelResolver {
   constructor(private readonly deps: ResolverDeps) {}
 
   selection(): SelectionContext {
-    const { machine, packOffered, packUsable, variantInstalled } = this.deps;
-    return { machine, packOffered, packUsable, variantInstalled };
+    const { machine, packOffered, packPublished, packUsable, variantInstalled } = this.deps;
+    return { machine, packOffered, packPublished, packUsable, variantInstalled };
   }
 
   defs(model: CatalogModel): ModelSettingDef[] {

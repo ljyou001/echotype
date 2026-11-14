@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 services/settings-store、settings-migration、settings-schema、model-catalog；读取真实 contracts/models.catalog.json
- * [OUTPUT]: SettingsStore 的读盘、v1 迁移、校验、原子写测试
- * [POS]: 用用户真实的 v1 settings.json 形状验证迁移映射；全部在临时目录进行，从不触碰 ~/.echotype。
+ * [OUTPUT]: SettingsStore 的读盘、首次启动从 v2 只读导入（v1 与 schemaVersion 2）、校验、原子写测试
+ * [POS]: 用用户真实的 v1 settings.json 形状验证迁移映射，并断言 v2 的源文件逐字节不变；全部在临时目录进行，从不触碰 ~/.echotype 与 ~/.echotype-v3。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import fs from "node:fs";
@@ -39,12 +39,18 @@ function storeIn(dir: string) {
   return new SettingsStore(path.join(dir, "settings.json"), ctx, createMemoryLogger());
 }
 
-describe("settings migration v1 → v2", () => {
-  it("maps the real v1 file", () => {
+/** v2 应用的目录：放一份 settings.json，返回它的路径与原始字节 */
+function legacyWith(content: unknown) {
+  const file = path.join(makeTempDir("echotype-v2-"), "settings.json");
+  fs.writeFileSync(file, JSON.stringify(content, null, 2));
+  return { file, bytes: fs.readFileSync(file) };
+}
+
+describe("first launch: read-only import from the v2 app", () => {
+  it("maps the real v1 file into the new home and leaves the v2 file untouched", () => {
+    const legacy = legacyWith(REAL_V1);
     const dir = makeTempDir();
-    const file = path.join(dir, "settings.json");
-    fs.writeFileSync(file, JSON.stringify(REAL_V1, null, 2));
-    const s = storeIn(dir).load();
+    const s = storeIn(dir).load(legacy.file);
 
     expect(s.schemaVersion).toBe(2);
     expect(s.hotkey.accelerator).toBe("RCtrl");
@@ -56,9 +62,30 @@ describe("settings migration v1 → v2", () => {
     expect(catalog.get("paraformer-zh")).toBeDefined(); // 迁移目标确实在目录里
     expect(s.models.perModel["qwen3-asr-0.6b"]).toEqual({ provider: "cuda", language: "zh" });
 
-    // 原文件被备份，新文件是 v2
-    expect(JSON.parse(fs.readFileSync(`${file}.v1.bak`, "utf-8"))).toEqual(REAL_V1);
-    expect(JSON.parse(fs.readFileSync(file, "utf-8")).schemaVersion).toBe(2);
+    // 结果只写进新目录；v2 的文件逐字节不变，旁边也没有多出备份
+    expect(JSON.parse(fs.readFileSync(path.join(dir, "settings.json"), "utf-8")).schemaVersion).toBe(2);
+    expect(fs.readFileSync(legacy.file).equals(legacy.bytes)).toBe(true);
+    expect(fs.readdirSync(path.dirname(legacy.file))).toEqual(["settings.json"]);
+    expect(fs.readdirSync(dir)).toEqual(["settings.json"]);
+  });
+
+  it("imports a schemaVersion 2 file as well, and only when the new home has no settings yet", () => {
+    const legacy = legacyWith({ schemaVersion: 2, hotkey: { accelerator: "F8" }, models: { activeId: "paraformer-zh", perModel: {} } });
+    const dir = makeTempDir();
+    expect(storeIn(dir).load(legacy.file).hotkey.accelerator).toBe("F8");
+
+    const changed = storeIn(dir);
+    changed.load(legacy.file);
+    changed.update({ hotkey: { accelerator: "F9" } });
+    expect(storeIn(dir).load(legacy.file).hotkey.accelerator).toBe("F9"); // 新目录已有设置：不再导入
+  });
+
+  it("starts from defaults when the v2 file is missing or unreadable", () => {
+    const broken = path.join(makeTempDir("echotype-v2-"), "settings.json");
+    fs.writeFileSync(broken, "{ not json");
+    expect(storeIn(makeTempDir()).load(broken).models.activeId).toBe(catalog.defaultModelId);
+    expect(fs.readFileSync(broken, "utf-8")).toBe("{ not json");
+    expect(storeIn(makeTempDir()).load(path.join(makeTempDir(), "absent.json")).models.activeId).toBe(catalog.defaultModelId);
   });
 
   it("drops unknown legacy model ids and normalizes languages", () => {
@@ -71,11 +98,11 @@ describe("settings migration v1 → v2", () => {
     expect(migrateLanguage("Klingon")).toBe("auto");
   });
 
-  it("is idempotent: a migrated file loads unchanged", () => {
+  it("is idempotent: the imported file loads unchanged", () => {
+    const legacy = legacyWith(REAL_V1);
     const dir = makeTempDir();
-    fs.writeFileSync(path.join(dir, "settings.json"), JSON.stringify(REAL_V1));
-    const first = storeIn(dir).load();
-    const second = storeIn(dir).load();
+    const first = storeIn(dir).load(legacy.file);
+    const second = storeIn(dir).load(legacy.file);
     expect(second).toEqual(first);
   });
 });

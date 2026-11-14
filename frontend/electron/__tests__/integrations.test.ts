@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 services/integrations/* 全部模块；读取真实 contracts/integrations.catalog.json；依赖 helpers 的 makeTempDir
- * [OUTPUT]: Integrations 的单元与服务级测试：模板、密钥、SSE/LLM 流、HTTP/URI/CLI Runner、v2 迁移、实例与词典、运行与错误码
- * [POS]: 全部在临时目录与假 fetch / 假 spawn 上进行，不联网、不碰 ~/.echotype、不调用真实 CLI。
+ * [OUTPUT]: Integrations 的单元与服务级测试：模板、密钥、SSE/LLM 流、HTTP/URI/CLI Runner、v2 只读导入、实例与词典、运行与错误码
+ * [POS]: 全部在临时目录与假 fetch / 假 spawn 上进行，不联网、不碰 ~/.echotype 与 ~/.echotype-v3、不调用真实 CLI。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { EventEmitter } from "node:events";
@@ -267,9 +267,9 @@ describe("cli runner", () => {
   });
 });
 
-describe("v2 migration", () => {
+describe("v2 import (read-only)", () => {
   const catalog = loadIntegrationCatalog(catalogFile, logger);
-  it("maps legacy plugins, drops secrets from the backup, converts OpenClaw", () => {
+  it("maps legacy plugins, hands plaintext keys back as secrets, converts OpenClaw", () => {
     const dir = makeTempDir();
     const file = path.join(dir, "integrations.json");
     fs.writeFileSync(
@@ -309,7 +309,8 @@ describe("dictionary", () => {
 describe("IntegrationService", () => {
   async function build(opts: { fetch?: typeof fetch; legacy?: object } = {}) {
     const dir = makeTempDir();
-    if (opts.legacy) fs.writeFileSync(path.join(dir, "integrations.json"), JSON.stringify(opts.legacy));
+    const legacyDir = makeTempDir("echotype-v2-"); // v2 应用的目录与新目录分开
+    if (opts.legacy) fs.writeFileSync(path.join(legacyDir, "integrations.json"), JSON.stringify(opts.legacy));
     const events: IntegrationRunEvent[] = [];
     const opened: string[] = [];
     const copied: string[] = [];
@@ -319,7 +320,7 @@ describe("IntegrationService", () => {
       instances: new InstanceStore(path.join(dir, "integrations.v3.json")),
       secrets,
       dictionary: new DictionaryStore(path.join(dir, "dictionary.json")),
-      legacyFile: path.join(dir, "integrations.json"),
+      legacyFile: path.join(legacyDir, "integrations.json"),
       logger,
       ports: {
         fetch: opts.fetch ?? (fetch as typeof fetch),
@@ -329,7 +330,7 @@ describe("IntegrationService", () => {
       },
     });
     await service.start();
-    return { service, events, opened, copied, secrets, dir };
+    return { service, events, opened, copied, secrets, dir, legacyDir };
   }
   const finished = (events: IntegrationRunEvent[]) => events.find((e) => e.type === "done" || e.type === "error");
 
@@ -339,14 +340,14 @@ describe("IntegrationService", () => {
     expect(service.list()[0].isDefault).toBe(true);
   });
 
-  it("migrates a v2 file once, scrubs the backup", async () => {
-    const { service, dir, secrets } = await build({
-      legacy: { instances: [{ instanceId: "c", pluginId: "clawbot", name: "OpenClaw", order: 0, enabled: true, config: { apiKey: "tok" } }], defaultIntegrationId: null },
-    });
+  it("imports a v2 file once, read-only: the key lands in the secret store, the v2 file stays as it was", async () => {
+    const legacy = { instances: [{ instanceId: "c", pluginId: "clawbot", name: "OpenClaw", order: 0, enabled: true, config: { apiKey: "tok" } }], defaultIntegrationId: null };
+    const { service, dir, legacyDir, secrets } = await build({ legacy });
     expect(service.list()[0]).toMatchObject({ actionId: "ask-ai", providerId: "custom", secrets: { apiKey: true } });
     expect(await secrets.get("provider:custom:apiKey")).toBe("tok");
-    expect(fs.existsSync(path.join(dir, "integrations.json"))).toBe(false);
-    expect(fs.readFileSync(path.join(dir, "integrations.v2.bak.json"), "utf-8")).not.toContain("tok");
+    expect(JSON.parse(fs.readFileSync(path.join(legacyDir, "integrations.json"), "utf-8"))).toEqual(legacy);
+    expect(fs.readdirSync(legacyDir)).toEqual(["integrations.json"]);
+    expect(fs.readdirSync(dir).sort()).toEqual(["integrations.v3.json", "secrets.bin"]);
   });
 
   it("saves a DeepSeek cleanup instance: key is shared per provider and never returned", async () => {

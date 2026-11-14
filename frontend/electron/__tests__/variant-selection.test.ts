@@ -48,10 +48,13 @@ const qwen: CatalogModel = {
 };
 const gpuOnly: CatalogModel = { ...qwen, id: "big", variants: qwen.variants.filter((x) => x.target !== "cpu") };
 
-function ctx(machine: Partial<MachineProfile>, opts: { installed?: string[]; packs?: string[]; offered?: string[] } = {}): SelectionContext {
+/** packs = 已装好且健康的引擎包；offered = 目录里本平台有的包；published = 其中 sha256 非 null（缺省同 offered） */
+function ctx(machine: Partial<MachineProfile>, opts: { installed?: string[]; packs?: string[]; offered?: string[]; published?: string[] } = {}): SelectionContext {
+  const offered = opts.offered ?? ["cuda", "vulkan"];
   return {
     machine: { platform: "win32", arch: "x64", gpuVendors: [], ...machine },
-    packOffered: (id) => (opts.offered ?? ["cuda", "vulkan"]).includes(id),
+    packOffered: (id) => offered.includes(id),
+    packPublished: (id) => (opts.published ?? offered).includes(id),
     packUsable: (id) => (opts.packs ?? []).includes(id),
     variantInstalled: (_m, id) => (opts.installed ?? []).includes(id),
   };
@@ -60,12 +63,29 @@ function ctx(machine: Partial<MachineProfile>, opts: { installed?: string[]; pac
 describe("variant selection (MODEL_MANIFEST §2)", () => {
   it("auto prefers an installed, runnable variant, then the best installable one in nvidia → apple → cpu order", () => {
     const nvidia = { gpuVendors: ["nvidia"] };
-    expect(selectVariant(qwen, "auto", ctx(nvidia))?.id).toBe("cuda-gguf-q8");
-    expect(selectVariant(qwen, "auto", ctx(nvidia, { installed: ["cpu-int8"] }))?.id).toBe("cpu-int8");
+    expect(selectVariant(qwen, "auto", ctx(nvidia, { packs: ["cuda"] }))?.id).toBe("cuda-gguf-q8");
+    expect(selectVariant(qwen, "auto", ctx(nvidia, { installed: ["cpu-int8"], packs: ["cuda"] }))?.id).toBe("cpu-int8");
     expect(selectVariant(qwen, "auto", ctx(nvidia, { installed: ["cpu-int8", "cuda-gguf-q8"] }))?.id).toBe("cpu-int8"); // 包未装，cuda 版不可运行
     expect(selectVariant(qwen, "auto", ctx(nvidia, { installed: ["cpu-int8", "cuda-gguf-q8"], packs: ["cuda"] }))?.id).toBe("cuda-gguf-q8");
     expect(selectVariant(qwen, "auto", ctx({ gpuVendors: ["intel"] }))?.id).toBe("cpu-int8");
     expect(selectVariant(qwen, "auto", ctx({ platform: "darwin", arch: "arm64", gpuVendors: ["apple"] }))?.id).toBe("apple-metal-gguf-q8");
+  });
+
+  it("auto never needs a pack download: a variant whose pack is not installed is skipped (rule 1)", () => {
+    const nvidia = { gpuVendors: ["nvidia"] };
+    expect(selectVariant(qwen, "auto", ctx(nvidia))?.id).toBe("cpu-int8"); // cuda 包已发布但没装
+    expect(selectVariant(qwen, "auto", ctx(nvidia, { installed: ["cuda-gguf-q8"] }))?.id).toBe("cpu-int8"); // 模型装了，包没装
+    expect(selectVariant(gpuOnly, "auto", ctx(nvidia))).toBeNull(); // 只有带包的版本：auto 不选，留给显式 provider
+    expect(selectVariant(gpuOnly, "auto", ctx(nvidia, { packs: ["cuda"] }))?.id).toBe("cuda-gguf-q8");
+  });
+
+  it("a pack that is not published keeps its variants listed and its provider offered, but they are never selected (rule 4)", () => {
+    const nvidia = { gpuVendors: ["nvidia"] };
+    const unpublished = { published: ["vulkan"] };
+    expect(listedVariants(qwen, ctx(nvidia, unpublished)).map((x) => x.id)).toEqual(["cpu-int8", "cuda-gguf-q8", "vulkan-gguf-q8"]); // UI 显示"暂不可用"
+    expect(providerOptions(qwen, ctx(nvidia, unpublished))).toEqual(["auto", "cpu", "cuda", "vulkan"]);
+    expect(selectVariant(qwen, "cuda", ctx(nvidia, unpublished))?.id).toBe("cpu-int8"); // 显式 cuda 拿不到 → 回落 auto
+    expect(selectVariant(qwen, "cuda", ctx(nvidia, { published: [], packs: ["cuda"] }))?.id).toBe("cuda-gguf-q8"); // 已装的包照常可用
   });
 
   it("lists only what this platform can get", () => {
@@ -74,14 +94,15 @@ describe("variant selection (MODEL_MANIFEST §2)", () => {
     expect(listedVariants(qwen, ctx({ platform: "linux", arch: "arm64" }, { offered: ["vulkan"] })).map((x) => x.id)).toEqual(["cpu-int8", "vulkan-gguf-q8"]);
   });
 
-  it("an explicit provider picks the variant that lists it; an unavailable one falls back to auto", () => {
+  it("an explicit provider picks the variant that lists it, even when its published pack still has to be downloaded (rule 2)", () => {
     expect(selectVariant(qwen, "cuda", ctx({ gpuVendors: [] }))?.id).toBe("cuda-gguf-q8");
     expect(selectVariant(qwen, "vulkan", ctx({ gpuVendors: ["amd"] }))?.id).toBe("vulkan-gguf-q8");
     expect(selectVariant(qwen, "metal", ctx({ gpuVendors: [] }))?.id).toBe("cpu-int8");
   });
 
-  it("a GPU-only model uses Vulkan on an AMD machine and nothing on a machine without a GPU", () => {
-    expect(selectVariant(gpuOnly, "auto", ctx({ gpuVendors: ["amd"] }))?.id).toBe("vulkan-gguf-q8");
+  it("a GPU-only model uses Vulkan on an AMD machine once the pack is installed, and nothing on a machine without a GPU", () => {
+    expect(selectVariant(gpuOnly, "auto", ctx({ gpuVendors: ["amd"] }, { packs: ["vulkan"] }))?.id).toBe("vulkan-gguf-q8");
+    expect(selectVariant(gpuOnly, "vulkan", ctx({ gpuVendors: ["amd"] }))?.id).toBe("vulkan-gguf-q8");
     expect(selectVariant(gpuOnly, "auto", ctx({ gpuVendors: [] }, { offered: [] }))).toBeNull();
   });
 
