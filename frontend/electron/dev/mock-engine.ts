@@ -95,7 +95,7 @@ export async function createMockEngine(options: MockEngineOptions): Promise<{ po
   // ============================================================
   const methods: Record<string, (params: Record<string, unknown>) => unknown | Promise<unknown>> = {
     hello: () => ({
-      engine_version: "4.0.0-mock",
+      engine_version: "3.0.0-mock",
       protocol: ENGINE_PROTOCOL_VERSION,
       runtimes: { "sherpa-onnx": "mock", "llama.cpp": "mock" },
       platform: process.platform,

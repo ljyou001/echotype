@@ -19,9 +19,12 @@ export interface AppError {
   code: string; // engine error code (contracts/ENGINE_PROTOCOL.md §7) or a Core code such as ENGINE_CRASHED
   message: string;
 }
+// Every bridge method that fails rejects with an Error that carries `code` and `message` (an AppError).
+// preload strips Electron's "Error invoking remote method '…': Error: [CODE] …" wrapper.
+// UI shows i18n text keyed by `code`; `message` goes only to logs and Diagnostics.
 
 // ============================================================
-// Settings — persisted by Core in ~/.echotype/settings.json (schemaVersion 2)
+// Settings — persisted by Core in ~/.echotype-v3/settings.json (schemaVersion 2)
 // ============================================================
 export type RecordingMode = "push-to-talk" | "toggle";
 export type ThemeMode = "system" | "light" | "dark";
@@ -184,7 +187,7 @@ export interface HistoryEntry {
 }
 
 // ============================================================
-// Integrations — actions run in Core; secrets never reach the UI (design/INTEGRATIONS_V4.md)
+// Integrations — actions run in Core; secrets never reach the UI (design/INTEGRATIONS_V3.md)
 // ============================================================
 export type LocalizedText = { en: string; zh?: string };
 export type ActionKind = "transform" | "send" | "open";

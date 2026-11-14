@@ -72,7 +72,7 @@ describe("EngineSupervisor", () => {
     const sup = makeSupervisor();
     sup.start();
     await waitFor(isState(sup, "running"), 10_000, "running");
-    expect(sup.status().engineVersion).toBe("4.0.0-mock");
+    expect(sup.status().engineVersion).toBe("3.0.0-mock");
     expect(sup.status().providers).toEqual(["cpu"]);
     const devices = await sup.request("devices.list", {});
     expect(devices.inputs.length).toBeGreaterThan(0);

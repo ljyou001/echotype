@@ -7,7 +7,7 @@
 import type { LicensesView } from "../../electron/ipc-contract";
 
 export const MOCK_LICENSES: Omit<LicensesView, "models"> = {
-  appVersion: "4.0.0-mock",
+  appVersion: "3.0.0-mock",
   components: [
     { name: "Electron", version: "31.7.7", license: "MIT", url: "https://github.com/electron/electron/blob/main/LICENSE" },
     { name: "React", version: "18.3.1", license: "MIT", url: "https://github.com/facebook/react/blob/main/LICENSE" },

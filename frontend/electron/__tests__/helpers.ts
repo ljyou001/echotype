@@ -40,7 +40,7 @@ export function mockEngineCommand(env: Record<string, string> = {}): EngineComma
   return { kind: "mock", packId: null, command: process.execPath, args: [mockBundle], cwd: frontendRoot, env };
 }
 
-/** 最小 zip 写入器（store，不压缩）：文件位于 zip 根，与 models-v4 资产的形状一致。 */
+/** 最小 zip 写入器（store，不压缩）：文件位于 zip 根，与 models-v3 资产的形状一致。 */
 export function makeZip(entries: Record<string, Buffer | string>): Buffer {
   const locals: Buffer[] = [];
   const centrals: Buffer[] = [];

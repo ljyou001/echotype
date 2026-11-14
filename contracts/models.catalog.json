@@ -120,7 +120,7 @@
           },
           "asset": {
             "name": "sensevoice-small--cpu-int8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "e9511a923f034b0aecd5fd0632792cb4798fbd5b44b409f44cd7b2c256077b87",
             "size_bytes": 160309459,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2"
@@ -149,7 +149,7 @@
           },
           "asset": {
             "name": "sensevoice-small--cuda-fp32.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "e4966454d5db4d1743f4479a29838ad25c7e713dac97dd49ddc0ddefc58d47af",
             "size_bytes": 867665995,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2"
@@ -234,7 +234,7 @@
           },
           "asset": {
             "name": "paraformer-zh-small--cpu-int8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "c2fca5669ed6bef33015e2f45fc74d341ff8e4592d9fb29cd899e88a8855a140",
             "size_bytes": 74228751,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-small-2024-03-09.tar.bz2"
@@ -317,7 +317,7 @@
           },
           "asset": {
             "name": "paraformer-zh--cpu-int8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "ec38d19bffb31b676f37fffd4b5e67e160e45f8a340245ba81174722b2c222a7",
             "size_bytes": 208510872,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2"
@@ -470,7 +470,7 @@
           },
           "asset": {
             "name": "qwen3-asr-0.6b--cpu-int8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "587ae33b1413ca6ed6233fe88ce103c6b717e06026992e89259e6821b0ab72f0",
             "size_bytes": 844774688,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2"
@@ -499,7 +499,7 @@
           },
           "asset": {
             "name": "qwen3-asr-0.6b--gguf-q8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "af9fbece19d60bcdb19464aa76f4ae012dc82bec6d25967336c3e1c65d4344a4",
             "size_bytes": 969451962,
             "upstream_url": "https://huggingface.co/ggml-org/Qwen3-ASR-0.6B-GGUF"
@@ -528,7 +528,7 @@
           },
           "asset": {
             "name": "qwen3-asr-0.6b--gguf-q8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "af9fbece19d60bcdb19464aa76f4ae012dc82bec6d25967336c3e1c65d4344a4",
             "size_bytes": 969451962,
             "upstream_url": "https://huggingface.co/ggml-org/Qwen3-ASR-0.6B-GGUF"
@@ -557,7 +557,7 @@
           },
           "asset": {
             "name": "qwen3-asr-0.6b--gguf-q8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "af9fbece19d60bcdb19464aa76f4ae012dc82bec6d25967336c3e1c65d4344a4",
             "size_bytes": 969451962,
             "upstream_url": "https://huggingface.co/ggml-org/Qwen3-ASR-0.6B-GGUF"
@@ -680,7 +680,7 @@
           },
           "asset": {
             "name": "parakeet-tdt-0.6b-v3--cpu-int8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "61dbcee1631dd16fa8fe1b21477ec1ad99dc967fdb4d772e6297c893f76c1a65",
             "size_bytes": 478160566,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8.tar.bz2"
@@ -832,7 +832,7 @@
           },
           "asset": {
             "name": "qwen3-asr-1.7b--gguf-q8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "7b844055c170fdd77243e5f0dba6796334e0df48d0f42ee90390ea691dd65518",
             "size_bytes": 1995165542,
             "upstream_url": "https://huggingface.co/mradermacher/Qwen3-ASR-1.7B-GGUF"
@@ -861,7 +861,7 @@
           },
           "asset": {
             "name": "qwen3-asr-1.7b--gguf-q8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "7b844055c170fdd77243e5f0dba6796334e0df48d0f42ee90390ea691dd65518",
             "size_bytes": 1995165542,
             "upstream_url": "https://huggingface.co/mradermacher/Qwen3-ASR-1.7B-GGUF"
@@ -890,7 +890,7 @@
           },
           "asset": {
             "name": "qwen3-asr-1.7b--gguf-q8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "7b844055c170fdd77243e5f0dba6796334e0df48d0f42ee90390ea691dd65518",
             "size_bytes": 1995165542,
             "upstream_url": "https://huggingface.co/mradermacher/Qwen3-ASR-1.7B-GGUF"
@@ -975,7 +975,7 @@
           },
           "asset": {
             "name": "fire-red-asr2-aed--cpu-int8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "c84982428c19bb648f56a967244d9971f0d7c7b74a252e693020293e16f3c285",
             "size_bytes": 836351055,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-fire-red-asr2-zh_en-int8-2026-02-26.tar.bz2"
@@ -1131,7 +1131,7 @@
           },
           "asset": {
             "name": "whisper-large-v3-turbo--cpu-int8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "f700cd99a35f840480dd56d0984d39ef345263fba667fed6f371809f31cdfa23",
             "size_bytes": 611314614,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-turbo.tar.bz2"
@@ -1197,7 +1197,7 @@
           },
           "asset": {
             "name": "moonshine-v2-base-en--cpu-int8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "6bda207e321ea6ab0ec6dc339ecffe88c91364a2ff1faf212830d69a57fb1bd4",
             "size_bytes": 107104570,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-moonshine-base-en-quantized-2026-02-27.tar.bz2"
@@ -1256,7 +1256,7 @@
           },
           "asset": {
             "name": "punct-ct-transformer-zh-en--cpu-int8.zip",
-            "release": "models-v4",
+            "release": "models-v3",
             "sha256": "800578f1f105a176cd5c242971b9c569fadc4c7e1b2e1e896324763ef4741fe8",
             "size_bytes": 61216391,
             "upstream_url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/punctuation-models/sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12-int8.tar.bz2"
@@ -1292,17 +1292,17 @@
         "win32-x64": {
           "asset": {
             "name": "engine-pack-cuda-win32-x64.zip",
-            "release": "engine-packs-v4",
-            "sha256": null,
-            "size_bytes": 0
+            "release": "engine-packs-v3",
+            "sha256": "123291cf3dd5c0c2fb20b03d9a3b40314b2cd60fa98664ef1355b27b097992b0",
+            "size_bytes": 1747562132
           }
         },
         "linux-x64": {
           "asset": {
             "name": "engine-pack-cuda-linux-x64.zip",
-            "release": "engine-packs-v4",
-            "sha256": null,
-            "size_bytes": 0
+            "release": "engine-packs-v3",
+            "sha256": "4c2e17cd8443568cef6561d8580a3d08d413abcd60359f4a4e1b7512d5e72f3c",
+            "size_bytes": 1771739678
           }
         }
       },
@@ -1319,33 +1319,33 @@
         "win32-x64": {
           "asset": {
             "name": "engine-pack-vulkan-win32-x64.zip",
-            "release": "engine-packs-v4",
-            "sha256": null,
-            "size_bytes": 0
+            "release": "engine-packs-v3",
+            "sha256": "afe32a609dccfca0cb93141fa2c3bdfddaf9708f88750a712c11a742fd10cb1a",
+            "size_bytes": 41236486
           }
         },
         "win32-arm64": {
           "asset": {
             "name": "engine-pack-vulkan-win32-arm64.zip",
-            "release": "engine-packs-v4",
-            "sha256": null,
-            "size_bytes": 0
+            "release": "engine-packs-v3",
+            "sha256": "a2e81e7f85b757e409f17e4fd02f35e3ea561f33eed12ff2850d510229a9bc76",
+            "size_bytes": 33226808
           }
         },
         "linux-x64": {
           "asset": {
             "name": "engine-pack-vulkan-linux-x64.zip",
-            "release": "engine-packs-v4",
-            "sha256": null,
-            "size_bytes": 0
+            "release": "engine-packs-v3",
+            "sha256": "dc054ff8f048d6c32d487fc6e7fa431d0c3f72ffbb234439e5d81a7c9ec99345",
+            "size_bytes": 55226322
           }
         },
         "linux-arm64": {
           "asset": {
             "name": "engine-pack-vulkan-linux-arm64.zip",
-            "release": "engine-packs-v4",
-            "sha256": null,
-            "size_bytes": 0
+            "release": "engine-packs-v3",
+            "sha256": "c42be27735944736627fbca3f21d94b3f758285176caeded56181f6b816cf0c9",
+            "size_bytes": 46830315
           }
         }
       },

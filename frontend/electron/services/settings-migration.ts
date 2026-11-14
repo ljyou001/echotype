@@ -8,7 +8,7 @@
  */
 import type { DeepPartial, ModelUserSettings, Provider, Settings } from "../ipc-contract.js";
 
-/** v2 应用的模型文件夹名 → v4 目录（models.catalog.json）的模型 id。未列出的旧 id 迁移后为 null。 */
+/** v2 应用的模型文件夹名 → v3 目录（models.catalog.json）的模型 id。未列出的旧 id 迁移后为 null。 */
 export const LEGACY_MODEL_IDS: Readonly<Record<string, string>> = {
   "paraformer-offline": "paraformer-zh",
   "Qwen3-ASR-0.6B": "qwen3-asr-0.6b",

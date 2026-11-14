@@ -1,12 +1,15 @@
 /**
  * [INPUT]: 依赖 frontend/dist-electron 的 Core 模块（engine/engine-command 的 resolveEngineCommand、
- *          engine/engine-supervisor 的 EngineSupervisor）；依赖 electron-builder 输出目录里的解包应用
- * [OUTPUT]: CLI。退出码 0 = Core 以打包态布局拉起 resources/engine/ 下的引擎，并完成 ready 行 → token 连接 → hello 握手
+ *          engine/engine-supervisor 的 EngineSupervisor）；依赖 electron-builder 输出目录里的解包应用；
+ *          依赖 engine/Cargo.toml 的 [package] version（期望的引擎版本）
+ * [OUTPUT]: CLI。退出码 0 = Core 以打包态布局拉起 resources/engine/ 下的引擎，完成 ready 行 → token 连接 → hello 握手，
+ *           且 hello 的 engine_version 等于 Cargo.toml 的版本
  * [POS]: 安装包冒烟检查。build.yml 每个安装包行打包后运行，本地验证同一份。
  *        只复用 Core 的选路与 supervisor，不起 Electron 窗口、不装全局键盘钩子、不碰用户的 ~/.echotype。
+ *        版本比对拦住 engine/dist 里残留的旧引擎：引擎的 ENGINE_VERSION 就是 CARGO_PKG_VERSION，所以期望值只读 Cargo.toml。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
-import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -14,6 +17,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CORE_DIST = path.join(ROOT, "frontend", "dist-electron");
 const TIMEOUT_MS = 90_000;
+// [package] 段的 version 行。引擎二进制把它编译为 hello 的 engine_version
+const EXPECTED_VERSION = readFileSync(path.join(ROOT, "engine", "Cargo.toml"), "utf8").match(/^\[package\][^[]*?^version\s*=\s*"([^"]+)"/m)?.[1];
+if (!EXPECTED_VERSION) {
+  console.error("Cannot read [package] version from engine/Cargo.toml.");
+  process.exit(1);
+}
 
 const outDir = process.argv[2];
 if (!outDir) {
@@ -85,7 +94,11 @@ if (status.state === "running") {
   const devices = await supervisor.request("devices.list", {}).catch((err) => ({ error: err.message }));
   console.log(`HELLO OK  engine_version=${status.engineVersion}  providers=${status.providers.join(",")}  pid=${status.pid}`);
   console.log(`devices.list → ${JSON.stringify(devices)}`);
-  exitCode = 0;
+  if (status.engineVersion === EXPECTED_VERSION) {
+    exitCode = 0;
+  } else {
+    console.error(`Engine version ${status.engineVersion} does not match engine/Cargo.toml ${EXPECTED_VERSION}: the packaged engine is stale.`);
+  }
 } else {
   console.error(`Engine did not handshake: ${JSON.stringify(status)}`);
 }

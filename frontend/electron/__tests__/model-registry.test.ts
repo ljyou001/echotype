@@ -84,7 +84,7 @@ afterAll(() => {
 // 目录构造
 // ============================================================
 function asset(name: string, withSha = true): AssetRef {
-  return { name, release: "models-v4", sha256: withSha && assets[name] ? sha(assets[name]) : null, size_bytes: 0 };
+  return { name, release: "models-v3", sha256: withSha && assets[name] ? sha(assets[name]) : null, size_bytes: 0 };
 }
 
 function variant(modelId: string, id: string, over: Partial<CatalogVariant> = {}): CatalogVariant {
@@ -152,7 +152,7 @@ function catalogOf(models: CatalogModel[], channel = "github", extraSources: Cat
         target: "nvidia",
         providers: ["cuda"],
         protocol: 3,
-        platforms: { [`${process.platform}-${process.arch}`]: { asset: { ...asset(`engine-pack-cuda-${process.platform}-${process.arch}.zip`), release: "engine-packs-v4" } } },
+        platforms: { [`${process.platform}-${process.arch}`]: { asset: { ...asset(`engine-pack-cuda-${process.platform}-${process.arch}.zip`), release: "engine-packs-v3" } } },
       },
     ],
   };

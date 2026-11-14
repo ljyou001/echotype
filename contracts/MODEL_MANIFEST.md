@@ -9,7 +9,7 @@
 
 ```jsonc
 {
-  "id": "qwen3-asr-0.6b",                // stable id; folder ~/.echotype/models/<id>/<variant.id>/
+  "id": "qwen3-asr-0.6b",                // stable id; folder ~/.echotype-v3/models/<id>/<variant.id>/
   "name": "Qwen3 ASR 0.6B",
   "description": "…",                    // one sentence, English
   "kind": "asr",                         // asr | punctuation
@@ -41,7 +41,7 @@ A variant exists for a target only after it measurably beats the cpu variant on 
   "files": { "…": "relative/path" },     // arch-specific keys, relative to the variant folder
   "asset": {
     "name": "sensevoice-small--cuda-fp16.zip", // file name on every source (§6); files sit at the zip root
-    "release": "models-v4",              // release/bucket name a source template may use
+    "release": "models-v3",              // release/bucket name a source template may use
     "sha256": "…",                       // null only while drafting
     "size_bytes": 0,
     "upstream_url": "https://…"          // original source, for re-packaging only — Core never downloads it
@@ -52,8 +52,10 @@ A variant exists for a target only after it measurably beats the cpu variant on 
 ```
 
 Variant selection for the user's `provider` setting:
-1. `auto` → the best installed-or-installable variant for this machine, in target order nvidia → apple → cpu, skipping variants whose `requires_pack` is missing and not installable here.
+1. `auto` → the best installed-or-installable variant for this machine, in target order nvidia → apple → cpu, skipping every variant whose `requires_pack` is not installed yet. `auto` never starts a pack download.
 2. An explicit provider → the variant that lists it. If it is not installed, the Model Manager offers its download (and its pack).
+3. A pack is installed only by an explicit user action: the Model Manager, or an explicit provider from rule 2.
+4. A pack whose asset for this platform has `sha256: null` is unpublished. Core shows it as unavailable and never requests its URL.
 
 ## 3. Model settings (`settings[]`) — model-specific, never global
 
@@ -91,13 +93,13 @@ The engine session owns this table: a row exists only after a real load + decode
   "providers": ["cuda"],
   "protocol": 3,                         // must equal the bundled engine's protocol
   "platforms": {
-    "win32-x64": { "asset": { "name": "engine-pack-cuda-win32-x64.zip", "release": "engine-packs-v4", "sha256": "…", "size_bytes": 0 } },
-    "linux-x64": { "asset": { "name": "engine-pack-cuda-linux-x64.zip", "release": "engine-packs-v4", "sha256": "…", "size_bytes": 0 } }
+    "win32-x64": { "asset": { "name": "engine-pack-cuda-win32-x64.zip", "release": "engine-packs-v3", "sha256": "…", "size_bytes": 0 } },
+    "linux-x64": { "asset": { "name": "engine-pack-cuda-linux-x64.zip", "release": "engine-packs-v3", "sha256": "…", "size_bytes": 0 } }
   }
 }
 ```
 - A pack is a complete engine build plus its GPU libraries: `echotype-engine`, sherpa-onnx shared CUDA libs, ONNX Runtime GPU, the NVIDIA runtime DLLs it needs (cudart, cuBLAS, cuDNN, cuFFT — redistributable), and the CUDA `llama-server`.
-- Core installs it to `~/.echotype/engines/<pack id>/`. While a pack is installed and its `hello.protocol` matches, Core spawns the engine from the pack folder instead of the bundled one. On mismatch or crash loop, Core falls back to the bundled engine and reports `PACK_OUTDATED`.
+- Core installs it to `~/.echotype-v3/engines/<pack id>/`. While a pack is installed and its `hello.protocol` matches, Core spawns the engine from the pack folder instead of the bundled one. On mismatch or crash loop, Core falls back to the bundled engine and reports `PACK_OUTDATED`.
 - The macOS base engine already includes CoreML + Metal; Apple Silicon needs no pack.
 - Packs appear in the Model Manager next to the models.
 
@@ -124,5 +126,5 @@ The engine session owns this table: a row exists only after a real load + decode
 
 1. Add one object to `contracts/models.catalog.json`.
 2. If its `arch` is new, add one loader in the engine and one row in §4.
-3. Package each variant as `<model id>--<variant id>.zip` (files at the zip root) and upload it to the `models-v4` release on each source.
+3. Package each variant as `<model id>--<variant id>.zip` (files at the zip root) and upload it to the `models-v3` release on each source.
 4. Nothing else. Core and UI need no code change.
