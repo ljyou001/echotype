@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ============================================================================
 # [INPUT]: 依赖 engine/ 的 Cargo 工程与 cargo/rustc（基础引擎）；依赖 engine/scripts/make-pack.sh（GPU 引擎包，
-#          以及 mac 基础引擎的 Metal llama-server）；依赖 contracts/models.catalog.json 的
+#          以及基础引擎的 llama-server：mac 为 Metal 版，Windows / Linux 为 CPU 版）；依赖 contracts/models.catalog.json 的
 #          engine_packs[].platforms[].asset.name；依赖 python3 或 python（catalog 查询与打 zip）
-# [OUTPUT]: 基础引擎 → engine/dist/<target-id>/echotype-engine[.exe]（mac 另含 Metal llama-server 及其 dylib）
+# [OUTPUT]: 基础引擎 → engine/dist/<target-id>/echotype-engine[.exe] + llama-server 及其运行库（mac 为 Metal 版，其余为 CPU 版）
 #           GPU 引擎包 → engine/dist/packs/<catalog asset.name>（可复现 zip，文件位于 zip 根）
 # [POS]: 打包流水线中唯一构建引擎的入口。build.yml 每个矩阵行调用一次，本地也可直接运行。
 #        electron-builder 以 engine/dist/${os}-${arch} 读取基础引擎，所以 target-id 必须等于 <os>-<arch>。
@@ -155,13 +155,15 @@ build_engine() {
   cp "$bin" "$out/"
   annotate notice "Staged $EXE into engine/dist/$TARGET/."
 
-  # macOS 基础引擎自带 CoreML + Metal（MODEL_MANIFEST §5）：Metal llama-server 与引擎放在同一目录
+  # 每个基础引擎都带 llama-server，与引擎放在同一目录（MODEL_MANIFEST §5）：macOS 用 Metal 版（另有 CoreML），
+  # Windows / Linux 用 CPU 版。catalog 的 cpu-gguf-q8 变体靠它运行，check-engine 要求 hello.runtimes 含 llama.cpp
+  local llama
   case "$TARGET" in
-    mac-*)
-      make_pack metal "$out"
-      annotate notice "Staged the Metal llama-server into engine/dist/$TARGET/."
-      ;;
+    mac-*) llama=metal ;;
+    win-* | linux-*) llama=cpu ;;
   esac
+  make_pack "$llama" "$out"
+  annotate notice "Staged the $llama llama-server into engine/dist/$TARGET/."
   ls -la "$out"
 }
 

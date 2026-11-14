@@ -3,10 +3,11 @@
  *          engine/engine-supervisor 的 EngineSupervisor）；依赖 electron-builder 输出目录里的解包应用；
  *          依赖 engine/Cargo.toml 的 [package] version（期望的引擎版本）
  * [OUTPUT]: CLI。退出码 0 = Core 以打包态布局拉起 resources/engine/ 下的引擎，完成 ready 行 → token 连接 → hello 握手，
- *           且 hello 的 engine_version 等于 Cargo.toml 的版本
+ *           hello 的 engine_version 等于 Cargo.toml 的版本，且 hello.runtimes 含 llama.cpp
  * [POS]: 安装包冒烟检查。build.yml 每个安装包行打包后运行，本地验证同一份。
  *        只复用 Core 的选路与 supervisor，不起 Electron 窗口、不装全局键盘钩子、不碰用户的 ~/.echotype。
  *        版本比对拦住 engine/dist 里残留的旧引擎：引擎的 ENGINE_VERSION 就是 CARGO_PKG_VERSION，所以期望值只读 Cargo.toml。
+ *        llama.cpp 比对拦住漏装 llama-server 的安装包：6 个基础引擎都带它，catalog 的 cpu-gguf-q8 变体靠它运行。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
@@ -92,12 +93,17 @@ const status = await new Promise((resolve) => {
 let exitCode = 1;
 if (status.state === "running") {
   const devices = await supervisor.request("devices.list", {}).catch((err) => ({ error: err.message }));
-  console.log(`HELLO OK  engine_version=${status.engineVersion}  providers=${status.providers.join(",")}  pid=${status.pid}`);
+  const runtimes = Object.entries(status.runtimes).map(([name, version]) => `${name}@${version}`).join(",");
+  console.log(`HELLO OK  engine_version=${status.engineVersion}  providers=${status.providers.join(",")}  runtimes=${runtimes}  pid=${status.pid}`);
   console.log(`devices.list → ${JSON.stringify(devices)}`);
-  if (status.engineVersion === EXPECTED_VERSION) {
-    exitCode = 0;
-  } else {
+  if (status.engineVersion !== EXPECTED_VERSION) {
     console.error(`Engine version ${status.engineVersion} does not match engine/Cargo.toml ${EXPECTED_VERSION}: the packaged engine is stale.`);
+  } else if (!status.runtimes["llama.cpp"]) {
+    console.error(
+      "hello.runtimes has no llama.cpp: resources/engine lacks a runnable llama-server (build-engine.sh stages it; Linux also needs the system libgomp1 and libssl3).",
+    );
+  } else {
+    exitCode = 0;
   }
 } else {
   console.error(`Engine did not handshake: ${JSON.stringify(status)}`);

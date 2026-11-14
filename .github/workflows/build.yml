@@ -58,7 +58,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # --- 安装包（基础引擎只含 CPU；mac 另含 CoreML + Metal llama-server）---
+          # --- 安装包（基础引擎：CPU + llama-server；win/linux 为 CPU 版，mac 为 Metal 版并另含 CoreML）---
           - { target: win-x64,     os: windows-2025,     gpu: "" }
           - { target: win-arm64,   os: windows-11-arm,   gpu: "" }
           - { target: linux-x64,   os: ubuntu-22.04,     gpu: "" }
@@ -211,6 +211,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
+          # 写在自动生成的说明之前。deb 已声明这两个依赖，AppImage 无法声明，只能写给用户
+          NOTES_HEADER: "**Linux AppImage:** the Qwen3-ASR CPU (GGUF) variants run on llama.cpp, which needs libgomp and OpenSSL 3 from the system. On Debian/Ubuntu: `sudo apt install libgomp1 libssl3`. The .deb installs both for you."
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
             # 重跑：只覆盖草稿的资产，已发布的 Release 一律不碰
@@ -220,7 +222,7 @@ jobs:
             fi
             gh release upload "$TAG" release/* --clobber
           else
-            flags=(--draft --verify-tag --generate-notes --title "EchoType ${TAG#v}")
+            flags=(--draft --verify-tag --generate-notes --notes "$NOTES_HEADER" --title "EchoType ${TAG#v}")
             # v3.1.0-beta.1 这类带后缀的 tag 标为预发布
             if [[ "$TAG" == *-* ]]; then flags+=(--prerelease); fi
             gh release create "$TAG" release/* "${flags[@]}"
