@@ -59,7 +59,8 @@ DLC（Store Presence → Applications → DLC / Depots）：
 
 ## 2. 需要用户决定
 
-**已决定（2026-11-15）**：用户选方案 B。因此 D1 = 免费（方案 B 的前提），D2 = B。D3–D8 按下表建议执行。
+**已决定（2026-11-15）**：用户选方案 B（主程序带 SenseVoice，8 个免费 DLC），D3–D8 按下表建议执行。
+同日更正 §3.2：用户的研究确认 FunASR Model License v1.1 允许商用，条件是注明作者与出处、保留模型原名。catalog 把 4 个 FunASR 模型的 `license.commercial` 改为 `yes`，steam 渠道维持 `allow_commercial: ["yes"]` 也能显示全部模型。所以价格（D1）不再受模型许可限制，由用户在 Steamworks 自定。
 §7 的提案已落地为 Model Manifest v2.3（`contracts/MODEL_MANIFEST.md` §5、§6），与提案的差别：
 - DLC 表是 `channels.steam.steam.dlc[]`（每个 DLC 一项：id、name、app_id、assets、packs），不是"资产名 → app id"的映射。引擎包按 pack id 引用，资产名随版本变化（`…-3.0.1.zip`）时 DLC 表不用改。
 - `base_assets` 列出基础 Content depot 的资产，steam-build.sh 与 Core 读同一份表；steam.conf 只留 Steamworks ID。

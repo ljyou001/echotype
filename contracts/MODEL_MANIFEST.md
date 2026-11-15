@@ -113,7 +113,7 @@ The engine session owns this table: a row exists only after a real load + decode
 ],
 "channels": {
   "github":  { "sources": ["github"],          "remote_catalog": null, "allow_commercial": ["yes", "unclear"] },
-  "steam":   { "sources": ["steam", "github"], "remote_catalog": null, "allow_commercial": ["yes", "unclear"],
+  "steam":   { "sources": ["steam", "github"], "remote_catalog": null, "allow_commercial": ["yes"],
                "steam": {
                  "base_assets": ["sensevoice-small--cpu-int8.zip"],
                  "dlc": [
@@ -126,7 +126,7 @@ The engine session owns this table: a row exists only after a real load + decode
 ```
 - Assets are referenced by `{release, asset}` only. Core builds the URL or path from the channel's sources, in order, and falls back to the next source on failure. Changing hosts = editing `sources`, never the models.
 - The channel is a build-time constant (`ECHOTYPE_CHANNEL`, default `github`) set by CI per store build.
-- `allow_commercial` filters models by `license.commercial` for that store. steam: `["yes", "unclear"]` (the Steam app is free, strategy B in design/STEAM_RELEASE_V3.md). msstore: provisional.
+- `allow_commercial` filters models by `license.commercial` for that store. steam: `["yes"]`. msstore: provisional. `license.commercial` is `yes` only when the license allows commercial use: the FunASR Model License v1.1 does, with attribution to the author and source and the original model name kept (`license.author`, About).
 - `remote_catalog`: optional URL. When set, Core fetches it at startup, accepts it only if `schema` matches and `updated` is newer, caches it, and falls back to the bundled catalog on any error. This lets sources and models change without an app update.
 - Template variables: `{release}`, `{asset}`, `{asset_stem}` (`{asset}` without `.zip`), `{platform}` (e.g. `win32-x64`), `{steam_app_dir}` (the Steam install folder: the executable's folder on Windows and Linux, the folder that holds `EchoType.app` on macOS; resolved only in the steam channel). Core skips a source whose variable cannot be resolved.
 
