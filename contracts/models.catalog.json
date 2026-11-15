@@ -1351,16 +1351,16 @@
           "asset": {
             "name": "engine-pack-cuda-win32-x64-3.0.1.zip",
             "release": "engine-packs-v3",
-            "sha256": null,
-            "size_bytes": 0
+            "sha256": "3a1080b4c161b5037144f7b0231792635c06267dd1f487f34830e34c69b727cf",
+            "size_bytes": 1747896296
           }
         },
         "linux-x64": {
           "asset": {
             "name": "engine-pack-cuda-linux-x64-3.0.1.zip",
             "release": "engine-packs-v3",
-            "sha256": null,
-            "size_bytes": 0
+            "sha256": "0ad6898b4b74639033fdd6030992ea0f3cd7cfe4a8e248d02acb9ada7869fd5f",
+            "size_bytes": 1771742189
           }
         }
       },
@@ -1378,32 +1378,32 @@
           "asset": {
             "name": "engine-pack-vulkan-win32-x64-3.0.1.zip",
             "release": "engine-packs-v3",
-            "sha256": null,
-            "size_bytes": 0
+            "sha256": "85752f821aa3653e51edc9f19d5c283634a3aeb92159f2b0ed414dc99b3f995a",
+            "size_bytes": 41553810
           }
         },
         "win32-arm64": {
           "asset": {
             "name": "engine-pack-vulkan-win32-arm64-3.0.1.zip",
             "release": "engine-packs-v3",
-            "sha256": null,
-            "size_bytes": 0
+            "sha256": "55147c46f9060694c4ff92bf7cad0b247da82968d6572c8c270248fec8ac42b1",
+            "size_bytes": 33739658
           }
         },
         "linux-x64": {
           "asset": {
             "name": "engine-pack-vulkan-linux-x64-3.0.1.zip",
             "release": "engine-packs-v3",
-            "sha256": null,
-            "size_bytes": 0
+            "sha256": "831efb52e86a84ab88900972e07eb23ef58d4ad56e82c22699487cdfa8f37a1d",
+            "size_bytes": 55228138
           }
         },
         "linux-arm64": {
           "asset": {
             "name": "engine-pack-vulkan-linux-arm64-3.0.1.zip",
             "release": "engine-packs-v3",
-            "sha256": null,
-            "size_bytes": 0
+            "sha256": "124b9aa5111898f1855dc1f8dff62d8486765dd0f83df9fb21b7e07e73990d27",
+            "size_bytes": 46834268
           }
         }
       },
