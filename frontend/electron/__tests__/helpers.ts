@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 esbuild（把 mock 引擎打成可执行 ESM）、node:fs/os/path；依赖 engine/engine-command 的 EngineCommand
- * [OUTPUT]: 导出 mockEngineCommand、makeZip、makeTempDir、waitFor、FakeEngine（内存版 EngineGateway）
+ * [OUTPUT]: 导出 mockEngineCommand、makeZip、stageAssetDir（模拟 Steam 构建写出的 dir 源目录）、makeTempDir、waitFor、FakeEngine（内存版 EngineGateway）
  * [POS]: __tests__ 的共享夹具。mock 引擎产物写进 node_modules/.cache，使 ws 等依赖按常规路径解析。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -79,6 +79,18 @@ export function makeZip(entries: Record<string, Buffer | string>): Buffer {
   end.writeUInt32LE(cd.length, 12);
   end.writeUInt32LE(offset, 16);
   return Buffer.concat([...locals, cd, end]);
+}
+
+/** 模拟 Steam 构建写出的 dir 源目录（MODEL_MANIFEST §6）：zip 根的文件 + .asset.json（资产名、zip 的 sha256、每个文件的字节数） */
+export function stageAssetDir(folder: string, asset: string, sha256: string, files: Record<string, string | Buffer>): void {
+  const sizes: Record<string, number> = {};
+  for (const [rel, body] of Object.entries(files)) {
+    const file = path.join(folder, rel);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, body);
+    sizes[rel] = fs.statSync(file).size;
+  }
+  fs.writeFileSync(path.join(folder, ".asset.json"), JSON.stringify({ asset, sha256, files: sizes }));
 }
 
 export function makeTempDir(prefix = "echotype-test-"): string {

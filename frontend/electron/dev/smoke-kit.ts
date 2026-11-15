@@ -2,7 +2,8 @@
  * [INPUT]: 依赖 electron 的 BrowserWindow；依赖 core/create-core 的 Core、core/logger 的 Logger
  * [OUTPUT]: 导出 Smoke、SmokeContext、SmokeFactory、Checks、openProbeWindow、writeSmokeSettings、readCoreLog、until、sleep
  * [POS]: 两个 smoke（smoke.ts 跑 mock 引擎，smoke-real.ts 跑真实引擎）共用的骨架。main.ts 只认 Smoke 接口：
- *        home（临时 ECHOTYPE_HOME）、budgetMs（看门狗）、adaptFetch（可选：改写下载请求）、run、finish（可选：收尾）。
+ *        home（临时 ECHOTYPE_HOME）、budgetMs（看门狗）、adaptFetch（可选：改写下载请求）、openUri（可选：记录外链而不打开）、
+ *        catalogFile（可选：注入的模型目录）、run、finish（可选：收尾）。
  *        探针窗口是隐藏的 BrowserWindow，经真实 preload 与 IPC 调 window.echotype，与 UI 走同一条路。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -29,6 +30,10 @@ export interface Smoke {
   readonly budgetMs: number;
   /** 改写 Core 的 fetch 端口（真实 smoke 用本地镜像代替 GitHub 下载） */
   adaptFetch?(base: typeof fetch): typeof fetch;
+  /** 代替 shell.openExternal：smoke 只记录 steam://store/… 之类的外链，绝不真的打开 */
+  openUri?(uri: string): Promise<void>;
+  /** 注入的模型目录（同目录下须有 integrations.catalog.json）；缺省用仓库的 contracts/models.catalog.json */
+  readonly catalogFile?: string;
   run(ctx: SmokeContext): Promise<number>;
   /** core.dispose 与日志关闭之后调用 */
   finish?(code: number): void;

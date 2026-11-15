@@ -2,6 +2,7 @@
  * [INPUT]: 依赖 electron 的 BrowserWindow、shell
  * [OUTPUT]: 导出 MainWindow（create / show / hide / toggle / apply / applyBackground / allowClose）、RendererSource、loadRenderer、hardenWebContents
  * [POS]: 主窗口的生命周期，行为与 v2 一致：980×680，关闭即隐藏（托盘应用），退出时才真正关闭。
+ *        获得焦点时回调 onFocus（Core 据此重新扫描 Steam 目录：用户可能刚在 Steam 里装好或卸载了 DLC）。
  *        loadRenderer 与 hardenWebContents 也供 Quick Action 窗口复用：开发态加载 Vite URL，打包态加载 dist/index.html；
  *        新窗口一律拒绝，外链交给系统浏览器。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -32,6 +33,7 @@ export interface MainWindowOptions {
   renderer: RendererSource;
   icon: string;
   trust: (contents: WebContents) => void;
+  onFocus?: () => void;
 }
 
 export class MainWindow {
@@ -65,6 +67,7 @@ export class MainWindow {
     win.setMenuBarVisibility(false);
     loadRenderer(win, this.opts.renderer);
     if (showWhenReady) win.once("ready-to-show", () => win.show());
+    win.on("focus", () => this.opts.onFocus?.());
     win.on("close", (event) => {
       if (this.closable) return;
       event.preventDefault();

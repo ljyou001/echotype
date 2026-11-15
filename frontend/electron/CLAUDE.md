@@ -9,10 +9,10 @@ UI 只经 preload 的 window.echotype 进入本层；本层只经 engine/ 的 We
 ## 子模块
 core/ - 组合根与基础设施：装配全部服务、路径、日志、原子写、事件、快照节流（6 文件）
 engine/ - 引擎协议 v3 的 Core 侧：类型镜像、WebSocket 客户端、进程监管、启动命令（4 文件）
-services/ - 业务服务：设置、模型目录/variant 选择/安装/加载、GPU 引擎包、听写状态机、热键、输出、音频、历史（18 文件）+ integrations/ 集成动作（子目录）
+services/ - 业务服务：设置、模型目录/资产来源（http 下载、Steam dir 就地使用）/variant 选择/安装/加载、GPU 引擎包、听写状态机、热键、输出、音频、历史（19 文件）+ integrations/ 集成动作（子目录）
 shell/ - Electron 外壳：窗口、托盘、主题、IPC 处理器、系统能力、原生适配器（7 文件）
 dev/ - 开发工具：mock 引擎、smoke（mock 引擎 / 真实引擎）与本地下载镜像，不在生产路径上（6 文件）
-__tests__/ - vitest 测试与夹具（10 文件）
+__tests__/ - vitest 测试与夹具（14 文件）
 
 ## 成员清单
 main.ts: 主进程入口，纯装配（≤ 200 行）。解析运行时布局与数据根（userData = <home>/electron，先于单例锁）→ 探测本机（GPU 厂商、发行渠道、Wayland）→ 日志 → Core（注入 Electron 适配器）→ IPC → 托盘与窗口；退出时 core.dispose() 优雅关停引擎
@@ -27,8 +27,10 @@ ipc-contract.ts: Core ⇄ UI 契约（orchestrator 所有，本层只读）
 - `npm run smoke:real`：真实 Electron + Core + 真实 Rust 引擎 + 真实模型下载（开发专用，需要引擎二进制）。
   样例 zh.wav、en.wav 缺省取 `<repo>/engine/target/test-wavs`，先跑一次 `bash engine/scripts/fetch-test-wavs.sh`；缺文件时 smoke 一行报错并给出这条命令。
   `ECHOTYPE_SMOKE_WAVS=<目录>` 换样例目录；`ECHOTYPE_SMOKE_ASSETS=<目录>` 用本地 zip 代替 GitHub；`ECHOTYPE_ENGINE_PATH` 指定引擎；
-  `ECHOTYPE_SMOKE_PACK=cuda` 追加一段：显式 provider 下载已发布的引擎包（真实 sha256）→ 从包拉起引擎 → GPU 版本听写（该包在目录里未发布时一行报错）
+  `ECHOTYPE_SMOKE_PACK=cuda` 追加一段：显式 provider 下载已发布的引擎包（真实 sha256）→ 从包拉起引擎 → GPU 版本听写（该包在目录里未发布时一行报错）；
+  `ECHOTYPE_SMOKE_STEAM=1` 整轮跑 steam 渠道并追加一段：下载的默认模型 zip 解压到临时 Steam 目录的 content/ → 就地使用、与 GitHub 那份逐字比对 → remove 被拒 → DLC 资产只打开商店页
 - `npm run dev:mock`：开发态整套应用跑在 mock 引擎上；`ECHOTYPE_HOME=<dir>` 把用户数据指向别处
+- Steam 渠道联调：`ECHOTYPE_CHANNEL=steam` + `ECHOTYPE_STEAM_APP_DIR=<目录>`（开发态代替 {steam_app_dir}，打包态忽略）；目录下 `content/<asset_stem>/` 放 zip 解压出的文件与 `.asset.json`，Core 就地使用
 - 用户数据根目录 `~/.echotype-v3/`（`ECHOTYPE_HOME` 覆盖），Electron 的 userData 在其下 `electron/`。v2 的 `~/.echotype/` 只读：本目录没有 settings.json 时导入设置与集成密钥，从不写入；`ECHOTYPE_HOME` 被覆盖时不导入，`ECHOTYPE_V2_HOME=<目录>` 指定导入来源
 - 真实引擎：开发态 `<repo>/engine/target/release/echotype-engine(.exe)`，`ECHOTYPE_ENGINE_PATH` 可覆盖；打包态 `resources/engine/`；装了 GPU 引擎包则从 `<home>/engines/<id>/` 拉起
 - 开发态 `ECHOTYPE_ENGINE_ARGS` 追加到引擎命令行（如 `--fake-mic "<wav>"`、`--log-level debug`），打包态忽略

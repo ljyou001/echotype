@@ -1,6 +1,6 @@
 # services/
 > L2 | 父级: frontend/electron/CLAUDE.md
-> 契约: contracts/MODEL_MANIFEST.md v2.2 · contracts/ENGINE_PROTOCOL.md v3 · ipc-contract.ts（ipcVersion 2）
+> 契约: contracts/MODEL_MANIFEST.md v2.3 · contracts/ENGINE_PROTOCOL.md v3 · ipc-contract.ts（ipcVersion 2）
 
 业务服务。不 import electron；原生能力经端口接口（ClipboardPort、KeyboardPort、KeySource）注入，引擎经 EngineGateway 注入。
 
@@ -10,14 +10,15 @@ settings-schema.ts: Settings v2 的默认值与合并规则。读盘、迁移、
 settings-migration.ts: v1 {hotkey, app} → v2 补丁的纯函数。LEGACY_MODEL_IDS（paraformer-offline → paraformer-zh，Qwen3-ASR-0.6B → qwen3-asr-0.6b）、设备 → provider、语言名 → ISO 码；浏览器 deviceId 不迁移
 
 ## 模型与引擎包
-model-catalog.ts: contracts/models.catalog.json（schema 2）的唯一读取点。按渠道的 allow_commercial 过滤许可证（requires 被过滤的模型一并过滤），按 sources 顺序给出下载源；modelForEngine 去掉 variants 转发引擎；remote_catalog 后台拉取，较新则缓存、下次启动生效
+model-catalog.ts: contracts/models.catalog.json（schema 2）的唯一读取点。按渠道的 allow_commercial 过滤许可证（requires 被过滤的模型一并过滤），按 sources 顺序给出资产来源（http / dir），steam() 给出 steam 渠道的基础资产与 DLC 表；modelLicense 是 ModelView 与 LicensesView 共用的许可证视图（含 author）；modelForEngine 去掉 variants 转发引擎；remote_catalog 后台拉取，较新则缓存、下次启动生效
 variant-selection.ts: MODEL_MANIFEST §2 的选择规则，纯函数。平台层（apple 只在 darwin-arm64，带包的要求本平台有这个包）+ 硬件层（GPU 厂商）；列出 ≠ 可选：包未发布的版本照样列出、provider 照样进选项（UI 显示"暂不可用"），但永远不被选中；auto 按 nvidia → apple → cpu → vulkan，跳过引擎包不可用的版本（auto 从不引出引擎包下载），已装可运行优先，再选可安装，没有候选为 null；显式 provider 选列出它、且包可用或已发布的版本，没有则回落 auto；resolveProvider 在 model.load 前解析 auto
 model-settings.ts: MODEL_MANIFEST §3 的规则，纯函数。定义 = 隐式 provider 下拉 + catalog settings[]；存储值不合法时回落默认；UI 补丁严格校验
-model-resolver.ts: 把目录、本机、引擎包、安装态、用户取值折叠成答案的唯一位置：设置定义与当前值、选中的 variant、ModelView。runtime、registry、create-core 都问它
-asset-installer.ts: 模型 variant 与引擎包共用的安装流水线。sources 模板生成候选位置（http 下载 / local 复制），失败换下一个源 → <dir>.partial（Range 续传，换源续传）→ sha256（模型资产为 null 时告警跳过；引擎包未发布即不进流水线，因此必校验）→ 解 zip（文件在 zip 根）→ 核对必需文件 → .installed.json（资产名 + 实际 sha256）→ swapIntoPlace 换位（旧目录先挪到 <dir>.previous，新目录就位后才删；换位被打断时下次扫描放回）；cloneInstalled 从已装的兄弟目录就地复制；另含目录清理与占用统计
+model-resolver.ts: 把目录、本机、引擎包、安装态、交付方式、用户取值折叠成答案的唯一位置：设置定义与当前值、选中的 variant、ModelView（每个版本带 delivery，license 带 author）。runtime、registry、create-core 都问它
+asset-sources.ts: "资产从哪来"（§6）的唯一回答者。dir 源：.asset.json 写明该资产、sha256 等于目录、列出的文件都在且大小一致、加载所需的文件都在，即就地可用（Core 从不写入、复制或删除那里）；结果缓存到下一次 scan（启动、窗口获得焦点、打开 DLC 商店页后 10 分钟内每 5 秒），资产出现或消失时通知。delivery：有 app_id 的 DLC 里 → steam + dlc（downloads() 为空，从不下载）；已在磁盘上的其余资产 → steam + null；其余 → download。DLC 的 packs 按包 id 解析成本平台当前版本的资产名
+asset-installer.ts: 模型 variant 与引擎包共用的安装流水线。locateAsset 展开 sources 模板（{asset_stem} = 资产名去掉 .zip），得到 http 地址与 dir 目录；这里只消费 http 地址，失败换下一个源 → <dir>.partial（Range 续传，换源续传）→ sha256（模型资产为 null 时告警跳过；引擎包未发布即不进流水线，因此必校验）→ 解 zip（文件在 zip 根）→ 核对必需文件 → .installed.json（资产名 + 实际 sha256）→ swapIntoPlace 换位（旧目录先挪到 <dir>.previous，新目录就位后才删；换位被打断时下次扫描放回）；cloneInstalled 从已装的兄弟目录就地复制；另含目录清理与占用统计
 install-jobs.ts: 安装任务簿：每个 key 一份安装态，同 key 合并，取消回到 not_installed，失败记录 AppError；fail 把前置步骤（所需引擎包）的失败记到该条目上。安装失败只在卡片上，不进引擎或应用状态
-model-registry.ts: variant 的磁盘安装态 <home>/models/<model>/<variant>/。先装 requires（依赖版本由 pickVariant 选）；同一资产支撑多个 variant 时复制已装的兄弟 variant 而不重复下载；按 variant 或整模型取消、删除；不扫描、不删除目录外的遗留文件夹
-engine-packs.ts: GPU 引擎包 <home>/engines/<pack>/（内含完整 echotype-engine）。§5：一个包只属于一个引擎版本；只有标记里记录的 sha256 等于目录该平台的 sha256（v3.0.0 布局没有 sha256 时比资产名）、且没有因握手协议不符或反复崩溃被标记，已装的包才"可用"并被拉起；其余已装的包是过期：引擎回落内置版本，视图显示 not_installed + PACK_OUTDATED（提供更新）。本平台有资产且 protocol 一致才"提供"；sha256 为 null 即未发布：不进列表（过期的旧包同样隐藏，UI 显示暂不可用），install 以 PACK_UNAVAILABLE 拒绝且从不请求 URL；更新失败时旧目录原样保留；preferred() 决定从哪个包拉起引擎
+model-registry.ts: variant 的安装态。资产在 dir 源上即已安装，variantDir（引擎的 model_dir）指向那里；否则看下载目录 <home>/models/<model>/<variant>/，两处都有时用 dir 上的那份；下载、复制、删除只发生在下载目录。先装 requires（依赖版本由 pickVariant 选）；同一资产支撑多个 variant 时复制已装的兄弟 variant 而不重复下载；按 variant 或整模型取消、删除；不扫描、不删除目录外的遗留文件夹
+engine-packs.ts: GPU 引擎包（内含完整 echotype-engine）。dir 源上的包（Steam DLC，asset-sources 已按 .asset.json 的 sha256 核对）就地拉起、算已安装（§2 规则 1），否则用下载目录 <home>/engines/<pack>/；delivery 给出包的交付方式。§5：一个包只属于一个引擎版本；下载的包只有标记里记录的 sha256 等于目录该平台的 sha256（v3.0.0 布局没有 sha256 时比资产名）、且没有因握手协议不符或反复崩溃被标记，已装的包才"可用"并被拉起；其余已装的包是过期：引擎回落内置版本，视图显示 not_installed + PACK_OUTDATED（提供更新）。本平台有资产且 protocol 一致才"提供"；sha256 为 null 即未发布：不进列表（过期的旧包同样隐藏，UI 显示暂不可用），install 以 PACK_UNAVAILABLE 拒绝且从不请求 URL；更新失败时旧目录原样保留；preferred() 决定从哪个包拉起引擎
 model-runtime.ts: 引擎里加载哪个模型的哪个 variant。前置条件不满足（未选、未装、缺引擎包）是 blocked，引擎加载失败才是 error。期望状态（模型 + variant + 目录 + 生效取值 + 已解析 provider + 配套标点）序列化成 key，相同则不动作 → 启动只加载一次；需要的引擎包不在运行时先请装配层换引擎；听写中或 SESSION_BUSY 时推迟；记录实际 provider 供状态栏判断回退；held 记录引擎实际持有的模型，删除前卸载
 
 ## 听写

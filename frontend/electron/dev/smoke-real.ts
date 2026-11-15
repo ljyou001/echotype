@@ -1,5 +1,6 @@
 /**
- * [INPUT]: 依赖 node:fs/os/path；依赖 engine/engine-command 的 resolveEngineCommand；依赖 ./smoke-kit 与 ./asset-mirror
+ * [INPUT]: 依赖 node:crypto/fs/os/path/stream；依赖 extract-zip；依赖 engine/engine-command 的 resolveEngineCommand；
+ *          依赖 services/asset-sources 的 checkAssetDir、ASSET_MANIFEST；依赖 ./smoke-kit 与 ./asset-mirror
  * [OUTPUT]: 导出 realSmoke（SmokeFactory）
  * [POS]: `npm run smoke:real` 的执行体（开发专用）：真实 Electron + Core + 真实 Rust 引擎 + 真实模型下载。
  *        全新临时 ECHOTYPE_HOME；模型经 window.echotype.models.install 走真实安装（下载 → sha256 → 解压），
@@ -11,15 +12,24 @@
  *        英文半角标点 → 配套标点模型 → 杀引擎后自动恢复 → activeModel → 全程没有请求过任何引擎包的 URL。
  *        ECHOTYPE_SMOKE_PACK=<包 id>（如 cuda）追加一段：显式 provider → 下载已发布的引擎包（按 catalog 的真实 sha256 校验）→
  *        从包拉起引擎 → 下载并加载 GPU 版本 → 中文听写。
+ *        ECHOTYPE_SMOKE_STEAM=1 时整轮跑 steam 渠道（注入目录副本：多一个带假 app_id 的 DLC；ECHOTYPE_STEAM_APP_DIR 指向临时目录；
+ *        外链只记录不打开），并追加一段：把刚从 GitHub 下载的默认模型 zip 解压到 content/<asset_stem>/ 并写 .asset.json，
+ *        删掉下载目录里的副本 → 不下载即显示已安装、引擎从 Steam 目录加载 → 听写与 GitHub 那份逐字相同、release_to_final_ms 不变差 →
+ *        remove 被 STEAM_MANAGED 拒绝 → DLC 资产的 install 只打开 steam://store/<app id>，没有下载请求。
  *        文本按 EXPECT 比对：样例按 sha256 钉死，引擎整句解码 + ITN，结果确定。
  *        结尾打印每个模型的 load_ms 与 release_to_final_ms（取自 Core 日志）。输出关闭，不装全局键盘钩子。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import extractZip from "extract-zip";
 import { resolveEngineCommand } from "../engine/engine-command.js";
-import type { HistoryEntry } from "../ipc-contract.js";
+import type { HistoryEntry, ModelView } from "../ipc-contract.js";
+import { ASSET_MANIFEST, checkAssetDir } from "../services/asset-sources.js";
 import { AssetMirror } from "./asset-mirror.js";
 import { Checks, openProbeWindow, readCoreLog, sleep, until, writeSmokeSettings, type LogEntry, type SmokeContext, type SmokeFactory } from "./smoke-kit.js";
 
@@ -28,11 +38,14 @@ interface CatalogVariant {
   target: string;
   providers: string[];
   requires_pack: string | null;
-  asset: { name: string; sha256: string | null; size_bytes: number };
+  files: Record<string, string>;
+  asset: { name: string; release: string; sha256: string | null; size_bytes: number };
 }
 interface CatalogModel {
   id: string;
   kind: string;
+  status?: string;
+  requires?: string[];
   languages?: string[];
   punctuation?: { mode: string; companion_id?: string };
   variants: CatalogVariant[];
@@ -55,6 +68,8 @@ const TAIL_MS = 300;
 const FULL_WIDTH = /[，。？！、；：]/;
 /** fetch-test-wavs.sh 的缺省输出目录（相对仓库根） */
 const DEFAULT_WAVS = path.join("engine", "target", "test-wavs");
+/** ECHOTYPE_SMOKE_STEAM 注入的 DLC 的假 app id：openUri 只记录，从不打开 */
+const SMOKE_APP_ID = 3999990;
 
 // ============================================================
 // 期望文本。zh 只比尾巴"早上9点至下午5点。"（ITN + 句号）：首词"开放/开饭"随模型而变，不断言；
@@ -81,22 +96,27 @@ export const realSmoke: SmokeFactory = (catalogFile, layout) => {
   const mirror = process.env.ECHOTYPE_SMOKE_ASSETS ? new AssetMirror(path.resolve(process.env.ECHOTYPE_SMOKE_ASSETS)) : null;
   const engine = resolveEngineCommand({ layout, env: process.env, execPath: process.execPath, pack: null }).command;
   const catalog = JSON.parse(fs.readFileSync(catalogFile, "utf-8")) as Catalog;
+  const steam = process.env.ECHOTYPE_SMOKE_STEAM === "1" ? prepareSteam(home, catalogFile, catalog) : null;
   const requested: string[] = []; // Core 发出的每个下载 URL（镜像改写之前）
   return {
     home,
     budgetMs: 30 * 60_000, // 首次从 GitHub 下载约 300 MB；带引擎包再加约 2.6 GB
+    catalogFile: steam?.catalogFile,
+    openUri: steam ? async (uri: string) => void steam.opened.push(uri) : undefined,
     adaptFetch: (base) => {
       const inner = mirror ? mirror.adapt(base) : base;
-      return ((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
-        requested.push(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
-        return inner(input, init);
+      return (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+        const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        requested.push(url);
+        const res = await inner(input, init);
+        return steam ? steam.keepZip(url, res) : res;
       }) as typeof fetch;
     },
-    run: (ctx) => runRealSmoke(ctx, { engine, wavs, clips, mirror, catalog, home, requested, pack: process.env.ECHOTYPE_SMOKE_PACK || null }),
+    run: (ctx) => runRealSmoke(ctx, { engine, wavs, clips, mirror, catalog, home, requested, pack: process.env.ECHOTYPE_SMOKE_PACK || null, steam }),
     finish: (code) => {
       mirror?.close();
       // 引擎已停，模型与引擎包（解压后数 GB）可以删；Chromium 在退出前仍占着 userData，所以目录本身留下
-      if (code === 0) for (const dir of ["models", "engines"]) fs.rmSync(path.join(home, dir), { recursive: true, force: true, maxRetries: 3 });
+      if (code === 0) for (const dir of ["models", "engines", "steam-app", "steam-zips"]) fs.rmSync(path.join(home, dir), { recursive: true, force: true, maxRetries: 3 });
       process.stdout.write(`${code === 0 ? "logs" : "home kept for inspection"}: ${code === 0 ? path.join(home, "logs") : home}\n`);
     },
   };
@@ -111,6 +131,7 @@ interface RunOptions {
   home: string;
   requested: string[];
   pack: string | null; // ECHOTYPE_SMOKE_PACK
+  steam: SteamSetup | null; // ECHOTYPE_SMOKE_STEAM
 }
 
 async function runRealSmoke(ctx: SmokeContext, o: RunOptions): Promise<number> {
@@ -149,6 +170,7 @@ async function runRealSmoke(ctx: SmokeContext, o: RunOptions): Promise<number> {
   const readyLines = () => logs().filter((e) => e.msg === "model ready").length;
 
   let sessions = 0; // 本引擎进程里已开始的会话数，决定假麦克风播哪个文件
+  let tag = ""; // 报告里标出这段听写用的是哪份模型（steam）
   const dictate = async (expected: ClipName): Promise<string> => {
     const clip = o.clips![sessions % o.clips!.length];
     if (clip.name !== expected) throw new Error(`fake mic order: next clip is ${clip.name}.wav, expected ${expected}.wav`);
@@ -165,6 +187,7 @@ async function runRealSmoke(ctx: SmokeContext, o: RunOptions): Promise<number> {
     const line = await waitLog("final", (d) => d.id === final.sessionId, "Core final log line");
     report.dictations.push({
       model: core.snapshot().activeModel?.id ?? "?",
+      tag,
       clip: clip.name,
       engineMs: Number(line.engineReleaseToFinalMs),
       coreMs: line.coreReleaseToFinalMs === null ? null : Number(line.coreReleaseToFinalMs),
@@ -208,6 +231,7 @@ async function runRealSmoke(ctx: SmokeContext, o: RunOptions): Promise<number> {
     if (plan.first.languages?.includes("en")) {
       checks.check(`English with punct_style auto → half-width, ends with "${EXPECT.enTail}"`, en.endsWith(EXPECT.enTail) && !FULL_WIDTH.test(en), en);
     }
+    const github = { zh: report.dictations[0], en: report.dictations[1] }; // steam 段的比对基准：同一模型从 GitHub 下载的那份
 
     // ---------- 配套标点：安装标点模型与 ASR → 激活 → 中文 ----------
     await install(plan.punct);
@@ -244,6 +268,69 @@ async function runRealSmoke(ctx: SmokeContext, o: RunOptions): Promise<number> {
     );
     const packUrls = o.requested.filter((u) => o.catalog.engine_packs.some((p) => Object.values(p.platforms).some((x) => u.endsWith(`/${x.asset.name}`))));
     checks.check(`no engine pack URL requested (${o.requested.length} downloads, all models)`, packUrls.length === 0, packUrls);
+
+    // ---------- ECHOTYPE_SMOKE_STEAM：默认模型改由 Steam 目录就地提供，与 GitHub 下载的那份逐字比对 ----------
+    if (o.steam) {
+      const s = o.steam;
+      const id = plan.first.id;
+      const v = s.base;
+      if (!s.zipDone) throw new Error(`${v.asset.name} was not downloaded in this run, so there is no zip to stage`);
+      await s.zipDone;
+      const folder = path.join(s.appDir, "content", v.asset.name.replace(/\.zip$/, ""));
+      const zipSha = await stageFromZip(s.zip, folder, v.asset.name);
+      fs.rmSync(s.zip, { force: true });
+      checks.check(`steam: the downloaded ${v.asset.name} (sha256 ${zipSha.slice(0, 12)}… = catalog) extracted to content/${path.basename(folder)}/ with ${ASSET_MANIFEST}`, zipSha === v.asset.sha256, zipSha);
+      fs.rmSync(path.join(o.home, "models", id, v.id), { recursive: true, force: true }); // 只剩 Steam 目录里的那份
+      const downloads = o.requested.length;
+      core.rescanAssets(); // 与窗口获得焦点同一入口
+      const view = async (m: string, variant: string) => (await js<ModelView[]>(`window.echotype.models.list()`)).find((x) => x.id === m)?.variants.find((x) => x.id === variant);
+      const shown = await view(id, v.id);
+      checks.check(
+        `steam: ${id}/${v.id} shows installed without a download (delivery steam, base asset)`,
+        shown?.install.status === "installed" && shown.delivery.kind === "steam" && shown.delivery.dlc === null && o.requested.length === downloads,
+        shown,
+      );
+
+      before = readyLines();
+      await js(`window.echotype.models.activate(${JSON.stringify(id)})`);
+      await awaitLoaded(plan.first, before);
+      const loadedFrom = (await waitLog("loading model", (d) => d.id === id, "loading model log line")).dir;
+      checks.check(`steam: the engine loads ${id} from the Steam folder (model_dir)`, loadedFrom === folder, loadedFrom);
+
+      tag = "steam";
+      const steamRun: Partial<Record<ClipName, Dictation>> = {};
+      for (let i = 0; i < o.clips.length; i++) {
+        const name = o.clips[sessions % o.clips.length].name;
+        await dictate(name);
+        steamRun[name] = report.dictations.at(-1);
+      }
+      tag = "";
+      const clipsBoth = ["zh", "en"] as const;
+      const differ = clipsBoth.filter((n) => steamRun[n]?.text !== github[n].text);
+      checks.check("steam: dictation text equals the GitHub-downloaded copy word for word (zh, en)", differ.length === 0, { steam: steamRun, github });
+      const allowance = (ms: number) => Math.max(30, ms * 0.2);
+      const worse = clipsBoth.filter((n) => steamRun[n]!.engineMs > github[n].engineMs + allowance(github[n].engineMs));
+      const latency = clipsBoth.map((n) => `${n} ${steamRun[n]!.engineMs} vs ${github[n].engineMs} ms`).join(", ");
+      checks.check(`steam: release_to_final_ms no worse than the GitHub copy (${latency}; noise allowance max(30 ms, 20 %))`, worse.length === 0, worse);
+
+      const removal = await js<string>(`window.echotype.models.remove(${JSON.stringify(id)}, ${JSON.stringify(v.id)}).then(() => "resolved", (e) => e.code)`);
+      const intact = checkAssetDir(folder, v.asset, Object.values(v.files));
+      checks.check("steam: models.remove on a Steam-delivered version rejects with STEAM_MANAGED; the folder stays intact", removal === "STEAM_MANAGED" && intact.ok, { removal, intact });
+
+      const dlc = s.dlc;
+      const dlcDownloads = o.requested.length;
+      await js(`window.echotype.models.install(${JSON.stringify(dlc.model.id)}, ${JSON.stringify(dlc.variant.id)})`);
+      const dlcView = await view(dlc.model.id, dlc.variant.id);
+      checks.check(
+        `steam: models.install on ${dlc.variant.asset.name} (in a DLC with an app_id) only opens steam://store/${SMOKE_APP_ID}; no download request`,
+        s.opened.join(" ") === `steam://store/${SMOKE_APP_ID}` &&
+          o.requested.length === dlcDownloads &&
+          dlcView?.install.status === "not_installed" &&
+          dlcView.delivery.kind === "steam" &&
+          dlcView.delivery.dlc?.appId === SMOKE_APP_ID,
+        { opened: s.opened, downloads: o.requested.slice(dlcDownloads), view: dlcView },
+      );
+    }
 
     // ---------- ECHOTYPE_SMOKE_PACK：显式 provider → 已发布的引擎包（真实 sha256）→ 从包拉起引擎 → GPU 版本 ----------
     if (o.pack) {
@@ -315,6 +402,90 @@ function gpuPlan(catalog: Catalog, model: CatalogModel, packId: string) {
   return { variant, provider: variant.providers[0], asset };
 }
 
+// ============================================================
+// ECHOTYPE_SMOKE_STEAM：steam 渠道的准备与 content/ 目录的布置
+// ============================================================
+interface RawCatalog {
+  channels: { steam: { steam: { base_assets: string[]; dlc: Array<{ id: string; name: string; app_id: number | null; assets?: string[]; packs?: string[] }> } } };
+}
+
+interface SteamSetup {
+  appDir: string; // ECHOTYPE_STEAM_APP_DIR
+  catalogFile: string; // 注入的目录副本
+  base: CatalogVariant; // 默认模型的 cpu 版本：Steam 基础资产
+  dlc: { model: CatalogModel; variant: CatalogVariant }; // 放进带假 app_id 的 DLC 的资产
+  zip: string; // 下载 base 资产时顺手留下的 zip
+  zipDone: Promise<void> | null;
+  opened: string[]; // Core 打开过的外链
+  keepZip(url: string, res: Response): Response;
+}
+
+/** 整轮跑 steam 渠道：Steam 安装目录是临时目录；目录副本里加一个带假 app_id 的 DLC，装着一个本轮用不到的模型 */
+function prepareSteam(home: string, catalogFile: string, catalog: Catalog): SteamSetup {
+  const plan = planModels(catalog);
+  const base = cpuVariant(plan.first);
+  const used = new Set([plan.first.id, plan.companion.id, plan.punct.id]);
+  const spare = catalog.models.find((m) => m.kind === "asr" && !used.has(m.id) && m.status !== "hidden" && !m.requires?.length && m.variants.some((v) => v.target === "cpu"));
+  if (!spare) throw new Error("the catalog has no spare ASR model for the DLC check");
+  const dlcVariant = cpuVariant(spare);
+
+  const raw = JSON.parse(fs.readFileSync(catalogFile, "utf-8")) as RawCatalog;
+  const table = raw.channels.steam.steam;
+  if (!table.base_assets.includes(base.asset.name)) throw new Error(`${base.asset.name} is not a Steam base asset in the catalog`);
+  for (const d of table.dlc) d.assets = (d.assets ?? []).filter((a) => a !== dlcVariant.asset.name); // 一个资产只出现一次
+  table.dlc.push({ id: "smoke-dlc", name: "Smoke Test DLC", app_id: SMOKE_APP_ID, assets: [dlcVariant.asset.name] });
+  const catalogDir = path.join(home, "smoke-catalog");
+  fs.mkdirSync(catalogDir, { recursive: true });
+  fs.writeFileSync(path.join(catalogDir, "models.catalog.json"), JSON.stringify(raw));
+  fs.copyFileSync(path.join(path.dirname(catalogFile), "integrations.catalog.json"), path.join(catalogDir, "integrations.catalog.json"));
+
+  const appDir = path.join(home, "steam-app");
+  fs.mkdirSync(path.join(appDir, "content"), { recursive: true });
+  process.env.ECHOTYPE_CHANNEL = "steam";
+  process.env.ECHOTYPE_STEAM_APP_DIR = appDir;
+  const zip = path.join(home, "steam-zips", base.asset.name);
+  fs.mkdirSync(path.dirname(zip), { recursive: true });
+
+  const setup: SteamSetup = {
+    appDir,
+    catalogFile: path.join(catalogDir, "models.catalog.json"),
+    base,
+    dlc: { model: spare, variant: dlcVariant },
+    zip,
+    zipDone: null,
+    opened: [],
+    // Core 下载 base 资产时把响应分一路写进 zip：之后像 scripts/steam 那样解压它
+    keepZip: (url, res) => {
+      if (!url.endsWith(`/${base.asset.name}`) || res.status !== 200 || !res.body) return res;
+      const [forCore, forZip] = res.body.tee();
+      const done = pipeline(Readable.fromWeb(forZip as import("node:stream/web").ReadableStream), fs.createWriteStream(zip));
+      done.catch(() => undefined); // 在 steam 段里 await 时再报错
+      setup.zipDone = done;
+      return new Response(forCore, { status: res.status, statusText: res.statusText, headers: res.headers });
+    },
+  };
+  return setup;
+}
+
+/** scripts/steam 的做法：zip 解压到 content/<asset_stem>/，写 .asset.json（资产名、zip 的 sha256、每个文件的字节数）。返回 zip 的 sha256 */
+async function stageFromZip(zip: string, folder: string, asset: string): Promise<string> {
+  const hash = createHash("sha256");
+  await pipeline(fs.createReadStream(zip), hash);
+  const sha256 = hash.digest("hex");
+  await extractZip(zip, { dir: path.resolve(folder) });
+  const files: Record<string, number> = {};
+  const walk = (dir: string): void => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else files[path.relative(folder, p).split(path.sep).join("/")] = fs.statSync(p).size;
+    }
+  };
+  walk(folder);
+  fs.writeFileSync(path.join(folder, ASSET_MANIFEST), `${JSON.stringify({ asset, sha256, files }, null, 2)}\n`);
+  return sha256;
+}
+
 function readMarker(dir: string): Record<string, unknown> {
   return JSON.parse(fs.readFileSync(path.join(dir, ".installed.json"), "utf-8")) as Record<string, unknown>;
 }
@@ -367,11 +538,13 @@ function wavSeconds(file: string): number {
 // ============================================================
 // 报告：安装耗时、加载耗时、每段听写的松键到出字
 // ============================================================
+type Dictation = { model: string; tag: string; clip: ClipName; engineMs: number; coreMs: number | null; audioMs: number; text: string };
+
 class Report {
   hello = "";
   readonly installs: Array<{ model: string; mb: number; seconds: number; source: string }> = [];
   readonly loads: Array<{ model: string; provider: string; loadMs: number; warmupMs: number }> = [];
-  readonly dictations: Array<{ model: string; clip: ClipName; engineMs: number; coreMs: number | null; audioMs: number; text: string }> = [];
+  readonly dictations: Dictation[] = [];
 
   render(): string {
     const lines = [`  ${this.hello}`];
@@ -379,7 +552,7 @@ class Report {
     for (const l of this.loads) lines.push(`  load     ${l.model.padEnd(36)} ${l.provider.padEnd(5)} load_ms ${String(l.loadMs).padStart(5)}  warmup_ms ${l.warmupMs}`);
     for (const d of this.dictations) {
       const core = d.coreMs === null ? "-" : String(d.coreMs);
-      lines.push(`  dictate  ${d.model.padEnd(24)} ${d.clip}.wav  release_to_final_ms ${String(d.engineMs).padStart(4)} (Core ${core.padStart(4)})  audio ${d.audioMs} ms  "${d.text}"`);
+      lines.push(`  dictate  ${`${d.model}${d.tag ? ` [${d.tag}]` : ""}`.padEnd(24)} ${d.clip}.wav  release_to_final_ms ${String(d.engineMs).padStart(4)} (Core ${core.padStart(4)})  audio ${d.audioMs} ms  "${d.text}"`);
     }
     return `${lines.join("\n")}\n`;
   }

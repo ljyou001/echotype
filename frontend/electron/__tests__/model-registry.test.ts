@@ -1,7 +1,8 @@
 /**
- * [INPUT]: 依赖 services/model-registry、engine-packs、model-catalog、asset-installer；依赖 node:http 起本地夹具服务器；./helpers 的 makeZip
- * [OUTPUT]: catalog schema 2 的安装测试：variant 目录、requires 顺序、Range 续传、多源回落、local 源、sha256、取消、
- *          缺文件、同一资产支撑多个 variant（就地复制）、渠道许可证过滤、按 variant 删除、遗留目录、GPU 引擎包的安装/失效/删除；
+ * [INPUT]: 依赖 services/model-registry、engine-packs、model-catalog、asset-installer、asset-sources；依赖 node:http 起本地夹具服务器；
+ *          ./helpers 的 makeZip、stageAssetDir
+ * [OUTPUT]: catalog schema 2 的安装测试：variant 目录、requires 顺序、Range 续传、多源回落、dir 源就地使用（不下载、不复制、不删除，与下载副本并存时用 dir 上的）、sha256、取消、
+ *          缺文件、同一资产支撑多个 variant（就地复制）、渠道许可证过滤、按 variant 删除、遗留目录、GPU 引擎包的安装/失效/删除、dir 源提供的引擎包；
  *          MODEL_MANIFEST §5 引擎包版本：记录构建、过期、原地更新（校验通过前旧包不动）、新包未发布、换位中断后放回
  * [POS]: 不联网。夹具服务器按 sources 模板提供 {release}/{asset}，支持 Range、404（主源宕机）、中途断流、慢速流。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -14,11 +15,12 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createMemoryLogger } from "../core/logger.js";
 import { ENGINE_EXECUTABLE } from "../engine/engine-command.js";
-import { locateAsset, readMarker } from "../services/asset-installer.js";
+import { readMarker } from "../services/asset-installer.js";
+import { AssetSources } from "../services/asset-sources.js";
 import { EnginePacks } from "../services/engine-packs.js";
 import { ModelCatalog, type AssetRef, type CatalogData, type CatalogModel, type CatalogVariant } from "../services/model-catalog.js";
 import { ModelRegistry } from "../services/model-registry.js";
-import { makeTempDir, makeZip, waitFor } from "./helpers.js";
+import { makeTempDir, makeZip, stageAssetDir, waitFor } from "./helpers.js";
 
 // ============================================================
 // 夹具：zip 资产 + 本地 HTTP 服务器（/primary 与 /backup 两个源）
@@ -32,7 +34,6 @@ const assets: Record<string, Buffer> = {
   [`engine-pack-cuda-${process.platform}-${process.arch}-3.0.1.zip`]: makeZip({ [ENGINE_EXECUTABLE]: "fake engine 3.0.1", "cudart.dll": "y" }),
 };
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
-const localDir = makeTempDir("echotype-local-source-");
 const seenRanges: string[] = [];
 const requested: string[] = [];
 let mode: { cutAfter?: number; slow?: boolean; primaryDown?: boolean } = {};
@@ -40,7 +41,6 @@ let server: http.Server;
 let base = "";
 
 beforeAll(async () => {
-  fs.writeFileSync(path.join(localDir, "test-punct--cpu-int8.zip"), assets["test-punct--cpu-int8.zip"]);
   server = http.createServer((req, res) => {
     const [, source, , asset] = (req.url ?? "").split("/");
     requested.push(asset ?? "");
@@ -161,20 +161,23 @@ function catalogOf(models: CatalogModel[], channel = "github", extraSources: Cat
   return new ModelCatalog(data, channel);
 }
 
+/** 真实的 AssetSources：github 渠道只有 http 源；带 dir 源时 vars 给出 steam_app_dir */
+function sourcesOf(catalog: ModelCatalog, vars: Record<string, string> = {}): AssetSources {
+  const sources = new AssetSources({ catalog, platformKey: `${process.platform}-${process.arch}`, templateVars: vars, logger: createMemoryLogger() });
+  sources.scan();
+  return sources;
+}
+
+const STEAM_DIR_SOURCE = { id: "steam", type: "dir" as const, path_template: "{steam_app_dir}/content/{asset_stem}" };
+
 function makeRegistry(models: CatalogModel[], extraSources: CatalogData["sources"] = [], vars: Record<string, string> = {}) {
   const catalog = catalogOf(models, "github", extraSources);
   const modelsDir = path.join(makeTempDir(), "models");
   const logger = createMemoryLogger();
-  const registry = new ModelRegistry({
-    catalog,
-    modelsDir,
-    logger,
-    fetch: globalThis.fetch,
-    locate: (a) => locateAsset(a, catalog.sources(), vars),
-    pickVariant: (m) => m.variants[0],
-  });
+  const sources = sourcesOf(catalog, vars);
+  const registry = new ModelRegistry({ catalog, modelsDir, logger, fetch: globalThis.fetch, sources, pickVariant: (m) => m.variants[0] });
   registry.scan();
-  return { registry, modelsDir, logger, catalog };
+  return { registry, modelsDir, logger, catalog, sources };
 }
 
 const partialOf = (modelsDir: string, m: string, v: string) => path.join(modelsDir, m, `${v}.partial`);
@@ -226,7 +229,7 @@ describe("ModelRegistry.install (schema 2)", () => {
       modelsDir,
       logger: createMemoryLogger(),
       fetch: globalThis.fetch,
-      locate: (a) => locateAsset(a, catalog.sources(), {}),
+      sources: sourcesOf(catalog),
       pickVariant: (m) => m.variants[0],
     });
     seenRanges.length = 0;
@@ -248,26 +251,39 @@ describe("ModelRegistry.install (schema 2)", () => {
     expect(logger.lines.some((l) => l.level === "warn" && /next one/.test(l.msg))).toBe(true);
   });
 
-  it("copies from a local source and skips sources whose template variable is unresolved", async () => {
-    const local = [{ id: "steam", type: "local" as const, path_template: `${localDir}/{asset}` }];
-    const unresolved = [{ id: "steam2", type: "local" as const, path_template: "{steam_app_dir}/models/{asset}" }];
-    expect(locateAsset(asset("test-punct--cpu-int8.zip"), unresolved, {})).toEqual([]);
-
-    const catalog = new ModelCatalog(
-      { ...catalogOf([punct()]).data, sources: local, channels: { github: { sources: ["steam"], remote_catalog: null, allow_commercial: ["unclear"] } } },
-      "github",
-    );
-    const modelsDir = path.join(makeTempDir(), "models");
-    const registry = new ModelRegistry({
-      catalog,
-      modelsDir,
-      logger: createMemoryLogger(),
-      fetch: () => Promise.reject(new Error("network must not be used")),
-      locate: (a) => locateAsset(a, catalog.sources(), {}),
-      pickVariant: (m) => m.variants[0],
-    });
-    await registry.install("test-punct", "cpu-int8");
+  it("uses an asset that a dir source holds in place: no download, no copy, never removed", async () => {
+    const steamDir = makeTempDir("echotype-steam-");
+    const folder = path.join(steamDir, "content", "test-punct--cpu-int8");
+    stageAssetDir(folder, "test-punct--cpu-int8.zip", sha(assets["test-punct--cpu-int8.zip"]), { "model.int8.onnx": randomBytes(1024) });
+    const { registry, modelsDir } = makeRegistry([punct()], [STEAM_DIR_SOURCE], { steam_app_dir: steamDir });
+    const before = requested.length;
     expect(registry.isInstalled("test-punct", "cpu-int8")).toBe(true);
+    expect(registry.state("test-punct", "cpu-int8")).toMatchObject({ status: "installed", error: null });
+    expect(registry.variantDir("test-punct", "cpu-int8")).toBe(folder); // 引擎的 model_dir 就是 Steam 目录
+    await registry.install("test-punct", "cpu-int8");
+    await registry.remove("test-punct", "cpu-int8");
+    expect(requested.length).toBe(before);
+    expect(fs.existsSync(path.join(modelsDir, "test-punct"))).toBe(false);
+    expect(fs.readdirSync(folder).sort()).toEqual([".asset.json", "model.int8.onnx"]);
+    expect(registry.isInstalled("test-punct", "cpu-int8")).toBe(true);
+  });
+
+  it("prefers the dir source over an earlier download of the same asset and leaves the download alone", async () => {
+    const steamDir = makeTempDir("echotype-steam-");
+    const { registry, modelsDir, sources } = makeRegistry([punct()], [STEAM_DIR_SOURCE], { steam_app_dir: steamDir });
+    await registry.install("test-punct", "cpu-int8"); // 以前从 GitHub 下载过
+    const downloaded = path.join(modelsDir, "test-punct", "cpu-int8");
+    expect(registry.variantDir("test-punct", "cpu-int8")).toBe(downloaded);
+
+    const folder = path.join(steamDir, "content", "test-punct--cpu-int8");
+    stageAssetDir(folder, "test-punct--cpu-int8.zip", sha(assets["test-punct--cpu-int8.zip"]), { "model.int8.onnx": "x" });
+    expect(sources.scan()).toBe(true);
+    expect(registry.variantDir("test-punct", "cpu-int8")).toBe(folder);
+    expect(fs.existsSync(path.join(downloaded, "model.int8.onnx"))).toBe(true); // 不自动删除用户数据
+
+    fs.rmSync(folder, { recursive: true }); // 用户在 Steam 里卸载了 DLC
+    expect(sources.scan()).toBe(true);
+    expect(registry.variantDir("test-punct", "cpu-int8")).toBe(downloaded);
   });
 
   it("rejects a checksum mismatch and leaves nothing behind", async () => {
@@ -378,7 +394,7 @@ describe("EnginePacks", () => {
       enginesDir,
       platformKey: `${process.platform}-${process.arch}`,
       protocol: 3,
-      locate: (a) => locateAsset(a, catalog.sources(), {}),
+      sources: sourcesOf(catalog),
       fetch: globalThis.fetch,
       logger: createMemoryLogger(),
     });
@@ -396,9 +412,36 @@ describe("EnginePacks", () => {
     expect(packs.preferred(null)?.id).toBe("cuda"); // 已装的包也用于不需要它的模型
     expect(packs.views("cuda")).toMatchObject([{ id: "cuda", target: "nvidia", inUse: true, install: { status: "installed" } }]);
 
-    const again = new EnginePacks({ catalog, enginesDir, platformKey: `${process.platform}-${process.arch}`, protocol: 3, locate: () => [], fetch: globalThis.fetch, logger: createMemoryLogger() });
+    const again = new EnginePacks({ catalog, enginesDir, platformKey: `${process.platform}-${process.arch}`, protocol: 3, sources: sourcesOf(catalog), fetch: globalThis.fetch, logger: createMemoryLogger() });
     again.scan();
     expect(again.isInstalled("cuda")).toBe(true);
+  });
+
+  it("spawns from a pack that a dir source provides, counts it as installed, and never writes there", async () => {
+    const steamDir = makeTempDir("echotype-steam-");
+    const name = `engine-pack-cuda-${process.platform}-${process.arch}.zip`;
+    const folder = path.join(steamDir, "content", name.replace(/\.zip$/, ""));
+    stageAssetDir(folder, name, sha(assets[name]), { [ENGINE_EXECUTABLE]: "steam engine", "cudart.dll": "x" });
+    const catalog = catalogOf([asr(), punct()], "github", [STEAM_DIR_SOURCE]);
+    const enginesDir = path.join(makeTempDir(), "engines");
+    const sources = sourcesOf(catalog, { steam_app_dir: steamDir });
+    const packs = new EnginePacks({ catalog, enginesDir, platformKey: `${process.platform}-${process.arch}`, protocol: 3, sources, fetch: globalThis.fetch, logger: createMemoryLogger() });
+    packs.scan();
+    const before = requested.length;
+    expect(packs.isInstalled("cuda")).toBe(true);
+    expect(packs.usable("cuda")).toBe(true); // §2 规则 1：dir 提供的包算已安装
+    expect(packs.preferred(null)?.id).toBe("cuda");
+    expect(packs.executable("cuda")).toBe(path.join(folder, ENGINE_EXECUTABLE));
+    expect(packs.views("cuda")).toMatchObject([{ id: "cuda", inUse: true, delivery: { kind: "steam", dlc: null }, install: { status: "installed", error: null } }]);
+    await packs.install("cuda");
+    await packs.remove("cuda"); // 只删下载目录；Core 在此之前以 STEAM_MANAGED 拒绝
+    expect(requested.length).toBe(before);
+    expect(fs.readdirSync(folder).sort()).toEqual([".asset.json", ENGINE_EXECUTABLE, "cudart.dll"].sort());
+    expect(fs.existsSync(enginesDir)).toBe(false);
+
+    packs.markOutdated("cuda", "protocol 2"); // hello.protocol 校验与回退对 dir 上的包同样适用
+    expect(packs.preferred("cuda")).toBeNull();
+    expect(packs.views(null)[0].install).toMatchObject({ status: "not_installed", error: { code: "PACK_OUTDATED" } });
   });
 
   it("stops using an outdated pack and is not offered when the catalog protocol differs", async () => {
@@ -413,7 +456,7 @@ describe("EnginePacks", () => {
 
     const catalog = catalogOf([]);
     catalog.packs()[0].protocol = 4;
-    const newer = new EnginePacks({ catalog, enginesDir: makeTempDir(), platformKey: `${process.platform}-${process.arch}`, protocol: 3, locate: () => [], fetch: globalThis.fetch, logger: createMemoryLogger() });
+    const newer = new EnginePacks({ catalog, enginesDir: makeTempDir(), platformKey: `${process.platform}-${process.arch}`, protocol: 3, sources: sourcesOf(catalog), fetch: globalThis.fetch, logger: createMemoryLogger() });
     expect(newer.offered("cuda")).toBe(false);
     expect(newer.views(null)).toEqual([]);
   });
@@ -468,7 +511,7 @@ describe("EnginePacks", () => {
     await packs.install("cuda");
     const dir = path.join(enginesDir, "cuda");
     fs.renameSync(dir, `${dir}.previous`); // 旧目录已挪走、新目录还没就位时进程退出
-    const again = new EnginePacks({ catalog, enginesDir, platformKey: PLATFORM, protocol: 3, locate: () => [], fetch: globalThis.fetch, logger: createMemoryLogger() });
+    const again = new EnginePacks({ catalog, enginesDir, platformKey: PLATFORM, protocol: 3, sources: sourcesOf(catalog), fetch: globalThis.fetch, logger: createMemoryLogger() });
     again.scan();
     expect(again.usable("cuda")).toBe(true);
     expect(fs.readdirSync(enginesDir)).toEqual(["cuda"]);
