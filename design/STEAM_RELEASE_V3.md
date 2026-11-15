@@ -59,6 +59,15 @@ DLC（Store Presence → Applications → DLC / Depots）：
 
 ## 2. 需要用户决定
 
+**已决定（2026-11-15）**：用户选方案 B。因此 D1 = 免费（方案 B 的前提），D2 = B。D3–D8 按下表建议执行。
+§7 的提案已落地为 Model Manifest v2.3（`contracts/MODEL_MANIFEST.md` §5、§6），与提案的差别：
+- DLC 表是 `channels.steam.steam.dlc[]`（每个 DLC 一项：id、name、app_id、assets、packs），不是"资产名 → app id"的映射。引擎包按 pack id 引用，资产名随版本变化（`…-3.0.1.zip`）时 DLC 表不用改。
+- `base_assets` 列出基础 Content depot 的资产，steam-build.sh 与 Core 读同一份表；steam.conf 只留 Steamworks ID。
+- `app_id` 为 null 的 DLC 不生效：它的资产照常走渠道的来源（先 dir，后 GitHub）。
+- 不加渠道级 `default_model_id`：方案 B 的默认模型就是顶层的 sensevoice-small。
+- 删掉没人用的 `local` zip 源类型。
+- license 加 `author`，「关于」页显示模型作者（满足 FunASR 许可 2.2 与 CC-BY-4.0 的署名要求）。
+
 | # | 决策 | 选项 | 建议 |
 |---|---|---|---|
 | D1 | 免费还是付费 | 免费 / 付费（定价） | 用户决定。它影响 D2 |

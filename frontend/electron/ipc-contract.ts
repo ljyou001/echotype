@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 无依赖（纯类型 + 一个 channel 常量表，零运行时 import）
- * [OUTPUT]: 导出 Core ⇄ UI 契约：Settings、AppSnapshot、ModelView、EchotypeBridge、IPC channel 名
+ * [OUTPUT]: 导出 Core ⇄ UI 契约：Settings、AppSnapshot、ModelView、EnginePackView、AssetDelivery、EchotypeBridge、IPC channel 名
  * [POS]: Electron 主进程（Core 层）与渲染进程（UI 层）之间的唯一真相源。
  *        Core 在 preload 中实现 EchotypeBridge，UI 通过 window.echotype 调用。
  *        渲染进程只用 `import type` 引用本文件，不增加打包体积。
@@ -129,6 +129,16 @@ export interface ModelSettingDef {
 /** 同一模型针对不同硬件分别优化的版本（MODEL_MANIFEST §2）。 */
 export type HardwareTarget = "cpu" | "nvidia" | "apple" | "vulkan";
 
+/**
+ * 资产由谁交付（MODEL_MANIFEST §6）。Core 判定，UI 据此选按钮。
+ * - download：Core 从 http 源下载到 ~/.echotype-v3。install() 下载，remove() 删除。
+ * - steam：文件归 Steam 管，Core 就地使用。remove() 以 STEAM_MANAGED 拒绝。
+ *   dlc 为 null：随基础 App 安装（base_assets），或 DLC 尚无 app_id 但文件已在磁盘上。
+ *   dlc 不为 null：由该免费 DLC 提供。未安装时 install() 打开 steam://store/<appId>，
+ *   Core 随后重新扫描磁盘，文件到位即经 onModelsChanged / onPacksChanged 报 installed。
+ */
+export type AssetDelivery = { kind: "download" } | { kind: "steam"; dlc: { appId: number; name: string } | null };
+
 export interface VariantView {
   id: string; // e.g. "cpu-int8", "cuda-fp16", "apple-metal-gguf-q8"
   target: HardwareTarget; // UI 分组：CPU / NVIDIA GPU / Apple Silicon / Vulkan
@@ -136,8 +146,17 @@ export interface VariantView {
   requiresPack: string | null; // 需要的引擎包 id（如 "cuda"），未安装时模型管理器一并提供下载
   providers: Provider[];
   sizeBytes: number;
+  delivery: AssetDelivery;
   install: { status: InstallStatus; pct: number | null; error: AppError | null };
   benchP50Ms: number | null; // 10 s 语音松键到出字的实测中位数
+}
+
+/** catalog 的 license 对象。author 是模型作者，「关于」页与模型详情显示它（FunASR 许可 2.2 与 CC-BY-4.0 要求署名）。 */
+export interface ModelLicense {
+  id: string;
+  url: string;
+  commercial: "yes" | "no" | "unclear";
+  author: string;
 }
 
 export interface ModelView {
@@ -152,7 +171,7 @@ export interface ModelView {
   selectedVariantId: string | null; // 按当前 provider 设置选中的版本
   settings: ModelSettingDef[];
   values: ModelUserSettings; // 当前值（已与默认值合并）
-  license: { id: string; url: string; commercial: "yes" | "no" | "unclear" };
+  license: ModelLicense;
   isActive: boolean;
 }
 
@@ -162,6 +181,7 @@ export interface EnginePackView {
   target: HardwareTarget;
   providers: Provider[];
   sizeBytes: number;
+  delivery: AssetDelivery;
   install: { status: InstallStatus; pct: number | null; error: AppError | null };
   inUse: boolean;
 }
@@ -169,7 +189,7 @@ export interface EnginePackView {
 /** 设置 → 关于：模型许可证来自 catalog，组件许可证来自打包时生成的 resources/licenses/third-party.json */
 export interface LicensesView {
   appVersion: string;
-  models: { id: string; name: string; license: { id: string; url: string; commercial: "yes" | "no" | "unclear" } }[];
+  models: { id: string; name: string; license: ModelLicense }[];
   components: { name: string; version: string; license: string; url: string }[];
 }
 
@@ -300,9 +320,9 @@ export interface EchotypeBridge {
 
   models: {
     list(): Promise<ModelView[]>;
-    install(id: string, variantId?: string): Promise<void>; // 省略 variantId = 按当前 provider 选；进度经 onModelsChanged
+    install(id: string, variantId?: string): Promise<void>; // 省略 variantId = 按当前 provider 选；进度经 onModelsChanged；steam DLC 交付的资产改为打开第一个缺失 DLC 的商店页
     cancelInstall(id: string, variantId?: string): Promise<void>;
-    remove(id: string, variantId?: string): Promise<void>; // 省略 variantId = 删除全部版本
+    remove(id: string, variantId?: string): Promise<void>; // 省略 variantId = 删除全部版本；只删 download 交付的版本，steam 交付的以 STEAM_MANAGED 拒绝
     activate(id: string): Promise<void>; // 设置 settings.models.activeId 并加载
     updateSettings(id: string, patch: ModelUserSettings): Promise<ModelView>; // 模型专属设置的唯一入口
     getStorage(): Promise<{ dir: string; usedBytes: number; freeBytes: number }>; // 模型管理器的磁盘占用
@@ -311,8 +331,8 @@ export interface EchotypeBridge {
 
   enginePacks: {
     list(): Promise<EnginePackView[]>;
-    install(id: string): Promise<void>; // 安装后 Core 改从该包目录拉起引擎；协议不符时回退内置引擎
-    remove(id: string): Promise<void>;
+    install(id: string): Promise<void>; // 安装后 Core 改从该包目录拉起引擎；协议不符时回退内置引擎；steam DLC 交付时打开商店页
+    remove(id: string): Promise<void>; // steam 交付的包以 STEAM_MANAGED 拒绝
     onPacksChanged(cb: (packs: EnginePackView[]) => void): Unsubscribe;
   };
 

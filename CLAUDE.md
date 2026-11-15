@@ -29,7 +29,7 @@ frontend/package.json - 前端依赖与 electron-builder 配置
 - 开发：`cd frontend && npm run dev`（Core 拉起 `engine/target` 下的引擎；`ECHOTYPE_ENGINE=mock` 用模拟引擎）
 - 测试：`npm run test:core`（vitest）· `npm run smoke:core`（mock 引擎）· `npm run smoke:real`（真实引擎 + 真实模型安装 + 假麦克风，用法见 frontend/electron/CLAUDE.md）· `cd engine && cargo test --release`
 - 用户数据：`~/.echotype-v3/{settings.json, history.jsonl, models/, engines/, logs/, electron/}`（`electron/` 是 Electron 的 userData，与 v2 不共用）
-- 版本：EchoType 3.0.1（app 与 engine 同号，发布 tag `v3.x.y`）。GPU 引擎包资产名带引擎版本，旧版本钉住的资产永不替换或删除。资产 release：`models-v3`、`engine-packs-v3`。契约各自编号，与产品版本无关：引擎协议 3、ipcVersion 2、catalog schema 2、Model Manifest v2.2
+- 版本：EchoType 3.0.1（app 与 engine 同号，发布 tag `v3.x.y`）。GPU 引擎包资产名带引擎版本，旧版本钉住的资产永不替换或删除。资产 release：`models-v3`、`engine-packs-v3`。契约各自编号，与产品版本无关：引擎协议 3、ipcVersion 2、catalog schema 2、Model Manifest v2.3
 - 提交与发布：不开分支、不开 PR，只在本地 `main` 提交，由用户 push。Windows x64 在本机用 electron-builder 打包；其余目标在 GitHub `main` 上手动触发 `.github/workflows/build.yml`
 
 [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md

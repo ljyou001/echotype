@@ -10,8 +10,8 @@
     },
     {
       "id": "steam",
-      "type": "local",
-      "path_template": "{steam_app_dir}/models/{asset}"
+      "type": "dir",
+      "path_template": "{steam_app_dir}/content/{asset_stem}"
     }
   ],
   "channels": {
@@ -32,8 +32,86 @@
       ],
       "remote_catalog": null,
       "allow_commercial": [
-        "yes"
-      ]
+        "yes",
+        "unclear"
+      ],
+      "steam": {
+        "base_assets": [
+          "sensevoice-small--cpu-int8.zip"
+        ],
+        "dlc": [
+          {
+            "id": "qwen3-asr-0.6b",
+            "name": "Qwen3 ASR 0.6B",
+            "app_id": null,
+            "assets": [
+              "qwen3-asr-0.6b--gguf-q8.zip"
+            ]
+          },
+          {
+            "id": "qwen3-asr-1.7b",
+            "name": "Qwen3 ASR 1.7B",
+            "app_id": null,
+            "assets": [
+              "qwen3-asr-1.7b--gguf-q8.zip"
+            ]
+          },
+          {
+            "id": "whisper-large-v3-turbo",
+            "name": "Whisper Large v3 Turbo",
+            "app_id": null,
+            "assets": [
+              "whisper-large-v3-turbo--cpu-int8.zip"
+            ]
+          },
+          {
+            "id": "parakeet-tdt-0.6b-v3",
+            "name": "Parakeet TDT 0.6B v3",
+            "app_id": null,
+            "assets": [
+              "parakeet-tdt-0.6b-v3--cpu-int8.zip"
+            ]
+          },
+          {
+            "id": "moonshine-v2-base-en",
+            "name": "Moonshine v2 Base",
+            "app_id": null,
+            "assets": [
+              "moonshine-v2-base-en--cpu-int8.zip"
+            ]
+          },
+          {
+            "id": "chinese-pro",
+            "name": "Chinese Pro Models",
+            "app_id": null,
+            "assets": [
+              "paraformer-zh-small--cpu-int8.zip",
+              "paraformer-zh--cpu-int8.zip",
+              "fire-red-asr2-aed--cpu-int8.zip",
+              "punct-ct-transformer-zh-en--cpu-int8.zip"
+            ]
+          },
+          {
+            "id": "nvidia-gpu",
+            "name": "NVIDIA GPU Runtime",
+            "app_id": null,
+            "assets": [
+              "sensevoice-small--cuda-fp32.zip"
+            ],
+            "packs": [
+              "cuda"
+            ]
+          },
+          {
+            "id": "vulkan-gpu",
+            "name": "Vulkan GPU Runtime",
+            "app_id": null,
+            "packs": [
+              "vulkan"
+            ]
+          }
+        ]
+      }
     },
     "msstore": {
       "sources": [
@@ -44,7 +122,7 @@
         "yes"
       ]
     },
-    "_note": "allow_commercial is provisional; the user decides per-store policy later."
+    "_note": "steam: free app, strategy B (design/STEAM_RELEASE_V3.md), decided 2026-11-15. msstore is provisional."
   },
   "models": [
     {
@@ -170,7 +248,8 @@
       "license": {
         "id": "FunASR-Model-License",
         "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
-        "commercial": "unclear"
+        "commercial": "unclear",
+        "author": "Alibaba (FunASR)"
       },
       "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     },
@@ -253,7 +332,8 @@
       "license": {
         "id": "FunASR-Model-License",
         "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
-        "commercial": "unclear"
+        "commercial": "unclear",
+        "author": "Alibaba (FunASR)"
       },
       "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     },
@@ -336,7 +416,8 @@
       "license": {
         "id": "FunASR-Model-License",
         "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
-        "commercial": "unclear"
+        "commercial": "unclear",
+        "author": "Alibaba (FunASR)"
       },
       "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     },
@@ -606,7 +687,8 @@
       "license": {
         "id": "Apache-2.0",
         "url": "https://huggingface.co/Qwen/Qwen3-ASR-0.6B",
-        "commercial": "yes"
+        "commercial": "yes",
+        "author": "Alibaba Qwen Team"
       },
       "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     },
@@ -729,7 +811,8 @@
       "license": {
         "id": "CC-BY-4.0",
         "url": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3",
-        "commercial": "yes"
+        "commercial": "yes",
+        "author": "NVIDIA"
       },
       "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     },
@@ -966,7 +1049,8 @@
       "license": {
         "id": "Apache-2.0",
         "url": "https://huggingface.co/Qwen/Qwen3-ASR-1.7B",
-        "commercial": "yes"
+        "commercial": "yes",
+        "author": "Alibaba Qwen Team"
       },
       "status": "beta",
       "_note": "GPU only. Hide the model on machines with no GPU provider.",
@@ -1051,7 +1135,8 @@
       "license": {
         "id": "Apache-2.0",
         "url": "https://github.com/FireRedTeam/FireRedASR",
-        "commercial": "yes"
+        "commercial": "yes",
+        "author": "FireRedTeam (Xiaohongshu)"
       },
       "status": "beta",
       "_note": "Engine: fill upstream_url and files from the sherpa-onnx FireRedASR docs (v2 AED package).",
@@ -1207,7 +1292,8 @@
       "license": {
         "id": "MIT",
         "url": "https://github.com/openai/whisper",
-        "commercial": "yes"
+        "commercial": "yes",
+        "author": "OpenAI"
       },
       "status": "beta",
       "_note": "languages lists the top 32; engine may extend. Add a cuda variant only if the sherpa CUDA pack measurably wins.",
@@ -1273,7 +1359,8 @@
       "license": {
         "id": "MIT",
         "url": "https://github.com/moonshine-ai/moonshine/blob/main/LICENSE",
-        "commercial": "yes"
+        "commercial": "yes",
+        "author": "Moonshine AI"
       },
       "status": "beta",
       "_note": "English only: Moonshine's non-English models are non-commercial. Engine: fill files/upstream_url.",
@@ -1333,7 +1420,8 @@
       "license": {
         "id": "FunASR-Model-License",
         "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
-        "commercial": "unclear"
+        "commercial": "unclear",
+        "author": "Alibaba (FunASR)"
       },
       "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
     }
