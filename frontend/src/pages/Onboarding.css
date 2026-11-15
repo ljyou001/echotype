@@ -1,6 +1,6 @@
 /*
  * [INPUT]: 依赖 styles/tokens.css 的变量
- * [OUTPUT]: 引导页样式：居中面板、步骤条 .stepper、权限/模型行 .onboarding__row
+ * [OUTPUT]: 引导页样式：居中面板、步骤条 .stepper、权限/模型行 .onboarding__row（含引擎包与 Steam 说明）
  * [POS]: pages/Onboarding.tsx 的专属样式。面板高度随窗口收缩，内容区内部滚动，页脚按钮始终可见。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -204,6 +204,11 @@
 .onboarding__pack-note {
   font-size: var(--text-xs);
   color: var(--warning);
+}
+
+.onboarding__steam-note {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
 .onboarding__row-text .lang-tags {

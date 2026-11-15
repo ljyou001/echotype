@@ -1,7 +1,7 @@
 /*
  * [INPUT]: 依赖 styles/tokens.css 的变量
  * [OUTPUT]: 共享组件样式：Switch、Segmented、ProgressBar、Badge、Section/SettingRow、Notice、EmptyState、Modal、Toast、
- *           LevelMeter、spinner、搜索框、Drawer、LanguageTags（HotkeyModal 与 Orb 的样式各在同名 .css）
+ *           LevelMeter、spinner、搜索框、Drawer、LanguageTags、SteamWaiting（HotkeyModal 与 Orb 的样式各在同名 .css）
  * [POS]: components/ 目录下全部组件的样式，与组件同目录放置。页面专属样式在 pages/*.css。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -120,6 +120,20 @@
   to {
     transform: translateX(290%);
   }
+}
+
+/* ---------- SteamWaiting：不定进度条 + "等待 Steam 下载…" + 重新打开商店页 ---------- */
+.steam-wait {
+  display: grid;
+  grid-template-columns: 72px auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.steam-wait__label {
+  white-space: nowrap;
 }
 
 /* ============================================================

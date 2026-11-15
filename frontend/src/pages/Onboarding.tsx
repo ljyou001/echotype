@@ -1,10 +1,11 @@
 /**
  * [INPUT]: 依赖 bridge().system（权限查询与跳转）、bridge().models、bridge().audio；依赖 store/appStore 的快照、模型、
- *          updateSettings、run；依赖 hooks 的 useAudioInputs、useMicTest；依赖 components 的 LevelMeter、ProgressBar、Badge；
- *          依赖 utils/runMode 的引擎包文案与 utils/errors 的错误文案
+ *          updateSettings、run；依赖 hooks 的 useAudioInputs、useMicTest、useVariantInstaller；依赖 components 的 LevelMeter、
+ *          ProgressBar、Badge、SteamDelivery；依赖 utils/runMode 的引擎包文案与 utils/errors 的错误文案
  * [OUTPUT]: 导出 Onboarding 组件
  * [POS]: 首次运行引导，三步：权限 → 麦克风 → 下载模型。settings.ui.onboardingCompleted 为 false 时替代主界面。
  *        模型列表来自 Core（不硬编码 id），语言用标签展示；版本缺引擎包时一并下载并注明；
+ *        经 Steam 交付的模型显示"在 Steam 获取"与等待 Steam 下载，与模型页同源；
  *        装好的第一个语音模型自动启用；完成时写回 onboardingCompleted。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -17,10 +18,12 @@ import { bridge } from "../bridge";
 import { Badge, ProgressBar } from "../components/controls";
 import { LanguageTags } from "../components/LanguageTags";
 import { LevelMeter } from "../components/LevelMeter";
+import { GetOnSteamButton, SteamWaiting, steamNote } from "../components/SteamDelivery";
 import { useAudioInputs } from "../hooks/useAudioInputs";
 import { useMicTest } from "../hooks/useMicTest";
 import { useVariantInstaller } from "../hooks/useVariantInstaller";
 import { useAppStore } from "../store/appStore";
+import { sameDlc } from "../utils/delivery";
 import { errorText } from "../utils/errors";
 import { formatBytes } from "../utils/format";
 import { TIER_ORDER, isBusy, isReady, modelSizeBytes, selectedVariant } from "../utils/models";
@@ -235,7 +238,7 @@ function ModelStep() {
   const { t, i18n } = useTranslation();
   const models = useAppStore((s) => s.models);
   const run = useAppStore((s) => s.run);
-  const { install, pendingPack } = useVariantInstaller();
+  const { install, pendingPack, nextStep } = useVariantInstaller();
 
   // 只列本机能跑的语音模型。推荐的模型置顶；其余按档位从快到准、同档按体积从小到大
   const { speech, recommended } = useMemo(() => {
@@ -259,6 +262,9 @@ function ModelStep() {
         const pack = pendingPack(variant);
         // 版本装好但引擎包还在下载时，仍算安装中
         const installing = isBusy(status) || (status === "installed" && !!pack && isBusy(pack.install.status));
+        const step = nextStep(variant);
+        const viaSteam = step?.state === "getOnSteam" || step?.state === "waitingForSteam";
+        const get = () => install(m.id, variant);
         return (
           <div key={m.id} className="onboarding__row onboarding__row--model">
             <div className="onboarding__row-text">
@@ -269,7 +275,10 @@ function ModelStep() {
               </div>
               <p className="onboarding__row-desc">{m.description}</p>
               <LanguageTags codes={m.languages} />
-              {pack && !installing && <p className="onboarding__pack-note">{packNeedText(t, pack, i18n.language)}</p>}
+              {pack && !installing && !sameDlc(variant.delivery, pack.delivery) && (
+                <p className="onboarding__pack-note">{packNeedText(t, pack, i18n.language)}</p>
+              )}
+              {step && viaSteam && <p className="onboarding__steam-note">{steamNote(t, step.state, step.dlc)}</p>}
               {installing && (
                 <div className="onboarding__progress">
                   <ProgressBar pct={status === "downloading" ? pct : null} label={t(`models.install.${status}`)} />
@@ -287,8 +296,12 @@ function ModelStep() {
                 <button type="button" className="btn btn--ghost btn--sm" onClick={() => run(() => bridge().models.cancelInstall(m.id, variant.id))}>
                   {t("common.cancel")}
                 </button>
+              ) : step?.state === "getOnSteam" ? (
+                <GetOnSteamButton small onClick={get} />
+              ) : step?.state === "waitingForSteam" ? (
+                <SteamWaiting onReopen={get} />
               ) : (
-                <button type="button" className="btn btn--secondary btn--sm" onClick={() => install(m.id, variant)}>
+                <button type="button" className="btn btn--secondary btn--sm" onClick={get}>
                   <FiDownload /> {status === "error" ? t("models.actions.retry") : formatBytes(variant.sizeBytes, i18n.language) || t("onboarding.models.download")}
                 </button>
               )}

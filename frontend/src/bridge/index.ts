@@ -16,7 +16,7 @@ export function bridge(): EchotypeBridge {
 // ============================================================
 export async function installMockBridgeIfMissing(): Promise<void> {
   if (window.echotype) return;
-  const { createMockBridge, readMockScenario } = await import("./mockBridge");
-  window.echotype = createMockBridge(readMockScenario());
+  const { createMockBridge, readMockChannel, readMockScenario } = await import("./mockBridge");
+  window.echotype = createMockBridge(readMockScenario(), readMockChannel());
   console.info("[bridge] window.echotype missing: installed the in-memory mock bridge");
 }

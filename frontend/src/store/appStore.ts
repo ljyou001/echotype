@@ -1,11 +1,13 @@
 /**
  * [INPUT]: 依赖 zustand 的 create；依赖 bridge() 访问 Core；依赖 ipc-contract 的快照与模型类型；
  *          依赖 i18n/config 的 resolveAppLanguage 同步界面语言；依赖 utils/theme 的 applyTheme 同步皮肤；
- *          依赖 utils/errors 把 bridge 拒绝转成按 code 取的文案
+ *          依赖 utils/errors 把 bridge 拒绝转成按 code 取的文案；依赖 utils/delivery 的 missingSteamDlcs 结束 Steam 等待
  * [OUTPUT]: 导出 useAppStore、connectStore()、PageKey、PageAnchor、Toast、LastError，
  *           以及选择器 selectSettings / selectActiveModel / selectDictationError / selectHotkeyError
  * [POS]: UI 层唯一的状态容器。镜像 Core 推送的 AppSnapshot、ModelView[] 与 EnginePackView[]，
- *        外加纯本地 UI 状态（当前页与页内锚点、提示条、最近一次错误）。
+ *        外加纯本地 UI 状态（当前页与页内锚点、提示条、最近一次错误、在等 Steam 下载的 DLC）。
+ *        Steam 等待是唯一一块"界面记得、Core 不知道"的安装状态：商店页打开后 Core 只在文件到位时报 installed，
+ *        所以界面记下 appId，DLC 的资产全部到位后自动删掉。
  *        动作失败一律经 reportError：提示条只显示 errors.codes.<CODE> 的文案，原始 code + message 存进 lastError 给诊断页。
  *        模型专属设置只经 updateModelSettings → bridge.models.updateSettings，从不经全局 updateSettings。
  *        快照里的 ui.language 与 ui.theme 变化时，同步 i18n 与 <html> 上的皮肤。
@@ -24,6 +26,7 @@ import type {
 } from "../../electron/ipc-contract";
 import { bridge } from "../bridge";
 import i18n, { resolveAppLanguage } from "../i18n/config";
+import { missingSteamDlcs } from "../utils/delivery";
 import { errorText, toAppError } from "../utils/errors";
 import { applyTheme } from "../utils/theme";
 
@@ -48,11 +51,13 @@ interface AppState {
   anchor: PageAnchor | null;
   toast: Toast | null;
   lastError: LastError | null; // 最近一次被拒的 bridge 调用，原样留给诊断页
+  steamWaits: number[]; // 已打开商店页、文件还没到位的 DLC appId
   setPage: (page: PageKey, anchor?: PageAnchor) => void;
   showToast: (message: string, kind?: Toast["kind"]) => void;
   dismissToast: () => void;
   /** 记下原始错误，提示条只显示按 code 取的文案 */
   reportError: (err: unknown) => void;
+  setSteamWait: (appId: number, waiting: boolean) => void;
 
   // ---------- 动作：全部转发给 Core ----------
   updateSettings: (patch: DeepPartial<Settings>) => Promise<void>;
@@ -74,6 +79,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   anchor: null,
   toast: null,
   lastError: null,
+  steamWaits: [],
 
   setPage: (page, anchor) => set({ page, anchor: anchor ?? null }),
   showToast: (message, kind = "info") => set({ toast: { id: ++toastSeq, kind, message } }),
@@ -83,6 +89,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ lastError: { ...error, at: Date.now() } });
     get().showToast(errorText(i18n.t, error), "error");
   },
+  setSteamWait: (appId, waiting) =>
+    set((s) => ({ steamWaits: waiting ? [...new Set([...s.steamWaits, appId])] : s.steamWaits.filter((id) => id !== appId) })),
 
   updateSettings: async (patch) => {
     try {
@@ -152,6 +160,12 @@ export async function connectStore(): Promise<void> {
     }
     if (ui && (ui.theme.mode !== prevUi?.theme.mode || ui.theme.accent !== prevUi?.theme.accent)) {
       applyTheme(ui.theme);
+    }
+    // DLC 的资产全部到位：结束等待
+    if (state.steamWaits.length > 0 && (state.models !== prev.models || state.packs !== prev.packs)) {
+      const missing = missingSteamDlcs(state.models, state.packs);
+      const waits = state.steamWaits.filter((id) => missing.has(id));
+      if (waits.length !== state.steamWaits.length) useAppStore.setState({ steamWaits: waits });
     }
   });
 

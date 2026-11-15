@@ -15,14 +15,14 @@ App.tsx: 主窗口外壳。快照未到显示占位，引导未完成显示 Onbo
 
 bridge/
 index.ts: `bridge()` 访问器（UI 通往 Core 的唯一出口）与 `installMockBridgeIfMissing()`（动态加载 mock，Electron 中不加载）
-mockBridge.ts: 内存版 EchotypeBridge（ipcVersion 2）。模拟快照推送（含 activeModel 运行方式）、引擎启动/加载/崩溃、20 Hz 电平、partial→final、历史、模型专属设置、GPU 引擎包、磁盘占用、许可证、热键与听写失败、quickAction.open（文本经 localStorage 交给新窗口）；失败一律 reject 带 code 的 Error，下载失败同时把安装态记成 error；`?mock=ready|fresh|error|loading|fallback|wayland|nomic|offline` 切换场景（offline：下载一律 DOWNLOAD_FAILED），控制台 `window.echotypeMock.setHotkeyError / setDictationError / failDownloads` 运行中切换失败状态
-mockModels.ts: mock 的模型与引擎包子系统。直接读 `contracts/models.catalog.json`；按 variant（cpu/nvidia/apple/vulkan）模拟下载→校验→解压；MockMachine 模拟一台有 NVIDIA 显卡的 win32-x64（CUDA 包可装，体积取清单真实值；Vulkan 包假装未发布：版本与 provider 选项照常列出、包不进 packs；Apple 版本不可用）
+mockBridge.ts: 内存版 EchotypeBridge（ipcVersion 2）。模拟快照推送（含 activeModel 运行方式）、引擎启动/加载/崩溃、20 Hz 电平、partial→final、历史、模型专属设置、GPU 引擎包、磁盘占用、许可证、热键与听写失败、quickAction.open（文本经 localStorage 交给新窗口）；失败一律 reject 带 code 的 Error，下载失败同时把安装态记成 error；`?mock=ready|fresh|error|loading|fallback|wayland|nomic|offline` 切换场景（offline：下载一律 DOWNLOAD_FAILED）；`?channel=steam` 模拟 Steam 版（可叠加）：DLC 交付的资产 install 只打开商店页、8 秒后整个 DLC 到位，remove 以 STEAM_MANAGED 拒绝；控制台 `window.echotypeMock.setHotkeyError / setDictationError / failDownloads` 运行中切换失败状态
+mockModels.ts: mock 的模型与引擎包子系统。直接读 `contracts/models.catalog.json`；按 variant（cpu/nvidia/apple/vulkan）模拟下载→校验→解压；MockMachine 模拟一台有 NVIDIA 显卡的 win32-x64（CUDA 包可装，体积取清单真实值；Vulkan 包假装未发布：版本与 provider 选项照常列出、包不进 packs；Apple 版本不可用）；MockDelivery 按渠道给版本与引擎包标交付方式（steam 读 catalog 的 channels.steam.steam，DLC 的 app_id 还是 null，mock 按序号编假的）
 mockIntegrations.ts: mock 的集成子系统（integrations + dictionary）。读 `contracts/integrations.catalog.json`；对齐 Core：目录视图剥掉执行描述、provider 级密钥共享、只回“已保存”布尔值、run 返回后才异步推事件；运行结果是假的（transform 流式回显、webhook 固定回复）；失败 reject 带 code 的 Error
 mockErrors.ts: bridgeError(code, message)：mock 各子系统共用的拒绝形状，对齐契约里 AppError 的注释
 mockLicenses.ts: mock 的应用版本与开源组件许可证假数据
 
 store/
-appStore.ts: 唯一状态容器。镜像 snapshot、models 与 packs，外加本地 UI 状态（当前页与页内锚点 PageAnchor、提示条、lastError）；动作失败一律经 reportError：提示条只显示按 code 取的文案，原始 code + message 进 lastError 给诊断页；selectDictationError / selectHotkeyError 把旧 Core 缺的槽位读成 null；动作全部转发 bridge；模型专属设置只经 `updateModelSettings` → `models.updateSettings`；`connectStore()` 先订阅后拉取；按 `settings.ui.language` / `settings.ui.theme` 同步 i18n 与皮肤
+appStore.ts: 唯一状态容器。镜像 snapshot、models 与 packs，外加本地 UI 状态（当前页与页内锚点 PageAnchor、提示条、lastError、steamWaits：已打开商店页、文件还没到位的 DLC，资产到齐自动删掉）；动作失败一律经 reportError：提示条只显示按 code 取的文案，原始 code + message 进 lastError 给诊断页；selectDictationError / selectHotkeyError 把旧 Core 缺的槽位读成 null；动作全部转发 bridge；模型专属设置只经 `updateModelSettings` → `models.updateSettings`；`connectStore()` 先订阅后拉取；按 `settings.ui.language` / `settings.ui.theme` 同步 i18n 与皮肤
 integrationsStore.ts: 集成目录与实例的只读镜像。变更先调 `bridge().integrations.*`，再以重新拉取的列表为准（开关与排序先乐观落位）；从不持有密钥，视图里只有“已保存”布尔值；默认集成由 Core 播种；`load()` 并发去重
 
 hooks/
@@ -30,7 +30,7 @@ useAudioInputs.ts: 引擎侧输入设备列表；窗口重新获得焦点时刷�
 useIntegrationRun.ts: 一次集成运行的客户端状态机（Quick Action 与 History 共用）。先订阅事件，run() 返回前到达的事件按 runId 缓冲、拿到 runId 后重放；增量累加成 text
 useMicTest.ts: 麦克风测试开关，卸载时自动关闭
 useHotkeyLabel.ts: 当前热键的本地化显示名
-useVariantInstaller.ts: 模型版本下载的唯一入口；版本需要的引擎包没装时一并下载，已装的版本不重下
+useVariantInstaller.ts: 模型版本与 GPU 运行库安装的唯一入口；版本需要的引擎包没装时一并安装，已装的版本不重下；给出每个资产的交付状态与"下一次点击会做什么"；Steam DLC 交付时记下等待，一次点击最多打开一个商店页，Core 拒绝则撤销等待
 useSmoothedLevel.ts: 引擎电平的唯一动画循环（平滑 + 峰值保持，停用后回落到 0 再停），LevelMeter 与 Orb 共用
 
 components/
@@ -43,26 +43,27 @@ Orb.tsx(.css): 首页状态光球。分层：光晕 → 随音量缩放的核心
 KeyHint.tsx: 把含 KEY_TOKEN 的译文渲染成"文字 + <kbd> + 文字"
 LanguageTags.tsx: 模型支持语言的一行标签，超出折叠为 "+N"
 controls.tsx: Switch、Segmented、ProgressBar、Badge
+SteamDelivery.tsx: Steam 交付的共用零件：GetOnSteamButton、SteamWaiting（不定进度 + "等待 Steam 下载…" + 重新打开商店页）、steamNote（免费 DLC 名 / 去 Steam「下载」页看进度）；四处界面说法一致
 layout.tsx: PageHeader、Section（id 即页内锚点落点）、SettingRow（左说明右控件的行式设置布局）、Notice（警示条：听写失败、热键受限）、EmptyState
-components.css: 共享组件样式（含 Drawer、LanguageTags、Notice）；HotkeyModal 的样式在 HotkeyModal.css
+components.css: 共享组件样式（含 Drawer、LanguageTags、Notice、SteamWaiting）；HotkeyModal 的样式在 HotkeyModal.css
 
 pages/
 HomePage.tsx(.css): 状态光球与提示、上一次听写失败（Notice + 下一步：选择麦克风 / 前往模型页）、录音按钮、实时文本与电平、上一次结果（弱化显示松键到出字耗时）、四张摘要卡（热键受限时警示；点击直达设置页对应分节）
 HistoryPage.tsx(.css): Core 持久化的历史，按天分组；搜索、复制、在 Quick Action 中打开（`quickAction.open`）、一键交给默认集成（回复或回执以提示条显示，失败经 reportError）、删除、清空
 ModelsPage.tsx(.css): 只负责选模型与设置：语音模型按档位稳定排序；右上角"管理模型"打开模型管理器
-model-catalog/ModelCard.tsx: 单个模型卡片：下载选中版本（缺引擎包时一并下载并注明，版本装好后显示引擎包进度）→ 启用；目录原名、语言标签、体积、~P50、许可证链接；引擎包那一行经 runMode 的 packNeedText（体积已知才写）；包拿不到时不给下载、直说"暂未提供"；安装失败只显示按 code 取的文案
-model-catalog/ModelSettingsPanel.tsx: 由 `ModelView.settings` 驱动的通用设置渲染（select/toggle/text/number，文案取 `models.settings.<key>.label/.help/.options`，未知键退回键名）；所选硬件版本未装时就地下载；所需引擎包拿不到的硬件在"运行设备"里置灰并标"暂未提供"
-model-catalog/ModelManager.tsx(.css): 模型管理器抽屉：GPU 运行库、每个模型按硬件分组的版本（体积、~P50、下载/取消/删除）、辅助模型、磁盘占用；不可用的版本分"暂未提供"（引擎包拿不到）与"这台电脑不可用"（没有对应硬件）
+model-catalog/ModelCard.tsx: 单个模型卡片：下载选中版本（缺引擎包时一并下载并注明，版本装好后显示引擎包进度）→ 启用；下一步要补的资产经 Steam 交付时改为"在 Steam 获取" + 免费 DLC 名，点击后等待 Steam 下载；目录原名、语言标签、体积、~P50、许可证链接与模型作者；引擎包那一行经 runMode 的 packNeedText（体积已知才写）；包拿不到时不给下载、直说"暂未提供"；安装失败只显示按 code 取的文案
+model-catalog/ModelSettingsPanel.tsx: 由 `ModelView.settings` 驱动的通用设置渲染（select/toggle/text/number，文案取 `models.settings.<key>.label/.help/.options`，未知键退回键名）；所选硬件版本未装时就地下载（Steam 交付时就地"在 Steam 获取"）；所需引擎包拿不到的硬件在"运行设备"里置灰并标"暂未提供"
+model-catalog/ModelManager.tsx(.css): 模型管理器抽屉：GPU 运行库、每个模型按硬件分组的版本（体积、~P50、下载/取消/删除）、辅助模型、磁盘占用；版本与运行库共用行尾操作，按交付状态出按钮：下载 / 已内置 / 在 Steam 获取 / 等待 Steam 下载 / 来自 Steam（Steam 交付的没有删除，抽屉顶部说一次去 Steam 里移除）；不可用的版本分"暂未提供"（引擎包拿不到）与"这台电脑不可用"（没有对应硬件）
 SettingsPage.tsx(.css): 通用、听写（热键、录音方式、输出三选一）、麦克风（设备、测试、保持就绪）、隐私、关于；听写与麦克风两节是页内锚点；热键受限时热键行显示警示
 settings/AppearanceSection.tsx: 外观：主题（跟随系统/浅色/深色）与主题色色块，保存到 settings.ui.theme，本窗口先行生效
 settings/AboutSection.tsx: 关于：版本与发行渠道、许可证入口、源代码与问题反馈链接
-settings/LicensesDialog.tsx: 许可证列表：模型许可证（名称 + 许可证链接）与开源组件；不显示商用判断（那是发行方内部的事）
+settings/LicensesDialog.tsx: 许可证列表：模型许可证（名称、作者 + 许可证链接；FunASR 许可与 CC-BY-4.0 要求署名）与开源组件；不显示商用判断（那是发行方内部的事）
 IntegrationsPage.tsx(.css): 两个标签页。动作：拖拽排序、启停、设默认、配置、删除、“待设置”标记；词典：见 DictionaryPanel。样式含动作选择器、密钥字段、隐私提示、词典行
 integrations/IntegrationDialogs.tsx: 新增（按组选动作 → 配置）与配置弹窗，表单完全由目录字段生成：动作字段 + 服务商、服务商字段、模型（获取模型 / 自填）、测试连接、隐私提示与 hint；secrets 只提交改动
 integrations/FieldInput.tsx: 目录字段 → 控件的唯一渲染器（text/textarea/enum/boolean/directory/secret）；secret 只写，已保存显示“已保存 · 更换 · 移除”
 integrations/DictionaryPanel.tsx: 个人词典行内编辑，失焦/删除时整份存回 Core
 DebugPage.tsx(.css): 引擎状态事实表（含平台架构、IPC 版本、引擎包）、重启引擎、打开日志目录、最近一次错误（原始 code + message，只在这里出现）、按键监听、快照 JSON
-Onboarding.tsx(.css): 三步引导：权限 → 麦克风（自动开测试）→ 下载模型（只列本机能跑的；首个装好的自动启用；引擎包与错误文案与模型页同源）
+Onboarding.tsx(.css): 三步引导：权限 → 麦克风（自动开测试）→ 下载模型（只列本机能跑的；首个装好的自动启用；引擎包、Steam 获取与错误文案与模型页同源）
 QuickActionWindow.tsx(.css): `#/quick-action` 小窗。文本经 `quickAction.getText`，窗口再次可见时刷新；点动作或回车运行默认动作，结果流式显示（纯文本）；完成后可替换上屏、复制、重新生成；需确认的动作先弹确认框；有结果时 `resize`；无文字结果的动作显示回执后自动关窗；标题栏用系统原生拖动（-webkit-app-region），不调 `move`，避免缩放屏上越拖越大
 
 
@@ -74,6 +75,7 @@ shell.css: 应用网格、侧栏、页面通用块（.page / .page-header / .car
 
 utils/
 integrations.ts: 清单文案按界面语言取值（zh 取中文，缺失退回英文）、动作分组顺序
+delivery.ts: 资产交付方式（MODEL_MANIFEST §6）的唯一判定：deliveryState → download / included / getOnSteam / waitingForSteam / fromSteam；sameDlc（版本与引擎包同在一个 DLC 时不再提示缺引擎包）；missingSteamDlcs（结束等待的依据）
 models.ts: ModelView 的纯函数视图：选中版本、是否就绪（含引擎包）、可用性、体积、构建名、TIER_ORDER / TARGET_ORDER；packUnavailable / providerUnavailable：版本要的引擎包不在 packs 里（本平台不提供或未发布）即拿不到
 runMode.ts: "当前模型怎么跑"的唯一文案：紧凑一行（CPU · sherpa-onnx / NVIDIA GPU · CUDA）+ 完整 tooltip + 回退说明；GPU 运行库那一行（packNeedText："需要 NVIDIA 显卡运行库（1.6 GB，只需下载一次）"，体积未知时不写；packUnavailableText："暂未提供"）
 issues.ts: 快照里非致命问题（dictation.error、hotkey.error）的唯一文案出口：按 code 取 `issues.<scope>.<CODE>`，未知 code 用通用标题 + Core message 并附 code

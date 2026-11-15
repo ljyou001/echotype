@@ -1,6 +1,6 @@
 /*
  * [INPUT]: 依赖 styles/tokens.css 的变量与 styles/shell.css 的 .card
- * [OUTPUT]: 模型页样式：.models 列表、.model-card 卡片（含许可证与引擎包提示）、.model-settings 设置区与就地下载
+ * [OUTPUT]: 模型页样式：.models 列表、.model-card 卡片（含许可证、引擎包提示与 Steam 说明）、.model-settings 设置区与就地下载
  * [POS]: pages/ModelsPage.tsx 与 pages/model-catalog/* 共用的样式。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -229,6 +229,13 @@
 .model-card__pack-note {
   font-size: var(--text-xs);
   color: var(--warning);
+}
+
+/* Steam 交付的说明（免费 DLC 名、去哪看下载进度）：中性色，不是警示 */
+.variant-action__steam-note,
+.model-card__steam-note {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
 .model-card__main .lang-tags {

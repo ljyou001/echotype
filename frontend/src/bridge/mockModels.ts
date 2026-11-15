@@ -1,18 +1,22 @@
 /**
  * [INPUT]: 依赖 contracts/models.catalog.json（假模型与 GPU 引擎包的唯一数据源）；依赖 ipc-contract 的 ModelView、
  *          VariantView、ModelSettingDef、EnginePackView、HardwareTarget 等类型
- * [OUTPUT]: 导出 MockModelRegistry（模型 × variant 的安装模拟、variant 选择、设置定义与取值、磁盘占用、fail 模拟下载失败）、
- *          MockPackRegistry（GPU 引擎包，含 fail）、MockMachine、preinstalledKeys()、defaultModelId
+ * [OUTPUT]: 导出 MockModelRegistry（模型 × variant 的安装模拟、variant 选择、设置定义与取值、磁盘占用、fail 模拟下载失败、
+ *          markAssets 模拟 Steam 放好文件）、MockPackRegistry（GPU 引擎包，含 fail 与 markInstalled）、MockMachine、
+ *          MockDelivery（按渠道给资产标交付方式）、MockChannel、preinstalledKeys()、defaultModelId
  * [POS]: mockBridge 的模型子系统，只在浏览器开发模式加载。不硬编码任何模型 id，一律从清单推导。
  *        模拟一台有 NVIDIA 显卡的 win32-x64：CUDA 引擎包可装（装之前 cuda 版本"可下载、不可运行"，体积取清单真实值）；
  *        显卡也支持 Vulkan，但 Vulkan 引擎包假装尚未发布（MODEL_MANIFEST §2 规则 4，sha256 为 null）：
  *        vulkan 版本与 provider 选项照常列出，包不进 packs 列表、auto 从不选它，用来检查"暂未提供"。
  *        Apple Silicon 版本在这台机器上不可用。
+ *        交付方式（MODEL_MANIFEST §6）：github 渠道一律 download；steam 渠道按 catalog 的 channels.steam.steam 判定，
+ *        base_assets 随应用内置，dlc[] 里的资产由免费 DLC 提供。catalog 里 DLC 的 app_id 还是 null，mock 假装都已上架、按序号编号。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import catalog from "../../../contracts/models.catalog.json";
 import type {
   AppError,
+  AssetDelivery,
   EnginePackView,
   HardwareTarget,
   ModelSettingDef,
@@ -37,6 +41,8 @@ const TARGET_ORDER: HardwareTarget[] = ["nvidia", "apple", "vulkan", "cpu"]; // 
 const FAKE_PACK_BYTES: Record<string, number> = { nvidia: 1434 * MB, vulkan: 180 * MB };
 const TIER_BENCH_MS = { instant: 45, balanced: 95, accurate: 260 } as const;
 const DISK_BYTES = 476 * 1024 * MB;
+
+const MOCK_DLC_APP_ID = 4_100_000; // 假的 DLC appId 起点：第 i 个 DLC 是 MOCK_DLC_APP_ID + i
 
 const NOT_INSTALLED: Install = { status: "not_installed", pct: null, error: null };
 const INSTALLED: Install = { status: "installed", pct: null, error: null };
@@ -143,6 +149,41 @@ export class MockMachine {
 }
 
 // ============================================================
+// 交付方式：github 渠道全部下载；steam 渠道按 catalog 的 channels.steam.steam
+// ============================================================
+export type MockChannel = "github" | "steam";
+
+const STEAM = catalog.channels.steam.steam;
+const DOWNLOAD: AssetDelivery = { kind: "download" };
+const dlcAssets = (i: number): string[] => (STEAM.dlc[i] as { assets?: string[] }).assets ?? [];
+const dlcPacks = (i: number): string[] => (STEAM.dlc[i] as { packs?: string[] }).packs ?? [];
+
+export class MockDelivery {
+  constructor(readonly channel: MockChannel) {}
+
+  forAsset(assetName: string): AssetDelivery {
+    if (this.channel !== "steam") return DOWNLOAD;
+    if ((STEAM.base_assets as string[]).includes(assetName)) return { kind: "steam", dlc: null };
+    return this.steamDlc(STEAM.dlc.findIndex((_, i) => dlcAssets(i).includes(assetName)));
+  }
+
+  forPack(packId: string): AssetDelivery {
+    if (this.channel !== "steam") return DOWNLOAD;
+    return this.steamDlc(STEAM.dlc.findIndex((_, i) => dlcPacks(i).includes(packId)));
+  }
+
+  /** 一个 DLC 装好后会出现在磁盘上的东西 */
+  contents(appId: number): { assets: string[]; packs: string[] } {
+    const i = appId - MOCK_DLC_APP_ID;
+    return i >= 0 && i < STEAM.dlc.length ? { assets: dlcAssets(i), packs: dlcPacks(i) } : { assets: [], packs: [] };
+  }
+
+  private steamDlc(i: number): AssetDelivery {
+    return i < 0 ? DOWNLOAD : { kind: "steam", dlc: { appId: MOCK_DLC_APP_ID + i, name: STEAM.dlc[i].name } };
+  }
+}
+
+// ============================================================
 // 模型 × variant
 // ============================================================
 export class MockModelRegistry {
@@ -151,6 +192,7 @@ export class MockModelRegistry {
 
   constructor(
     private readonly machine: MockMachine,
+    private readonly delivery: MockDelivery,
     preinstalled: Set<string>,
     private readonly perModel: () => Record<string, ModelUserSettings>,
     private readonly activeId: () => string | null,
@@ -257,6 +299,19 @@ export class MockModelRegistry {
     this.installs.set(keyOf(id, variantId), INSTALLED);
   }
 
+  /** 交付方式：省略 variantId 取当前选中的版本 */
+  deliveryOf(id: string, variantId?: string): AssetDelivery | undefined {
+    const view = this.get(id);
+    return view?.variants.find((v) => v.id === (variantId ?? view.selectedVariantId))?.delivery;
+  }
+
+  /** Steam 把 DLC 的文件放到位：用到这些资产的版本全部装好（不推送，调用方统一推） */
+  markAssets(assetNames: string[]): void {
+    for (const m of catalog.models) {
+      for (const v of m.variants) if (assetNames.includes(v.asset.name)) this.installs.set(keyOf(m.id, v.id), INSTALLED);
+    }
+  }
+
   /** 模拟一次失败的下载：记成 error，像 Core 的安装任务簿那样 */
   fail(id: string, variantId: string | undefined, error: AppError): void {
     const v = variantId ?? this.get(id)?.selectedVariantId;
@@ -302,6 +357,7 @@ export class MockModelRegistry {
       requiresPack: packOf(v),
       providers: v.providers as Provider[],
       sizeBytes: sizeOf(v),
+      delivery: this.delivery.forAsset(v.asset.name),
       install: this.installs.get(keyOf(m.id, v.id)) ?? NOT_INSTALLED,
       benchP50Ms: benchOf(m, v),
     }));
@@ -353,6 +409,7 @@ export class MockPackRegistry {
 
   constructor(
     private readonly machine: MockMachine,
+    private readonly delivery: MockDelivery,
     private readonly providerInUse: () => Provider | null,
     private readonly onChange: (installedChanged: boolean) => void,
   ) {
@@ -368,6 +425,7 @@ export class MockPackRegistry {
         target: p.target as HardwareTarget,
         providers: p.providers as Provider[],
         sizeBytes: packSize(p),
+        delivery: this.delivery.forPack(p.id),
         install,
         inUse: install.status === "installed" && !!inUse && (p.providers as string[]).includes(inUse),
       };
@@ -400,6 +458,14 @@ export class MockPackRegistry {
       }
     }, TICK_MS);
     this.timers.set(id, timer);
+  }
+
+  /** Steam 把包放到位（本平台没提供的包忽略） */
+  markInstalled(id: string): void {
+    if (!this.machine.packs.some((p) => p.id === id)) return;
+    this.states.set(id, INSTALLED);
+    this.machine.installedPacks.add(id);
+    this.onChange(true);
   }
 
   /** 模拟一次失败的下载 */

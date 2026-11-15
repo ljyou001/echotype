@@ -1,11 +1,12 @@
 /**
  * [INPUT]: 依赖 store/appStore 的 run；依赖 bridge().models 的 cancelInstall/activate 与 bridge().system.openExternal；
- *          依赖 hooks/useVariantInstaller；依赖 components 的 Badge、ProgressBar、LanguageTags；依赖 ./ModelSettingsPanel；
- *          依赖 utils/models、utils/runMode、utils/errors 与 utils/format
+ *          依赖 hooks/useVariantInstaller（安装与下一步的交付状态）；依赖 components 的 Badge、ProgressBar、LanguageTags、SteamDelivery；
+ *          依赖 ./ModelSettingsPanel；依赖 utils/models、utils/runMode、utils/errors 与 utils/format
  * [OUTPUT]: 导出 ModelCard 组件
  * [POS]: Models 页的单个模型卡片，只为"选模型、调设置"服务：下载选中版本（缺引擎包时一并下载并注明）→ 进度/取消 → 启用。
  *        所需引擎包拿不到时不给下载按钮，直说"暂未提供"；安装失败只显示按 code 取的文案。
- *        语言显示为一行标签；展示档位、体积、实测延迟与许可证。
+ *        下一步要补的资产经 Steam 交付时，按钮换成"在 Steam 获取"并注明免费 DLC 名，点击后显示等待 Steam 下载。
+ *        语言显示为一行标签；展示档位、体积、实测延迟、许可证与模型作者（许可证要求署名）。
  *        按版本删除、引擎包、磁盘占用都在模型管理器里，不在卡片上。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -16,8 +17,10 @@ import type { ModelView } from "../../../electron/ipc-contract";
 import { bridge } from "../../bridge";
 import { Badge, ProgressBar } from "../../components/controls";
 import { LanguageTags } from "../../components/LanguageTags";
+import { GetOnSteamButton, SteamWaiting, steamNote } from "../../components/SteamDelivery";
 import { useVariantInstaller } from "../../hooks/useVariantInstaller";
 import { useAppStore } from "../../store/appStore";
+import { sameDlc } from "../../utils/delivery";
 import { errorText } from "../../utils/errors";
 import { formatBytes } from "../../utils/format";
 import { isBusy, isReady, modelSizeBytes, packUnavailable, selectedVariant } from "../../utils/models";
@@ -29,7 +32,7 @@ const TIER_TONE = { instant: "info", balanced: "brand", accurate: "warning" } as
 export function ModelCard({ model }: { model: ModelView }) {
   const { t, i18n } = useTranslation();
   const run = useAppStore((s) => s.run);
-  const { install, pendingPack } = useVariantInstaller();
+  const { install, pendingPack, nextStep } = useVariantInstaller();
   const [expanded, setExpanded] = useState(false);
 
   const packs = useAppStore((s) => s.packs);
@@ -41,6 +44,8 @@ export function ModelCard({ model }: { model: ModelView }) {
   const pack = variant ? pendingPack(variant) : undefined;
   const packName = pack ? runtimeName(t, pack.target) : "";
   const packMissing = !!variant && packUnavailable(variant, packs);
+  const step = variant && !packMissing ? nextStep(variant) : null;
+  const viaSteam = step?.state === "getOnSteam" || step?.state === "waitingForSteam";
 
   // 版本装好了、引擎包还在下：进度条跟随引擎包
   const variantBusy = isBusy(status);
@@ -54,7 +59,7 @@ export function ModelCard({ model }: { model: ModelView }) {
     : status === "downloading" && pct !== null
       ? t("models.install.downloadingPct", { pct })
       : t(`models.install.${status}`);
-  const needsDownload =
+  const needsFetch =
     variant && !packMissing && (status === "not_installed" || status === "error" || (status === "installed" && pack && !packBusy));
 
   return (
@@ -98,14 +103,20 @@ export function ModelCard({ model }: { model: ModelView }) {
             >
               {model.license.id} <FiExternalLink />
             </button>
+            {model.license.author && <span>{t("models.license.by", { author: model.license.author })}</span>}
           </div>
-          {pack && !installing && <p className="model-card__pack-note">{packNeedText(t, pack, i18n.language)}</p>}
+          {pack && !installing && !(variant && sameDlc(variant.delivery, pack.delivery)) && (
+            <p className="model-card__pack-note">{packNeedText(t, pack, i18n.language)}</p>
+          )}
+          {step && viaSteam && <p className="model-card__steam-note">{steamNote(t, step.state, step.dlc)}</p>}
           {packMissing && variant && <p className="model-card__pack-note">{packUnavailableText(t, variant.target)}</p>}
         </div>
 
         <div className="model-card__actions">
           {!variant && <Badge tone="warning">{t("models.status.needsGpu")}</Badge>}
-          {needsDownload && variant && (
+          {needsFetch && variant && step?.state === "getOnSteam" && <GetOnSteamButton onClick={() => install(model.id, variant)} />}
+          {needsFetch && variant && step?.state === "waitingForSteam" && <SteamWaiting onReopen={() => install(model.id, variant)} />}
+          {needsFetch && variant && !viaSteam && (
             <button type="button" className="btn btn--secondary" onClick={() => install(model.id, variant)}>
               <FiDownload /> {status === "error" ? t("models.actions.retry") : t("models.actions.download")}
             </button>

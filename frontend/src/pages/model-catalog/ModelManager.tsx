@@ -1,23 +1,29 @@
 /**
  * [INPUT]: 依赖 store/appStore 的 models、packs、snapshot.activeModel、run；依赖 bridge().models（getStorage/cancelInstall/remove）
- *          与 bridge().enginePacks；依赖 hooks/useVariantInstaller；依赖 components 的 Drawer、ConfirmDialog、Badge、ProgressBar；
- *          依赖 utils/models、utils/runMode、utils/errors、utils/format
+ *          与 bridge().enginePacks.remove；依赖 hooks/useVariantInstaller（安装与交付状态）；依赖 components 的 Drawer、ConfirmDialog、Badge、
+ *          ProgressBar 与 SteamDelivery；依赖 utils/models、utils/runMode、utils/delivery、utils/errors、utils/format
  * [OUTPUT]: 导出 ModelManager 组件
  * [POS]: 模型管理器抽屉，从 Models 页右上角打开。集中管理"装什么"：GPU 运行库（引擎包）、每个模型按硬件分组的版本
  *        （CPU / NVIDIA GPU / Apple Silicon / Vulkan）、体积、实测延迟、下载/取消/删除，以及磁盘占用。
  *        版本需要的引擎包没装时，下载会连同引擎包一起下，并在行内说明。Models 页本身只负责选模型与设置。
  *        不可用的版本分两种说法：引擎包拿不到 → "暂未提供"；这台电脑没有对应硬件 → "这台电脑不可用"。
+ *        版本与运行库共用 RowAction，按交付状态（utils/delivery）出按钮：下载 / 已内置 / 在 Steam 获取 / 等待 Steam 下载 / 来自 Steam。
+ *        Steam 交付的资产没有删除按钮；有来自 Steam 的资产时，抽屉顶部说一次去 Steam 里移除（逐行重复太吵）。
+ *        版本与所需引擎包同在一个 DLC 里时，不再提示"还需要引擎包"。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { FaSteam } from "react-icons/fa";
 import { FiCheck, FiDownload, FiTrash2, FiX, FiZap } from "react-icons/fi";
 import type { EnginePackView, ModelView, VariantView } from "../../../electron/ipc-contract";
 import { bridge } from "../../bridge";
 import { Badge, ProgressBar } from "../../components/controls";
 import { ConfirmDialog, Drawer } from "../../components/Modal";
+import { GetOnSteamButton, SteamWaiting, steamNote } from "../../components/SteamDelivery";
 import { useVariantInstaller } from "../../hooks/useVariantInstaller";
 import { useAppStore } from "../../store/appStore";
+import { type DeliveryState, sameDlc, steamDlc } from "../../utils/delivery";
 import { errorText } from "../../utils/errors";
 import { formatBytes } from "../../utils/format";
 import { TARGET_ORDER, TIER_ORDER, isBusy, isVariantAvailable, packUnavailable, variantBuild } from "../../utils/models";
@@ -65,9 +71,17 @@ export function ModelManager({ onClose }: { onClose: () => void }) {
   );
 
   const confirm = (r: PendingRemoval) => setRemoval(r);
+  const anyFromSteam = [...models.flatMap((m) => m.variants), ...packs].some(
+    (a) => steamDlc(a.delivery) && a.install.status === "installed",
+  );
 
   return (
     <Drawer title={t("manager.title")} subtitle={subtitle} onClose={onClose}>
+      {anyFromSteam && (
+        <p className="mm-steam-note">
+          <FaSteam /> {t("delivery.removeFromSteamNote")}
+        </p>
+      )}
       {packs.length > 0 && (
         <section className="mm-section">
           <h3 className="mm-section__title">{t("manager.runtimes")}</h3>
@@ -120,10 +134,12 @@ export function ModelManager({ onClose }: { onClose: () => void }) {
 // ============================================================
 function PackRow({ pack, onRemove }: { pack: EnginePackView; onRemove: (r: PendingRemoval) => void }) {
   const { t, i18n } = useTranslation();
-  const run = useAppStore((s) => s.run);
+  const { installPack, stateOf } = useVariantInstaller();
   const { status, pct, error } = pack.install;
   const name = runtimeName(t, pack.target);
   const size = formatBytes(pack.sizeBytes, i18n.language);
+  const state = stateOf(pack);
+  const note = steamNote(t, state, steamDlc(pack.delivery));
 
   return (
     <div className="mm-row mm-row--pack">
@@ -141,12 +157,14 @@ function PackRow({ pack, onRemove }: { pack: EnginePackView; onRemove: (r: Pendi
           )}
         </span>
         <span className="mm-row__note">{t("manager.runtimeNote")}</span>
+        {note && <span className="mm-row__note">{note}</span>}
         {status === "error" && error && <span className="field__error">{errorText(t, error)}</span>}
       </div>
       <RowAction
+        state={state}
         status={status}
         pct={pct}
-        onInstall={() => run(() => bridge().enginePacks.install(pack.id))}
+        onInstall={() => installPack(pack)}
         onRemove={() =>
           onRemove({
             title: t("models.packs.removeTitle", { name }),
@@ -213,10 +231,12 @@ function VariantRow({
   const { t, i18n } = useTranslation();
   const run = useAppStore((s) => s.run);
   const inUseVariant = useAppStore((s) => (s.snapshot?.activeModel?.id === model.id ? s.snapshot.activeModel.variantId : null));
-  const { install, pendingPack } = useVariantInstaller();
+  const { install, pendingPack, stateOf } = useVariantInstaller();
   const { status, pct, error } = variant.install;
   const size = formatBytes(variant.sizeBytes, i18n.language);
   const pack = pendingPack(variant);
+  const state = stateOf(variant);
+  const note = available || status === "installed" ? steamNote(t, state, steamDlc(variant.delivery)) : null;
   const name = model.name;
   const versionName = `${targetLabel(t, variant.target)} · ${variantBuild(variant)}`;
 
@@ -237,7 +257,10 @@ function VariantRow({
           {size}
           {variant.benchP50Ms !== null && ` · ${t("models.info.benchShort", { ms: variant.benchP50Ms })}`}
         </span>
-        {available && pack && status !== "installed" && <span className="mm-row__pack-note">{packNeedText(t, pack, i18n.language)}</span>}
+        {note && <span className="mm-row__note">{note}</span>}
+        {available && pack && status !== "installed" && !sameDlc(variant.delivery, pack.delivery) && (
+          <span className="mm-row__pack-note">{packNeedText(t, pack, i18n.language)}</span>
+        )}
         {packMissing && status !== "installed" && <span className="mm-row__pack-note">{packUnavailableText(t, variant.target)}</span>}
         {status === "error" && error && <span className="field__error">{errorText(t, error)}</span>}
       </div>
@@ -245,6 +268,7 @@ function VariantRow({
         <span className="mm-row__unavailable">{t(packMissing ? "manager.notAvailableYet" : "manager.notOnThisComputer")}</span>
       ) : (
         <RowAction
+          state={state}
           status={status}
           pct={pct}
           onInstall={() => install(model.id, variant)}
@@ -263,22 +287,48 @@ function VariantRow({
 }
 
 // ============================================================
-// 行尾操作：下载 / 进度 + 取消 / 已安装 + 删除
+// 行尾操作：下载 / 进度 + 取消 / 已安装 + 删除；Steam 交付时换成 Steam 的四种状态
 // ============================================================
 function RowAction({
+  state,
   status,
   pct,
   onInstall,
   onCancel,
   onRemove,
 }: {
+  state: DeliveryState;
   status: VariantView["install"]["status"];
   pct: number | null;
-  onInstall: () => void;
+  onInstall: () => void; // Steam 交付时打开商店页
   onCancel?: () => void;
   onRemove: () => void;
 }) {
   const { t } = useTranslation();
+
+  if (state === "included" || state === "fromSteam") {
+    return (
+      <div className="mm-row__action">
+        <span className="mm-row__installed" title={state === "fromSteam" ? t("delivery.removeInSteam") : undefined}>
+          <FiCheck /> {t(`delivery.${state}`)}
+        </span>
+      </div>
+    );
+  }
+  if (state === "getOnSteam") {
+    return (
+      <div className="mm-row__action">
+        <GetOnSteamButton small onClick={onInstall} />
+      </div>
+    );
+  }
+  if (state === "waitingForSteam") {
+    return (
+      <div className="mm-row__action">
+        <SteamWaiting onReopen={onInstall} />
+      </div>
+    );
+  }
 
   if (status === "installed") {
     return (
