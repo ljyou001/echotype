@@ -4,8 +4,8 @@
 Electron 外壳：本层唯一 import electron 与原生模块的地方。只把 Core 的状态显示出来、把用户与系统事件转给 Core，不做业务决策。
 
 ## 成员清单
-ipc.ts: EchotypeBridge（ipcVersion 2）的主进程实现，每个 IPC channel 恰好一个处理器（含 models:update-settings、models:storage、packs:*、system:licenses、quick-action:open），只转调 Core 与窗口；拒绝非本应用 webContents 的调用；错误统一编码为 "[CODE] message"（preload 再拆成带 code 的 Error）；重启引擎带原因写日志
-main-window.ts: 主窗口 980×680，底色随主题明暗，经 additionalArguments 把发行渠道交给 preload，关闭即隐藏，退出时才真正关闭；loadRenderer（开发态 Vite URL / 打包态 dist/index.html）与 hardenWebContents（拒绝新窗口，外链交给浏览器）供两个窗口复用
+ipc.ts: EchotypeBridge（ipcVersion 2）的主进程实现，每个 IPC channel 恰好一个处理器（含 models:update-settings、models:storage、packs:*、system:licenses、quick-action:open；models:cancel-install 经 Core 以便拒绝 Steam 交付的资产），只转调 Core 与窗口；拒绝非本应用 webContents 的调用；错误统一编码为 "[CODE] message"（preload 再拆成带 code 的 Error）；重启引擎带原因写日志
+main-window.ts: 主窗口 980×680，底色随主题明暗，经 additionalArguments 把发行渠道交给 preload，关闭即隐藏，退出时才真正关闭；获得焦点时回调 onFocus（Core 重新扫描 Steam 目录）；loadRenderer（开发态 Vite URL / 打包态 dist/index.html）与 hardenWebContents（拒绝新窗口，外链交给浏览器）供两个窗口复用
 quick-action-window.ts: Quick Action 浮窗（底色随主题明暗），几何与交互移植自 v2：贴近鼠标、按插件数估高、1 s 失焦宽限、拖动夹在屏幕内、回复变长时上移；resize 视为"已有回复"并关闭失焦自动关闭（替代 v2 的 quick-action-has-reply 消息）
 theme.ts: ThemeSync，settings.ui.theme.mode 到 nativeTheme.themeSource 的唯一出口；原生标题栏、滚动条与渲染进程的 prefers-color-scheme 随之切换；主窗口与 Quick Action 窗口的底色跟随明暗（system 模式下系统切换由 nativeTheme updated 同步），色值等于渲染层的 --bg（tokens.css / themes.css）。强调色只属于渲染层
 tray.ts: 托盘。状态由 AppSnapshot 推导（加载黄、出错红、录音白、就绪无点；就绪但没有模型时提示 No model loaded），jimp 绘制并按状态缓存；菜单文案随听写状态切换

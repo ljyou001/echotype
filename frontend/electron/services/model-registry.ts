@@ -1,8 +1,10 @@
 /**
- * [INPUT]: 依赖 ./model-catalog 的目录与类型、./asset-installer 的安装流水线与目录维护、./install-jobs 的任务簿；
- *          依赖 core/emitter、core/logger；依赖 ipc-contract 的 AppError
+ * [INPUT]: 依赖 ./model-catalog 的目录与类型、./asset-installer 的安装流水线与目录维护、./install-jobs 的任务簿、
+ *          ./asset-sources 的就地目录与下载地址；依赖 core/emitter、core/logger；依赖 ipc-contract 的 AppError
  * [OUTPUT]: 导出 ModelRegistry（scan / isInstalled / installedVariants / variantDir / state / fail / install / cancelInstall / remove / onChange）
- * [POS]: 模型 variant 的磁盘安装态的唯一管理者：<home>/models/<model id>/<variant id>/。
+ * [POS]: 模型 variant 的安装态的唯一管理者。先问 asset-sources：资产在 dir 源上（Steam depot）即视为已安装，
+ *        variantDir 返回那个目录，引擎就地加载；否则看下载目录 <home>/models/<model id>/<variant id>/。两处都有时用 dir 上的那份。
+ *        下载、复制、删除只发生在下载目录，dir 源的目录从不被写入或删除。
  *        它不和引擎说话，也不懂用户设置——"选哪个 variant"由调用方（model-resolver）决定后传入；
  *        requires（配套标点模型）的 variant 由注入的 pickVariant 选择，并先于本体安装。
  *        同一资产（如一个 GGUF 包）支撑多个 variant 时，已装好的兄弟 variant 就地复制，不再下载第二遍。
@@ -14,16 +16,17 @@ import path from "node:path";
 import type { AppError } from "../ipc-contract.js";
 import type { Unsubscribe } from "../core/emitter.js";
 import type { Logger } from "../core/logger.js";
-import { cleanupStaging, cloneInstalled, installAsset, InstallError, readMarker, removeDir, type AssetLocation } from "./asset-installer.js";
-import { InstallJobs, type InstallState } from "./install-jobs.js";
-import type { AssetRef, CatalogModel, CatalogVariant, ModelCatalog } from "./model-catalog.js";
+import { cleanupStaging, cloneInstalled, installAsset, InstallError, readMarker, removeDir } from "./asset-installer.js";
+import type { AssetSources } from "./asset-sources.js";
+import { INSTALLED, InstallJobs, type InstallState } from "./install-jobs.js";
+import type { CatalogModel, CatalogVariant, ModelCatalog } from "./model-catalog.js";
 
 export interface RegistryOptions {
   catalog: ModelCatalog;
   modelsDir: string;
   logger: Logger;
   fetch: typeof globalThis.fetch;
-  locate: (asset: AssetRef) => AssetLocation[];
+  sources: Pick<AssetSources, "inPlace" | "downloads">;
   pickVariant: (model: CatalogModel) => CatalogVariant | null;
 }
 
@@ -46,32 +49,34 @@ export class ModelRegistry {
     return this.opts.modelsDir;
   }
 
-  /** 启动时调用一次：清理中断残留，按 .installed.json 判定每个 variant 的安装态。 */
+  /** 启动时调用一次（dir 源先由 asset-sources 扫描）：清理中断残留，按 .installed.json 判定下载目录里每个 variant 的安装态。 */
   scan(): void {
     for (const model of this.opts.catalog.all()) {
       cleanupStaging(path.join(this.opts.modelsDir, model.id));
       for (const v of model.variants) {
-        const marker = readMarker(this.variantDir(model.id, v.id));
+        const marker = readMarker(this.downloadDir(model.id, v.id));
         this.jobs.setInstalled(keyOf(model.id, v.id), marker?.model === model.id && marker?.variant === v.id);
       }
     }
     this.log.info("scan complete", { installed: this.opts.catalog.all().flatMap((m) => this.installedVariants(m.id).map((v) => keyOf(m.id, v))) });
   }
 
+  /** 就地可用（dir 源）或已下载 */
   isInstalled(modelId: string, variantId: string): boolean {
-    return this.jobs.isInstalled(keyOf(modelId, variantId));
+    return this.inPlaceDir(modelId, variantId) !== null || this.jobs.isInstalled(keyOf(modelId, variantId));
   }
 
   installedVariants(modelId: string): string[] {
     return (this.opts.catalog.get(modelId)?.variants ?? []).filter((v) => this.isInstalled(modelId, v.id)).map((v) => v.id);
   }
 
+  /** 引擎加载的目录（model_dir）：dir 源上的那份优先，否则下载目录 */
   variantDir(modelId: string, variantId: string): string {
-    return path.join(this.opts.modelsDir, modelId, variantId);
+    return this.inPlaceDir(modelId, variantId) ?? this.downloadDir(modelId, variantId);
   }
 
   state(modelId: string, variantId: string): InstallState {
-    return this.jobs.state(keyOf(modelId, variantId));
+    return this.inPlaceDir(modelId, variantId) ? { ...INSTALLED } : this.jobs.state(keyOf(modelId, variantId));
   }
 
   /** 该 variant 的前置步骤（所需引擎包）失败：错误记在它自己的卡片上。 */
@@ -115,26 +120,27 @@ export class ModelRegistry {
       const spec = {
         label: key,
         asset: variant.asset,
-        locations: this.opts.locate(variant.asset),
-        targetDir: this.variantDir(model.id, variant.id),
+        locations: this.opts.sources.downloads(variant.asset),
+        targetDir: this.downloadDir(model.id, variant.id),
         requiredFiles: Object.values(variant.files),
         marker: { model: model.id, variant: variant.id },
       };
-      const sibling = this.installedSibling(model, variant);
+      const sibling = this.downloadedSibling(model, variant);
       if (sibling) {
         onProgress("extracting", null);
         this.log.info("reusing an installed variant with the same asset", { key, from: sibling.id });
-        await cloneInstalled(this.variantDir(model.id, sibling.id), spec);
+        await cloneInstalled(this.downloadDir(model.id, sibling.id), spec);
         return;
       }
       await installAsset(spec, { signal, onProgress, fetch: this.opts.fetch, logger: this.log });
     });
   }
 
-  /** 同一模型里已安装、且来自同一资产（release + 文件名）的另一个 variant */
-  private installedSibling(model: CatalogModel, variant: CatalogVariant): CatalogVariant | undefined {
+  /** 同一模型里已下载、且来自同一资产（release + 文件名）的另一个 variant（就地可用的资产不走这里：兄弟 variant 同样就地可用） */
+  private downloadedSibling(model: CatalogModel, variant: CatalogVariant): CatalogVariant | undefined {
     return model.variants.find(
-      (v) => v.id !== variant.id && v.asset.name === variant.asset.name && v.asset.release === variant.asset.release && this.isInstalled(model.id, v.id),
+      (v) =>
+        v.id !== variant.id && v.asset.name === variant.asset.name && v.asset.release === variant.asset.release && this.jobs.isInstalled(keyOf(model.id, v.id)),
     );
   }
 
@@ -147,13 +153,16 @@ export class ModelRegistry {
     await this.jobs.cancel([...own, ...deps]);
   }
 
-  /** 调用方负责先让引擎释放该模型（model-runtime.release）。省略 variantId = 删除全部版本。 */
+  /**
+   * 删除下载目录里的版本。调用方负责先让引擎释放该模型（model-runtime.release），并拒绝 Steam 交付的版本（STEAM_MANAGED）。
+   * 省略 variantId = 删除全部版本。dir 源的目录不在下载目录里，从不被删除。
+   */
   async remove(modelId: string, variantId?: string): Promise<void> {
     const model = this.opts.catalog.require(modelId);
     const targets = model.variants.filter((v) => !variantId || v.id === variantId);
     await this.jobs.cancel(targets.map((v) => keyOf(model.id, v.id)));
     for (const v of targets) {
-      const dir = this.variantDir(model.id, v.id);
+      const dir = this.downloadDir(model.id, v.id);
       await removeDir(dir);
       fs.rmSync(`${dir}.partial`, { force: true });
       this.jobs.setInstalled(keyOf(model.id, v.id), false);
@@ -161,5 +170,17 @@ export class ModelRegistry {
     const modelDir = path.join(this.opts.modelsDir, model.id);
     if (fs.existsSync(modelDir) && fs.readdirSync(modelDir).length === 0) fs.rmdirSync(modelDir);
     this.log.info("removed", { model: model.id, variants: targets.map((v) => v.id) });
+  }
+
+  // ============================================================
+  // 内部
+  // ============================================================
+  private downloadDir(modelId: string, variantId: string): string {
+    return path.join(this.opts.modelsDir, modelId, variantId);
+  }
+
+  private inPlaceDir(modelId: string, variantId: string): string | null {
+    const variant = this.opts.catalog.get(modelId)?.variants.find((v) => v.id === variantId);
+    return variant ? this.opts.sources.inPlace(variant.asset) : null;
   }
 }

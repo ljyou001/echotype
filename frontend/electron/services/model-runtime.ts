@@ -215,7 +215,7 @@ export class ModelRuntime {
     this.set({ phase: "loading", modelId: desired.modelId, providerUsed: null, progress: null, error: null, loaded: null });
     const c = desired.params.companion as { model: { id: string }; variant: { id: string } } | undefined; // 协议层把目录对象视为不透明
     const companion = c ? `${c.model.id}/${c.variant.id}` : null;
-    this.log.info("loading model", { id: desired.modelId, variant: desired.loaded.variantId, settings: desired.params.settings, companion });
+    this.log.info("loading model", { id: desired.modelId, variant: desired.loaded.variantId, dir: desired.params.model_dir, settings: desired.params.settings, companion });
     try {
       const result = await this.deps.engine.request("model.load", desired.params);
       this.loadedKey = desired.key;

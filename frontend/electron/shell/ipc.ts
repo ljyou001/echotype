@@ -74,7 +74,7 @@ export function registerIpc(ctx: IpcContext): void {
   // 模型
   handle(IPC.modelsList, () => core.models());
   handle(IPC.modelsInstall, (id, variantId) => core.installModel(str(id), optStr(variantId)));
-  handle(IPC.modelsCancelInstall, (id, variantId) => core.registry.cancelInstall(str(id), optStr(variantId)));
+  handle(IPC.modelsCancelInstall, (id, variantId) => core.cancelModelInstall(str(id), optStr(variantId)));
   handle(IPC.modelsRemove, (id, variantId) => core.removeModel(str(id), optStr(variantId)));
   handle(IPC.modelsActivate, (id) => core.activateModel(str(id)));
   handle(IPC.modelsUpdateSettings, (id, patch) => core.updateModelSettings(str(id), patch as ModelUserSettings));

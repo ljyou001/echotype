@@ -2,9 +2,10 @@
  * [INPUT]: 依赖 node:fs/crypto/stream；依赖 extract-zip；依赖 core/atomic-file 的原子写与重试 rename；
  *          依赖 ./model-catalog 的 AssetRef、AssetSource
  * [OUTPUT]: 导出 locateAsset、installAsset、cloneInstalled、swapIntoPlace、readMarker、removeDir、cleanupStaging、directorySize、freeBytes、
- *          InstallError、AssetLocation
+ *          InstallError、AssetLocation、HttpLocation
  * [POS]: 一切可下载资产（模型 variant、引擎包）共用的安装流水线（MODEL_MANIFEST §2/§5/§6）：
- *        按渠道的 sources 顺序生成候选位置（http 下载 / local 复制），失败自动换下一个源 →
+ *        locateAsset 按渠道的 sources 顺序展开模板，得到 http 地址与 dir 目录；dir 目录由 asset-sources 校验后就地使用，
+ *        这里只消费 http 地址，失败自动换下一个源 →
  *        <dir>.partial（HTTP Range 续传，换源续传同一文件，sha256 兜底）→ sha256（目录值为 null 时告警跳过）→
  *        解 zip 到 <dir>.tmp（文件位于 zip 根）→ 核对必需文件 → 写 .installed.json（资产名 + 实际 sha256）→
  *        swapIntoPlace 换位（旧目录先挪到 <dir>.previous，新目录就位后才删旧目录，用于引擎包与模型的更新）。
@@ -35,11 +36,12 @@ export class InstallError extends Error {
   }
 }
 
-export type AssetLocation = { sourceId: string; kind: "http"; url: string } | { sourceId: string; kind: "local"; path: string };
+export type HttpLocation = { sourceId: string; kind: "http"; url: string };
+export type AssetLocation = HttpLocation | { sourceId: string; kind: "dir"; path: string };
 
-/** 模板变量：{release} {asset} {platform} {steam_app_dir} …；值缺失的 local 源被跳过，http 源同理。 */
+/** 模板变量：{release} {asset} {asset_stem}（资产名去掉 .zip）{platform} {steam_app_dir} …；有变量解析不了的源被跳过。 */
 export function locateAsset(asset: AssetRef, sources: AssetSource[], vars: Record<string, string | undefined>): AssetLocation[] {
-  const values: Record<string, string | undefined> = { ...vars, release: asset.release, asset: asset.name };
+  const values: Record<string, string | undefined> = { ...vars, release: asset.release, asset: asset.name, asset_stem: asset.name.replace(/\.zip$/i, "") };
   const fill = (template: string): string | null => {
     let unresolved = false;
     const out = template.replace(/\{([a-z_]+)\}/g, (_m, key: string) => {
@@ -54,9 +56,9 @@ export function locateAsset(asset: AssetRef, sources: AssetSource[], vars: Recor
     if (s.type === "http" && s.url_template) {
       const url = fill(s.url_template);
       if (url) out.push({ sourceId: s.id, kind: "http", url });
-    } else if (s.type === "local" && s.path_template) {
+    } else if (s.type === "dir" && s.path_template) {
       const p = fill(s.path_template);
-      if (p) out.push({ sourceId: s.id, kind: "local", path: p });
+      if (p) out.push({ sourceId: s.id, kind: "dir", path: path.normalize(p) }); // 模板用 /，引擎拿到的 model_dir 用本机分隔符
     }
   }
   return out;
@@ -65,7 +67,7 @@ export function locateAsset(asset: AssetRef, sources: AssetSource[], vars: Recor
 export interface InstallSpec {
   label: string; // 日志与错误里的名字，如 "sensevoice-small/cpu-int8"
   asset: AssetRef;
-  locations: AssetLocation[];
+  locations: HttpLocation[]; // 只有下载地址；就地使用的 dir 源不进安装流水线
   targetDir: string;
   requiredFiles: string[]; // 相对 targetDir
   marker: Record<string, unknown>;
@@ -121,8 +123,7 @@ async function fetchFromAnySource(spec: InstallSpec, partial: string, opts: Inst
   let lastError: unknown = null;
   for (const loc of spec.locations) {
     try {
-      if (loc.kind === "local") await copyLocal(loc.path, partial, opts);
-      else await download(loc.url, partial, spec.asset.size_bytes, opts);
+      await download(loc.url, partial, spec.asset.size_bytes, opts);
       return;
     } catch (err) {
       if (opts.signal.aborted) throw err;
@@ -131,13 +132,6 @@ async function fetchFromAnySource(spec: InstallSpec, partial: string, opts: Inst
     }
   }
   throw lastError instanceof InstallError ? lastError : new InstallError("DOWNLOAD_FAILED", String((lastError as Error)?.message ?? lastError));
-}
-
-async function copyLocal(from: string, to: string, opts: InstallOptions): Promise<void> {
-  if (!fs.existsSync(from)) throw new InstallError("DOWNLOAD_FAILED", `not found: ${from}`);
-  opts.onProgress("downloading", 0);
-  await pipeline(fs.createReadStream(from), fs.createWriteStream(to), { signal: opts.signal });
-  opts.onProgress("downloading", 100);
 }
 
 // ============================================================

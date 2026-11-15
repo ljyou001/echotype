@@ -3,7 +3,7 @@
  *          依赖 shell/ 的窗口、托盘、IPC、系统能力与平台适配器；
  *          依赖 dev/ 的 smoke 工厂（仅 ECHOTYPE_SMOKE=1 走 mock 引擎、ECHOTYPE_SMOKE=real 走真实引擎）
  * [OUTPUT]: 无导出。Electron 主进程入口
- * [POS]: 纯装配：解析运行时布局与数据根（userData = <home>/electron，先于单例锁）→ 探测本机（GPU、渠道、Wayland）→
+ * [POS]: 纯装配：解析运行时布局与数据根（userData = <home>/electron，先于单例锁）→ 探测本机（GPU、渠道、Wayland、steam 渠道的 {steam_app_dir}）→
  *        创建日志与 Core（注入 Electron 适配器）→ 注册 IPC → 托盘与窗口 → 退出时优雅关停引擎。
  *        不含业务逻辑；任何"做什么"都在 core/ 与 services/，任何"怎么显示"都在 shell/。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -16,7 +16,7 @@ import { app, Menu, net, safeStorage, shell, type WebContents } from "electron";
 import { IPC } from "./ipc-contract.js";
 import { Core } from "./core/create-core.js";
 import { createFileLogger } from "./core/logger.js";
-import { resolveCatalogPath, resolveCorePaths, resolveLicensesPath, type RuntimeLayout } from "./core/paths.js";
+import { resolveCatalogPath, resolveCorePaths, resolveLicensesPath, resolveSteamAppDir, type RuntimeLayout } from "./core/paths.js";
 import { resolveEngineCommand } from "./engine/engine-command.js";
 import { mockSmoke } from "./dev/smoke.js";
 import { realSmoke } from "./dev/smoke-real.js";
@@ -37,9 +37,9 @@ const layout: RuntimeLayout = {
   repoRoot: path.resolve(distDir, "..", ".."),
   distDir,
 };
-const catalogFile = resolveCatalogPath(layout);
 const SMOKES: Record<string, SmokeFactory> = { "1": mockSmoke, real: realSmoke };
-const smoke = app.isPackaged ? null : (SMOKES[process.env.ECHOTYPE_SMOKE ?? ""]?.(catalogFile, layout) ?? null); // 先于路径解析：smoke 设置临时 ECHOTYPE_HOME
+const smoke = app.isPackaged ? null : (SMOKES[process.env.ECHOTYPE_SMOKE ?? ""]?.(resolveCatalogPath(layout), layout) ?? null); // 先于路径解析：smoke 设置临时 ECHOTYPE_HOME（与渠道）
+const catalogFile = smoke?.catalogFile ?? resolveCatalogPath(layout);
 const paths = resolveCorePaths();
 // userData 放进数据根目录，须在 ready 与单例锁之前：Chromium 存储、safeStorage 密钥与单例锁都不与 v2 的 %APPDATA%\EchoType 共用
 fs.mkdirSync(paths.electronDir, { recursive: true }); // setPath 要求目录已存在
@@ -85,7 +85,7 @@ async function main(): Promise<void> {
   const preloadArgs = [`${CHANNEL_ARG}${channel}`];
   const theme = new ThemeSync();
   const background = () => theme.background();
-  const mainWindow = new MainWindow({ preload, preloadArgs, background, renderer, icon, trust });
+  const mainWindow = new MainWindow({ preload, preloadArgs, background, renderer, icon, trust, onFocus: () => core.rescanAssets() });
   const quickAction = new QuickActionWindow({ preload, preloadArgs, background, renderer, logger, trust });
   theme.track(mainWindow, quickAction);
   const power = new PowerPolicy(logger);
@@ -101,7 +101,10 @@ async function main(): Promise<void> {
       catalogFile,
       channel,
       machine,
-      templateVars: { platform: platformKey(machine), steam_app_dir: channel === "steam" ? path.dirname(process.execPath) : undefined },
+      templateVars: {
+        platform: platformKey(machine),
+        steam_app_dir: resolveSteamAppDir({ channel, isPackaged: app.isPackaged, env: process.env, execPath: process.execPath, platform: process.platform }),
+      },
       engineCommand: (pack) => resolveEngineCommand({ layout, env: process.env, execPath: process.execPath, pack }),
       licensesFile: resolveLicensesPath(layout),
       appVersion: app.getVersion(),
@@ -125,7 +128,7 @@ async function main(): Promise<void> {
       applyLaunchAtStartup: (enabled) => setLaunchAtStartup(enabled, logger),
       applyTheme: ({ mode }) => theme.apply(mode),
       secretCrypto: electronSecretCrypto(safeStorage),
-      openUri: (uri) => shell.openExternal(uri),
+      openUri: smoke?.openUri ?? ((uri) => shell.openExternal(uri)),
       publishIntegrationEvent: (event) => broadcast(IPC.integrationsEvent, event),
     },
   );

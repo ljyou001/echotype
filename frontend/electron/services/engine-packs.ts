@@ -1,9 +1,12 @@
 /**
  * [INPUT]: 依赖 ./model-catalog 的 EnginePack、ModelCatalog；依赖 ./asset-installer 的安装流水线；依赖 ./install-jobs；
- *          依赖 engine/engine-command 的 ENGINE_EXECUTABLE；依赖 ipc-contract 的 EnginePackView、AppError
- * [OUTPUT]: 导出 EnginePacks（scan / offered / published / isInstalled / usable / markOutdated / preferred / dir / views / install / remove / onChange）
- * [POS]: 可选 GPU 引擎包（MODEL_MANIFEST §5）的安装态：<home>/engines/<pack id>/，内含完整的 echotype-engine。
- *        一个包只属于一个引擎版本。安装时把资产名与 sha256 记进 .installed.json；
+ *          依赖 ./asset-sources 的就地目录、下载地址与交付方式；
+ *          依赖 engine/engine-command 的 ENGINE_EXECUTABLE；依赖 ipc-contract 的 EnginePackView、AppError、AssetDelivery
+ * [OUTPUT]: 导出 EnginePacks（scan / offered / published / isInstalled / usable / markOutdated / preferred / dir / delivery / views / install / remove / onChange）
+ * [POS]: 可选 GPU 引擎包（MODEL_MANIFEST §5）的安装态，包内含完整的 echotype-engine。两种来源：
+ *        dir 源（Steam DLC，asset-sources 已按 .asset.json 的 sha256 核对过目录）就地使用，引擎从那个目录拉起，从不写入或删除；
+ *        下载目录 <home>/engines/<pack id>/。两处都有时用 dir 上的那份。§2 规则 1：dir 提供的包算已安装，auto 可以选它。
+ *        一个包只属于一个引擎版本。下载安装时把资产名与 sha256 记进 .installed.json；
  *        只有记录的 sha256 等于本目录该平台的 sha256（旧布局没有 sha256 时比资产名，资产名带引擎版本）、
  *        且没有因握手协议不符或反复崩溃被标记，已装的包才"可用"，才会被拉起。其余已装的包都是"过期"：
  *        引擎回落内置版本，视图把它显示为 not_installed + PACK_OUTDATED，模型管理器据此提供更新。
@@ -15,12 +18,13 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import type { AppError, EnginePackView } from "../ipc-contract.js";
+import type { AppError, AssetDelivery, EnginePackView } from "../ipc-contract.js";
 import type { Unsubscribe } from "../core/emitter.js";
 import type { Logger } from "../core/logger.js";
 import { ENGINE_EXECUTABLE } from "../engine/engine-command.js";
-import { cleanupStaging, installAsset, InstallError, readMarker, removeDir, type AssetLocation } from "./asset-installer.js";
-import { InstallJobs, NOT_INSTALLED, type InstallState } from "./install-jobs.js";
+import { cleanupStaging, installAsset, InstallError, readMarker, removeDir } from "./asset-installer.js";
+import type { AssetSources } from "./asset-sources.js";
+import { INSTALLED, InstallJobs, NOT_INSTALLED, type InstallState } from "./install-jobs.js";
 import type { AssetRef, EnginePack, ModelCatalog } from "./model-catalog.js";
 
 export interface EnginePacksOptions {
@@ -28,7 +32,7 @@ export interface EnginePacksOptions {
   enginesDir: string;
   platformKey: string; // e.g. "win32-x64"
   protocol: number; // 内置引擎的协议版本
-  locate: (asset: AssetRef) => AssetLocation[];
+  sources: Pick<AssetSources, "inPlace" | "downloads" | "delivery">;
   fetch: typeof globalThis.fetch;
   logger: Logger;
 }
@@ -50,10 +54,11 @@ export class EnginePacks {
     this.jobs = new InstallJobs(this.log);
   }
 
+  /** 下载目录的安装态（dir 源由 asset-sources 扫描） */
   scan(): void {
     cleanupStaging(this.opts.enginesDir);
     for (const pack of this.opts.catalog.packs()) {
-      const present = readMarker(this.dir(pack.id))?.pack === pack.id && fs.existsSync(this.executable(pack.id));
+      const present = readMarker(this.downloadDir(pack.id))?.pack === pack.id && fs.existsSync(path.join(this.downloadDir(pack.id), ENGINE_EXECUTABLE));
       this.readBuild(pack.id, present);
       this.jobs.setInstalled(pack.id, present);
       if (present && !this.matchesCatalog(pack.id)) this.log.warn("installed pack is not this version's build", { id: pack.id, installed: this.builds.get(pack.id), catalog: this.asset(pack.id) });
@@ -71,14 +76,15 @@ export class EnginePacks {
     return this.offered(id) && !!this.asset(id)?.sha256;
   }
 
-  /** 包的文件在磁盘上（不论是否过期）。以扫描与安装为准，不看任务簿：更新失败时任务簿是 error，旧目录仍在 */
+  /** 包的文件在磁盘上（不论是否过期）：dir 源上，或下载目录里。以扫描与安装为准，不看任务簿：更新失败时任务簿是 error，旧目录仍在 */
   isInstalled(id: string): boolean {
-    return this.builds.has(id);
+    return this.inPlaceDir(id) !== null || this.builds.has(id);
   }
 
-  /** 可用于拉起引擎：已装、正是本目录钉住的构建、运行中没有被标记失效 */
+  /** 可用于拉起引擎：正是本目录钉住的构建（dir 源已按 sha256 核对；下载的看 .installed.json），且运行中没有被标记失效 */
   usable(id: string): boolean {
-    return this.isInstalled(id) && this.matchesCatalog(id) && !this.outdated.has(id);
+    if (this.outdated.has(id)) return false;
+    return this.inPlaceDir(id) !== null || (this.builds.has(id) && this.matchesCatalog(id));
   }
 
   markOutdated(id: string, reason: string): void {
@@ -95,12 +101,18 @@ export class EnginePacks {
     return packs.find((p) => this.usable(p.id)) ?? null;
   }
 
+  /** 拉起引擎的目录：dir 源上的那份优先，否则下载目录 */
   dir(id: string): string {
-    return path.join(this.opts.enginesDir, id);
+    return this.inPlaceDir(id) ?? this.downloadDir(id);
   }
 
   executable(id: string): string {
     return path.join(this.dir(id), ENGINE_EXECUTABLE);
+  }
+
+  delivery(id: string): AssetDelivery {
+    const asset = this.asset(id);
+    return asset ? this.opts.sources.delivery(asset) : { kind: "download" };
   }
 
   views(inUse: string | null): EnginePackView[] {
@@ -112,6 +124,7 @@ export class EnginePacks {
         target: p.target,
         providers: p.providers,
         sizeBytes: this.asset(p.id)?.size_bytes ?? 0,
+        delivery: this.delivery(p.id),
         install: this.installView(p.id),
         inUse: p.id === inUse,
       }));
@@ -121,37 +134,38 @@ export class EnginePacks {
     return this.jobs.onChange(() => cb());
   }
 
-  /** 安装或更新。旧目录在新包下载、校验、解压、核对完成之前原样保留，失败时继续留着（仍是过期状态，不会被拉起）。 */
+  /** 下载安装或更新。dir 源上已有本版本的包时什么都不做。旧目录在新包下载、校验、解压、核对完成之前原样保留，失败时继续留着（仍是过期状态，不会被拉起）。 */
   install(id: string): Promise<void> {
     const asset = this.asset(id);
     if (!asset || !this.published(id)) {
       const error = this.unavailable(id);
       return Promise.reject(new InstallError(error.code, error.message));
     }
+    if (this.inPlaceDir(id)) return Promise.resolve();
     return this.jobs.run(id, (signal, onProgress) =>
       installAsset(
         {
           label: `engine-pack/${id}`,
           asset,
-          locations: this.opts.locate(asset),
-          targetDir: this.dir(id),
+          locations: this.opts.sources.downloads(asset),
+          targetDir: this.downloadDir(id),
           requiredFiles: [ENGINE_EXECUTABLE],
           marker: { pack: id, platform: this.opts.platformKey },
         },
         { signal, onProgress, fetch: this.opts.fetch, logger: this.log },
       ).then(() => {
-        if (process.platform !== "win32") fs.chmodSync(this.executable(id), 0o755); // zip 不一定保留可执行位
+        if (process.platform !== "win32") fs.chmodSync(path.join(this.downloadDir(id), ENGINE_EXECUTABLE), 0o755); // zip 不一定保留可执行位
         this.readBuild(id, true);
         this.outdated.delete(id); // 新构建就位：此前的失效标记属于旧构建
       }),
     );
   }
 
-  /** 调用方负责先让引擎离开该包（重启到内置引擎），否则 Windows 删不掉正在运行的文件。 */
+  /** 删除下载目录里的包。调用方负责先让引擎离开该包（重启到内置引擎），并拒绝 Steam 交付的包（STEAM_MANAGED）。 */
   async remove(id: string): Promise<void> {
     await this.jobs.cancel([id]);
-    await removeDir(this.dir(id));
-    fs.rmSync(`${this.dir(id)}.partial`, { force: true });
+    await removeDir(this.downloadDir(id));
+    fs.rmSync(`${this.downloadDir(id)}.partial`, { force: true });
     this.outdated.delete(id);
     this.builds.delete(id);
     this.jobs.setInstalled(id, false);
@@ -165,9 +179,18 @@ export class EnginePacks {
     return this.opts.catalog.pack(id)?.platforms[this.opts.platformKey]?.asset ?? null;
   }
 
+  private downloadDir(id: string): string {
+    return path.join(this.opts.enginesDir, id);
+  }
+
+  private inPlaceDir(id: string): string | null {
+    const asset = this.asset(id);
+    return asset ? this.opts.sources.inPlace(asset) : null;
+  }
+
   private readBuild(id: string, present: boolean): void {
     if (!present) return void this.builds.delete(id);
-    const marker = readMarker(this.dir(id));
+    const marker = readMarker(this.downloadDir(id));
     const str = (v: unknown) => (typeof v === "string" && v ? v : null);
     this.builds.set(id, { asset: str(marker?.asset), sha256: str(marker?.sha256)?.toLowerCase() ?? null });
   }
@@ -180,11 +203,13 @@ export class EnginePacks {
     return build.sha256 ? build.sha256 === asset.sha256?.toLowerCase() : build.asset === asset.name;
   }
 
-  /** 进行中或失败的安装照实显示；装好但不可用的包显示为待更新（not_installed + PACK_OUTDATED） */
+  /** 进行中或失败的安装照实显示；可用的包 installed；在磁盘上但不可用的包显示为待更新（not_installed + PACK_OUTDATED） */
   private installView(id: string): InstallState {
     const state = this.jobs.state(id);
-    if (state.status !== "installed" || this.usable(id)) return { ...state };
-    return { ...NOT_INSTALLED, error: this.outdated.get(id) ?? this.staleBuild(id) };
+    if (state.status !== "installed" && state.status !== "not_installed") return { ...state };
+    if (this.usable(id)) return { ...INSTALLED };
+    if (this.isInstalled(id)) return { ...NOT_INSTALLED, error: this.outdated.get(id) ?? this.staleBuild(id) };
+    return { ...NOT_INSTALLED };
   }
 
   private staleBuild(id: string): AppError {

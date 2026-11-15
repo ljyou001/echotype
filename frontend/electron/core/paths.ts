@@ -1,11 +1,12 @@
 /**
  * [INPUT]: 依赖 node:os、node:path
- * [OUTPUT]: 导出 CorePaths、LegacyPaths、resolveCorePaths、resolveCatalogPath、resolveLicensesPath、RuntimeLayout
+ * [OUTPUT]: 导出 CorePaths、LegacyPaths、resolveCorePaths、resolveCatalogPath、resolveLicensesPath、resolveSteamAppDir、RuntimeLayout
  * [POS]: Core 全部磁盘位置的唯一来源。其他模块只接收已解析的路径，不自己拼目录。
  *        用户数据根目录缺省 ~/.echotype-v3，ECHOTYPE_HOME 覆盖：测试、smoke 与 mock 联调都指向临时目录。
  *        一切用户数据都在根目录下，含 Electron 的 userData（electron/）：Chromium 存储、safeStorage 密钥与单例锁都不与 v2 共用。
  *        legacy 是 v2 应用的 ~/.echotype，只读：首次启动从这里导入设置与集成密钥，Core 从不写入它。
  *        ECHOTYPE_HOME 被覆盖时不导入（临时目录不读用户真实的 v2 数据），除非 ECHOTYPE_V2_HOME 指定导入来源。
+ *        resolveSteamAppDir 给出资产来源模板的 {steam_app_dir}（Steam 安装目录，只在 steam 渠道解析），Core 只读其下的 content/。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import os from "node:os";
@@ -77,6 +78,22 @@ export function resolveCatalogPath(layout: RuntimeLayout): string {
   return layout.isPackaged
     ? path.join(layout.resourcesPath, "contracts", "models.catalog.json")
     : path.join(layout.repoRoot, "contracts", "models.catalog.json");
+}
+
+/**
+ * MODEL_MANIFEST §6 的 {steam_app_dir}：Steam 安装目录，只在 steam 渠道解析（其余渠道 undefined，dir 源被跳过）。
+ * Windows / Linux = 可执行文件所在目录；macOS = EchoType.app 所在目录（可执行文件在 .app/Contents/MacOS/ 里）。
+ * 开发态 ECHOTYPE_STEAM_APP_DIR 覆盖它（smoke 与 dev:mock 用），打包态忽略。
+ */
+export function resolveSteamAppDir(o: { channel: string; isPackaged: boolean; env: NodeJS.ProcessEnv; execPath: string; platform: NodeJS.Platform }): string | undefined {
+  if (o.channel !== "steam") return undefined;
+  if (!o.isPackaged && o.env.ECHOTYPE_STEAM_APP_DIR) return path.resolve(o.env.ECHOTYPE_STEAM_APP_DIR);
+  const p = o.platform === "win32" ? path.win32 : path.posix;
+  if (o.platform !== "darwin") return p.dirname(o.execPath);
+  for (let dir = p.dirname(o.execPath); dir !== p.dirname(dir); dir = p.dirname(dir)) {
+    if (dir.endsWith(".app")) return p.dirname(dir);
+  }
+  return undefined; // 不在 .app 里运行：无从得知 Steam 目录
 }
 
 /** 组件许可证清单：打包时由 ci 生成到 resources/licenses/；开发态读 frontend/resources/licenses/（通常不存在 → 空列表）。 */

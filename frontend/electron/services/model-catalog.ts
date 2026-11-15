@@ -1,15 +1,16 @@
 /**
- * [INPUT]: 依赖 core/atomic-file 的读写；依赖 core/logger；依赖 ipc-contract 的 Provider、SettingValue、HardwareTarget
- * [OUTPUT]: 导出 catalog schema 2 的类型（CatalogModel / CatalogVariant / EnginePack / AssetRef / AssetSource …）、
- *          ModelCatalog（按渠道过滤后的只读视图）、loadCatalog、refreshRemoteCatalog、modelForEngine
- * [POS]: contracts/models.catalog.json（MODEL_MANIFEST v2.2）在 Core 内的唯一读取点。
+ * [INPUT]: 依赖 core/atomic-file 的读写；依赖 core/logger；依赖 ipc-contract 的 Provider、SettingValue、HardwareTarget、ModelLicense
+ * [OUTPUT]: 导出 catalog schema 2 的类型（CatalogModel / CatalogVariant / EnginePack / AssetRef / AssetSource / SteamContent …）、
+ *          ModelCatalog（按渠道过滤后的只读视图）、loadCatalog、refreshRemoteCatalog、modelForEngine、modelLicense
+ * [POS]: contracts/models.catalog.json（MODEL_MANIFEST v2.3）在 Core 内的唯一读取点。
  *        Core 中没有任何模型 id 字面量：默认模型、settings[]、variants、引擎包、下载源全部从这里取。
- *        渠道（github/steam/msstore）在构建时确定：按 allow_commercial 过滤许可证，按 sources 顺序给出下载源；
+ *        渠道（github/steam/msstore）在构建时确定：按 allow_commercial 过滤许可证，按 sources 顺序给出资产来源（http / dir），
+ *        steam 渠道另带 Steam 内容表（基础资产与 DLC），由 asset-sources 解释；
  *        requires 指向被过滤模型的条目一并过滤，保证留下的每个模型都可用。
  *        remote_catalog 设置时启动后后台拉取，schema 相同且更新才写入缓存，下次启动生效；任何错误都回落内置目录。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
-import type { HardwareTarget, Provider, SettingValue } from "../ipc-contract.js";
+import type { HardwareTarget, ModelLicense, Provider, SettingValue } from "../ipc-contract.js";
 import { readJsonFile, writeFileAtomicSync } from "../core/atomic-file.js";
 import type { Logger } from "../core/logger.js";
 
@@ -59,7 +60,7 @@ export interface CatalogModel {
   requires: string[];
   settings: CatalogSetting[];
   variants: CatalogVariant[];
-  license: { id: string; url: string; commercial: CommercialUse };
+  license: { id: string; url: string; commercial: CommercialUse; author?: string };
   status: "stable" | "beta" | "hidden";
 }
 
@@ -71,17 +72,33 @@ export interface EnginePack {
   platforms: Record<string, { asset: AssetRef }>;
 }
 
+/** http：下载到 ~/.echotype-v3；dir：已解压在磁盘上（Steam depot），就地使用（MODEL_MANIFEST §6） */
 export interface AssetSource {
   id: string;
-  type: "http" | "local";
+  type: "http" | "dir";
   url_template?: string;
   path_template?: string;
+}
+
+/** channels.steam.steam：基础 depot 的资产与免费 DLC 表。packs 按引擎包 id 引用，资产名随引擎版本变化 */
+export interface SteamDlc {
+  id: string;
+  name: string;
+  app_id: number | null;
+  assets?: string[];
+  packs?: string[];
+}
+
+export interface SteamContent {
+  base_assets: string[];
+  dlc: SteamDlc[];
 }
 
 export interface ChannelPolicy {
   sources: string[];
   remote_catalog: string | null;
   allow_commercial: CommercialUse[];
+  steam?: SteamContent;
 }
 
 export interface CatalogData {
@@ -151,10 +168,26 @@ export class ModelCatalog {
     return this.data.engine_packs.find((p) => p.id === id);
   }
 
-  /** 本渠道的下载源，按优先级排序 */
+  /** 本渠道的资产来源（http 下载 / dir 就地使用），按优先级排序 */
   sources(): AssetSource[] {
     return this.policy.sources.map((id) => this.data.sources.find((s) => s.id === id)).filter((s): s is AssetSource => !!s);
   }
+
+  /** 本渠道的 Steam 内容表；非 steam 渠道或表缺失时为空表。DLC 条目缺字段时整条忽略 */
+  steam(): SteamContent {
+    const raw = this.policy.steam;
+    const names = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+    const dlc = (Array.isArray(raw?.dlc) ? raw.dlc : [])
+      .filter((d) => d && typeof d.id === "string" && typeof d.name === "string")
+      .map((d) => ({ id: d.id, name: d.name, app_id: Number.isInteger(d.app_id) ? d.app_id : null, assets: names(d.assets), packs: names(d.packs) }));
+    return { base_assets: names(raw?.base_assets), dlc };
+  }
+}
+
+/** ModelView 与 LicensesView 共用的许可证视图：author 缺省为空串（「关于」页显示模型作者） */
+export function modelLicense(model: CatalogModel): ModelLicense {
+  const { id, url, commercial, author } = model.license;
+  return { id, url, commercial, author: author ?? "" };
 }
 
 /** ENGINE_PROTOCOL §6：model.load 的 model 字段 = 目录条目去掉 variants 数组，其余原样 */

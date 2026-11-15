@@ -1,5 +1,5 @@
 /**
- * [INPUT]: 依赖 core/create-core、core/paths、dev/mock-engine（以子进程运行）、真实 contracts/models.catalog.json；./helpers
+ * [INPUT]: 依赖 ./core-harness 的 bootCore 与目录夹具（真实 Core + mock 引擎子进程）；依赖 core/paths、dev/mock-engine；./helpers
  * [OUTPUT]: Core 端到端集成测试：真实 supervisor + mock 引擎进程 + 全部服务，只有 Electron 适配器是假的
  * [POS]: 验证跨服务的连线：启动只加载一次模型、热键 → 粘贴 → 历史、activeModel、模型设置只经专用入口且只在必要时重载、
  *        引擎崩溃后自动恢复、缺模型不是引擎错误、从 GPU 引擎包拉起引擎并加载需要它的 variant、引擎包失效回落内置引擎、
@@ -8,152 +8,39 @@
  *        数据根路径解析与首次启动从 v2 目录只读导入（导入前后目录指纹一致）。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AppError, AppSnapshot } from "../ipc-contract.js";
-import { Emitter } from "../core/emitter.js";
-import { Core } from "../core/create-core.js";
-import { createMemoryLogger } from "../core/logger.js";
-import { resolveCorePaths, type CorePaths } from "../core/paths.js";
+import { afterEach, describe, expect, it } from "vitest";
+import type { AppError } from "../ipc-contract.js";
+import type { Core } from "../core/create-core.js";
+import { resolveCorePaths } from "../core/paths.js";
 import { MOCK_FINAL_TEXT } from "../dev/mock-engine.js";
-import { ENGINE_EXECUTABLE, type EngineCommand, type EnginePackRef } from "../engine/engine-command.js";
+import { ENGINE_EXECUTABLE } from "../engine/engine-command.js";
 import type { CatalogData } from "../services/model-catalog.js";
-import type { KeyEvent } from "../services/hotkey-service.js";
 import type { SecretCrypto } from "../services/integrations/secret-store.js";
-import type { MachineProfile } from "../services/variant-selection.js";
+import {
+  ACTIVE,
+  bootCore,
+  CATALOG,
+  catalogBuild,
+  CUDA_300,
+  disposeCores,
+  fakeInstall,
+  fakePack,
+  PACK_PLATFORM,
+  PUBLISHED,
+  ready,
+  sha256,
+  sleep,
+  UNPUBLISHED,
+  type PackBuild,
+} from "./core-harness.js";
 import { makeTempDir, makeZip, mockEngineCommand, waitFor } from "./helpers.js";
 
-const catalogFile = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../contracts/models.catalog.json");
-const CATALOG = JSON.parse(fs.readFileSync(catalogFile, "utf-8")) as CatalogData;
-let activeCatalog: CatalogData = CATALOG;
-const ACTIVE = CATALOG.default_model_id;
-const RCTRL = 3613;
-const cores: Core[] = [];
+afterEach(disposeCores);
 
-afterEach(async () => {
-  await Promise.all(cores.splice(0).map((c) => c.dispose()));
-});
-
-function fakeInstall(paths: CorePaths, modelId: string, variantId: string) {
-  const variant = activeCatalog.models.find((m) => m.id === modelId)!.variants.find((v) => v.id === variantId)!;
-  const dir = path.join(paths.modelsDir, modelId, variantId);
-  fs.mkdirSync(dir, { recursive: true });
-  for (const rel of Object.values(variant.files)) fs.writeFileSync(path.join(dir, rel), "x");
-  fs.writeFileSync(path.join(dir, ".installed.json"), JSON.stringify({ model: modelId, variant: variantId }));
-}
-
-/** 已装引擎包装的构建（.installed.json 的 asset 与 sha256）。缺省 = 当前目录钉住的构建；字段缺省即不写（v3.0.0 的布局） */
-interface PackBuild {
-  asset?: string;
-  sha256?: string | null;
-}
-const PACK_PLATFORM = "win32-x64"; // 与 bootCore 默认的 machine 一致
-
-function catalogBuild(id: string): PackBuild {
-  const asset = activeCatalog.engine_packs.find((p) => p.id === id)?.platforms[PACK_PLATFORM]?.asset;
-  return { asset: asset?.name, sha256: asset?.sha256 ?? null };
-}
-
-function fakePack(paths: CorePaths, id: string, build: PackBuild = catalogBuild(id)) {
-  const dir = path.join(paths.enginesDir, id);
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, ENGINE_EXECUTABLE), "fake");
-  fs.writeFileSync(path.join(dir, ".installed.json"), JSON.stringify({ pack: id, platform: PACK_PLATFORM, ...build }));
-}
-
-/** v3.0.0 的 cuda 包（a56f9c5 的目录）：资产名不带引擎版本 */
-const CUDA_300: PackBuild = { asset: "engine-pack-cuda-win32-x64.zip", sha256: "123291cf3dd5c0c2fb20b03d9a3b40314b2cd60fa98664ef1355b27b097992b0" };
-/** CI 回填之前，目录里本版本的包 sha256 为 null：已发布的路径用替身值，测试与发布进度无关 */
-const STAND_IN_SHA = "5".repeat(64);
-function withPacks(publish: boolean): CatalogData {
-  const c = structuredClone(CATALOG);
-  for (const p of c.engine_packs) for (const plat of Object.values(p.platforms)) plat.asset.sha256 = publish ? (plat.asset.sha256 ?? STAND_IN_SHA) : null;
-  return c;
-}
-const PUBLISHED = withPacks(true);
-const UNPUBLISHED = withPacks(false);
-
-interface BootOptions {
-  catalog?: CatalogData;
-  machine?: Partial<MachineProfile>;
-  prepare?: (paths: CorePaths) => void;
-  engineCommand?: (pack: EnginePackRef | null) => EngineCommand;
-  hotkeyLimitation?: AppError | null;
-  fetch?: typeof fetch;
-  legacyHome?: string; // v2 应用的目录（ECHOTYPE_V2_HOME）；缺省不导入
-  secretCrypto?: SecretCrypto;
-}
-
-function bootCore(opts: BootOptions = {}) {
-  const paths = resolveCorePaths({ ECHOTYPE_HOME: makeTempDir("echotype-core-"), ...(opts.legacyHome ? { ECHOTYPE_V2_HOME: opts.legacyHome } : {}) });
-  activeCatalog = opts.catalog ?? CATALOG;
-  const bootCatalogFile = opts.catalog ? path.join(paths.home, "catalog.json") : catalogFile;
-  if (opts.catalog) fs.writeFileSync(bootCatalogFile, JSON.stringify(opts.catalog));
-  fakeInstall(paths, activeCatalog.default_model_id, "cpu-int8");
-  opts.prepare?.(paths);
-  const keys = new Emitter<{ key: KeyEvent }>();
-  let clipboard = "";
-  const pastes: string[] = [];
-  const snapshots: AppSnapshot[] = [];
-  const quickActions: string[] = [];
-  const themes: string[] = [];
-  const machine: MachineProfile = { platform: "win32", arch: "x64", gpuVendors: [], ...opts.machine };
-  const logger = createMemoryLogger();
-  const core = new Core(
-    {
-      paths,
-      catalogFile: bootCatalogFile,
-      channel: "github",
-      machine,
-      templateVars: { platform: `${machine.platform}-${machine.arch}` },
-      engineCommand:
-        opts.engineCommand ??
-        ((pack) => ({ ...mockEngineCommand({ ECHOTYPE_MOCK_LOAD_MS: "40", ...(pack ? { ECHOTYPE_MOCK_PROVIDERS: `${pack.providers.join(",")},cpu` } : {}) }), packId: pack?.id ?? null })),
-      licensesFile: path.join(paths.home, "missing-licenses.json"),
-      appVersion: "3.0.0-test",
-      logger,
-      engineTuning: { backoffMs: [20, 20] },
-      hotkeyLimitation: opts.hotkeyLimitation,
-    },
-    {
-      clipboard: {
-        readText: async () => clipboard,
-        writeText: async (t) => {
-          clipboard = t;
-        },
-        snapshot: async () => clipboard,
-        restore: async (s) => {
-          clipboard = s as string;
-        },
-      },
-      keyboard: { paste: () => pastes.push(clipboard) },
-      keySource: { start: () => {}, stop: () => {}, onKey: (cb) => keys.on("key", cb) },
-      fetch: opts.fetch ?? globalThis.fetch,
-      openQuickAction: (t) => quickActions.push(t),
-      publishSnapshot: (s) => snapshots.push(s),
-      publishModels: () => {},
-      publishPacks: () => {},
-      publishLevel: () => {},
-      applyTheme: (t) => themes.push(`${t.mode}/${t.accent}`),
-      secretCrypto: opts.secretCrypto,
-    },
-  );
-  cores.push(core);
-  const requests = vi.spyOn(core.supervisor, "request");
-  const loads = () => requests.mock.calls.filter(([m]) => m === "model.load");
-  const rctrl = (down: boolean) => keys.emit("key", { keycode: RCTRL, down, ctrl: down, alt: false, shift: false, meta: false });
-  const latest = () => snapshots.at(-1);
-  return { core, paths, pastes, snapshots, quickActions, themes, loads, rctrl, latest, logger };
-}
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const sha256 = (buf: Buffer) => createHash("sha256").update(buf).digest("hex");
-const ready = (latest: () => AppSnapshot | undefined) => waitFor(() => latest()?.engine.state === "ready", 15_000, "engine ready");
 
 describe("Core against the mock engine", () => {
   it("puts the shell's hotkey limitation and a lost session in the snapshot", async () => {
