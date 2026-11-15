@@ -32,8 +32,7 @@
       ],
       "remote_catalog": null,
       "allow_commercial": [
-        "yes",
-        "unclear"
+        "yes"
       ],
       "steam": {
         "base_assets": [
@@ -122,7 +121,7 @@
         "yes"
       ]
     },
-    "_note": "steam: free app, strategy B (design/STEAM_RELEASE_V3.md), decided 2026-11-15. msstore is provisional."
+    "_note": "FunASR Model License v1.1 allows commercial use with attribution (author, source, original model name). msstore is provisional."
   },
   "models": [
     {
@@ -248,7 +247,7 @@
       "license": {
         "id": "FunASR-Model-License",
         "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
-        "commercial": "unclear",
+        "commercial": "yes",
         "author": "Alibaba (FunASR)"
       },
       "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
@@ -332,7 +331,7 @@
       "license": {
         "id": "FunASR-Model-License",
         "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
-        "commercial": "unclear",
+        "commercial": "yes",
         "author": "Alibaba (FunASR)"
       },
       "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
@@ -416,7 +415,7 @@
       "license": {
         "id": "FunASR-Model-License",
         "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
-        "commercial": "unclear",
+        "commercial": "yes",
         "author": "Alibaba (FunASR)"
       },
       "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
@@ -1420,7 +1419,7 @@
       "license": {
         "id": "FunASR-Model-License",
         "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
-        "commercial": "unclear",
+        "commercial": "yes",
         "author": "Alibaba (FunASR)"
       },
       "_targets_todo": "Engine: evaluate cpu, nvidia (cuda) and apple (coreml/metal) for this model; add a variant per target only when it beats cpu."
