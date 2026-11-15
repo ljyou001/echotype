@@ -308,9 +308,10 @@ async function stage(buildDir) {
     // VDF 与 steamcmd 在 Windows 上也接受 /；与 steam-build.sh 的 C:/… 路径保持一致
     console.log([d.id, d.name, d.os, root.split(path.sep).join("/")].join("\t"));
   }
-  prune(depotsDir, depots.map((d) => d.name));
-  // 缓存只留 Steam 表里还在用的资产：发版后旧版本的 pack zip 随之删除
+  // 本次没配置的 depot 留着供下次复用（不进 VDF）；只删 catalog 里已经没有的 depot
   const table = steamTable();
+  prune(depotsDir, contentDepots(table).map((d) => d.name));
+  // 缓存只留 Steam 表里还在用的资产：发版后旧版本的 pack zip 随之删除
   const inUse = new Set([...table.base_assets, ...table.dlc.flatMap((d) => d.assets ?? [])]);
   for (const id of new Set(table.dlc.flatMap((d) => d.packs ?? []))) Object.values(packOf(id).platforms).forEach((p) => inUse.add(p.asset.name));
   for (const entry of readdirSync(cacheDir)) if (!inUse.has(entry)) rmSync(path.join(cacheDir, entry), { force: true });

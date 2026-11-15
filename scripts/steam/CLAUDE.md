@@ -39,17 +39,17 @@ stage 的规则：
 - catalog 的 Steam 表要满足 MODEL_MANIFEST §6：每个资产只出现一次；模型的 `requires` 同在一个 DLC 或基础 Content；变体需要的 pack 在同一个 DLC 或有自己的 DLC。
 - DLC 的 `app_id` 为 null 却填了 depot ID：警告。Core 这时把它的文件当作基础 App 的就地内容，不当作 DLC。
 - DLC 的 `app_id` 已填：它在本次所发 OS 上的 depot 必须填，否则失败。
-- 已组装的资产（`.asset.json` 的资产名与 sha256 相同、文件大小一致）直接复用；depot 里不再属于 catalog 的目录、不再配置的 depot、缓存里不再使用的 zip 都会删掉。
+- 已组装的资产（`.asset.json` 的资产名与 sha256 相同、文件大小一致）直接复用；本次没配置的 depot 保留供下次复用，不进 VDF，也不进 `--assemble`；depot 里不再属于 catalog 的目录、catalog 里已经没有的 depot、缓存里不再使用的 zip 都会删掉。
 
 ## 2. 用法
 
 1. 构建 steam 渠道的 Windows 包（与 scripts/ci/CLAUDE.md §6 相同，只多一个环境变量）：
    `bash scripts/ci/build-engine.sh win-x64`，然后在 frontend/ 里 `npm ci && npm run build && ECHOTYPE_CHANNEL=steam npx electron-builder --config electron-builder.cjs --win --x64 --dir --publish never`
-2. 填 `steam.conf` 的 `STEAM_APP_ID` 与要发的 depot ID。
+2. `steam.conf` 已填 AppID 5627870 与基础 Content depot 5627871。在 Steamworks 建好 Windows depot 后填 `STEAM_DEPOT_WINDOWS`，以后每建一个 DLC depot 就填它的键。
 3. `bash scripts/steam/steam-build.sh --stage-only` 检查 VDF 与各 depot 的大小；再去掉 `--stage-only` 上传。steamcmd 提示时由用户输入密码与 Steam Guard 验证码。
 4. 在 Steamworks → SteamPipe → Builds 把这个 build 设为 default（或先上 beta 分支自测）。
 
-本机实测安装后的样子：给假 ID，加 `--assemble <空目录>`。它隐含 `--stage-only`，把本机 OS 的应用、所有 OS 共用的内容 depot、本机 OS 的 DLC depot 复制进该目录，再跑 `verify`。之后直接运行目录里的 EchoType.exe。
+本机实测安装后的样子：用环境变量给假 ID（环境变量覆盖 steam.conf），加 `--assemble <空目录>`。它隐含 `--stage-only`，把本机 OS 的应用、所有 OS 共用的内容 depot、本机 OS 的 DLC depot 复制进该目录，再跑 `verify`。之后直接运行目录里的 EchoType.exe。
 `STEAM_APP_ID=1 STEAM_DEPOT_WINDOWS=2 STEAM_DEPOT_CONTENT=3 STEAM_DEPOT_DLC_NVIDIA_GPU_WINDOWS=4 bash scripts/steam/steam-build.sh --assemble /c/steam-test`
 
 每次发版都重新 stage 并上传全部 depot：
