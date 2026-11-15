@@ -1,8 +1,9 @@
 /**
  * [INPUT]: 依赖 node:fs、node:path
- * [OUTPUT]: 导出 Logger 接口、createFileLogger（每次启动一个文件 + 轮转）、createMemoryLogger（测试用）、nullLogger
+ * [OUTPUT]: 导出 Logger 接口、createFileLogger（每次启动一个文件 + 轮转）、consoleMirror、createMemoryLogger（测试用）、nullLogger
  * [POS]: Core 唯一的日志方案。服务只接收 Logger 参数，不调用 console.*。
  *        引擎 stderr 也经由它写入同一个文件（scope = "engine"），便于按时间对照。
+ *        开发态镜像到终端（consoleMirror）：终端或管道关掉后不再镜像，EPIPE 不会变成主进程的未捕获异常。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
 import fs from "node:fs";
@@ -64,13 +65,43 @@ export function createFileLogger({ dir, keep = 10, mirrorToConsole = false }: Fi
   pruneOldLogs(dir, keep - 1);
   const stream = fs.createWriteStream(file, { flags: "a", encoding: "utf-8" });
 
+  const mirror = mirrorToConsole ? consoleMirror() : null;
   const sink: Sink = (level, scope, msg, data) => {
     const line = `${new Date().toISOString()} ${level.toUpperCase().padEnd(5)} [${scope}] ${msg}${serialize(data)}`;
     stream.write(`${line}\n`);
-    if (mirrorToConsole) (level === "error" ? console.error : console.log)(line);
+    mirror?.(level, line);
   };
   const root = makeLogger(sink, "core");
   return { ...root, file, close: () => stream.end() };
+}
+
+// ============================================================
+// 终端镜像（开发态）。启动它的终端或管道关掉后，写 stdout/stderr 以 'error' 事件异步报 EPIPE；
+// 全局 console 只吞同步错误，没人接的 'error' 事件就成了未捕获异常，Electron 主进程随之弹出错误框。
+// 这里一直接着两个流的 'error'：管道断开（EPIPE，以及之后写已销毁流）即停止镜像，其他错误照旧抛出。
+// 监听挂在流上，同一进程里别处写 stdout（如 smoke 的结果）断管时也不再崩溃。
+// ============================================================
+const BROKEN_PIPE = new Set(["EPIPE", "ERR_STREAM_DESTROYED"]);
+
+export function consoleMirror(
+  out: NodeJS.WritableStream = process.stdout,
+  err: NodeJS.WritableStream = process.stderr,
+): (level: LogLevel, line: string) => void {
+  let broken = false;
+  const onError = (e: NodeJS.ErrnoException) => {
+    if (!BROKEN_PIPE.has(e.code ?? "")) throw e;
+    broken = true;
+  };
+  out.on("error", onError);
+  if (err !== out) err.on("error", onError);
+  return (level, line) => {
+    if (broken) return;
+    try {
+      (level === "error" ? err : out).write(`${line}\n`);
+    } catch {
+      broken = true; // 同步报错的流同样视为断开
+    }
+  };
 }
 
 function pruneOldLogs(dir: string, keep: number): void {

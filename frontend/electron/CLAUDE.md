@@ -12,7 +12,7 @@ engine/ - 引擎协议 v3 的 Core 侧：类型镜像、WebSocket 客户端、�
 services/ - 业务服务：设置、模型目录/资产来源（http 下载、Steam dir 就地使用）/variant 选择/安装/加载、GPU 引擎包、听写状态机、热键、输出、音频、历史（19 文件）+ integrations/ 集成动作（子目录）
 shell/ - Electron 外壳：窗口、托盘、主题、IPC 处理器、系统能力、原生适配器（7 文件）
 dev/ - 开发工具：mock 引擎、smoke（mock 引擎 / 真实引擎）与本地下载镜像，不在生产路径上（6 文件）
-__tests__/ - vitest 测试与夹具（13 文件）
+__tests__/ - vitest 测试与夹具（14 文件）
 
 ## 成员清单
 main.ts: 主进程入口，纯装配（≤ 200 行）。解析运行时布局与数据根（userData = <home>/electron，先于单例锁）→ 探测本机（GPU 厂商、发行渠道、Wayland）→ 日志 → Core（注入 Electron 适配器）→ IPC → 托盘与窗口；退出时 core.dispose() 优雅关停引擎
