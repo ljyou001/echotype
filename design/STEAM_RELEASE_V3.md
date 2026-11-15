@@ -6,7 +6,7 @@
 
 ## 0. 结论
 
-- App 已建好：EchoType，AppID 5627870，类型 Software Application（§1.1）。还要建 Windows depot、启动项、分支、商店页，并上传第一个 build（§8）。
+- App 已建好：EchoType，AppID 5627870，类型 Software Application（§1.1）。Windows depot 与启动项已配好；还要发布配置、上传第一个 build、建分支、做商店页（§8）。
 - **品类**：建 App 时 Software 的品类清单里有 Business & Office（§1.2），EchoType 归入这一类。商店里已有同类听写软件。审核仍可能有意外，所以先让基础 App 过审，再投入做 DLC 商店页。
 - **模型许可**：10 个模型都允许商用（FunASR 的 4 个要求署名，§3.2）。steam 渠道显示全部模型，价格由用户自定，不受模型许可限制。
 - **模型与 GPU 运行库托管在 Steam 上，可行**：
@@ -32,8 +32,8 @@
 | Partner 账号 | 已就绪（PartnerID 375744）。银行与税务信息已验证 |
 | Steam Direct 费 | 已付，app credit 已兑换给 EchoType |
 | App | EchoType，AppID 5627870，类型 Software Application。商店后台条目号 1446042（Store Admin 链接用它） |
-| depot | 只有 Steam 自动建的 5627871 "EchoType Content"，用作基础 Content depot（§5）。Windows depot 待建 |
-| package | 1939497 "EchoType"（store package，含 depot 5627871）；1939495 "EchoType Developer Comp"（autogrant，含 App 5627870 与 depot 5627871）；1939496 "EchoType for Beta Testing" |
+| depot | 5627871 "EchoType Content"（Steam 自动建，所有 OS，基础 Content depot，§5）；5627872 "EchoType Windows"（OS Windows） |
+| package | 1939497 "EchoType"（store package）、1939495 "EchoType Developer Comp"（autogrant，含 App 5627870）、1939496 "EchoType for Beta Testing"，三个都含 depot 5627871 与 5627872 |
 | 定价 | 暂时打不开（§9.1） |
 | 启动项、分支、商店页、DLC | 都没有 |
 
@@ -307,17 +307,16 @@ steamapps/common/EchoType/
 ## 8. Steamworks 待办（用户在网页上做）
 
 1. **建 App**：已完成。EchoType，AppID 5627870，类型 Software Application（§1.1）。
-2. **基础 App 的 SteamPipe**：
-   - Depots：
-     - Steam 自动建的 5627871 "EchoType Content" 用作基础 Content depot，OS 保持所有系统。它的名字和 OS 设置本来就符合这个角色，不用改。
-     - 新建 "EchoType Windows" depot，OS 设为 Windows、64-bit。
-   - Packages：把 Windows depot 加进 1939497（store package）、1939496（beta testing）、1939495（Developer Comp）。确认 1939496 也含 5627871。
-   - Installation → General：Windows 启动项设为 `EchoType.exe`。
+2. **基础 App 的 SteamPipe**（2026-11-15 已配好，只差发布）：
+   - Depots：5627871 "EchoType Content" 用作基础 Content depot，OS 保持所有系统；新建 5627872 "EchoType Windows"，OS 设为 Windows，架构保持 All（只有这一个 Windows depot）。
+   - Packages：1939497、1939496、1939495 都含 5627871 与 5627872。
+   - Installation → General：安装目录 `EchoType`；启动项 `EchoType.exe`，Launch (Default)，Windows，64-bit only。Application 类型的 App 默认不开 Steam Overlay，保持不开。
    - Redistributables：不勾（VC++ 运行库已随引擎目录分发）。
-   - Branches：建 `internal`（带密码）。
-3. **填 `scripts/steam/steam.conf`**：`STEAM_APP_ID`（5627870）与 `STEAM_DEPOT_CONTENT`（5627871）已填，再填第 2 步新建的 `STEAM_DEPOT_WINDOWS`：
+   - Publish：以上改动要在 Publish 页发布后才对 Steam 客户端生效。
+   - Branches：Steam 要有第一个 build 后，Builds 页才能建分支。首次上传后再建 `internal`。
+3. **上传**：steam.conf 已填 `STEAM_APP_ID`（5627870）、`STEAM_DEPOT_WINDOWS`（5627872）、`STEAM_DEPOT_CONTENT`（5627871）。
    - 先 `bash scripts/steam/steam-build.sh --stage-only`，看各 depot 的内容与大小。要在本机实测安装后的样子，用 `--assemble <空目录>`。
-   - 再 `bash scripts/steam/steam-build.sh --branch internal` 上传，在 steamcmd 里输入账号密码与 Steam Guard 验证码。
+   - 首次上传不带 `--branch`，在 steamcmd 里输入账号密码与 Steam Guard 验证码。然后在 Builds 页建 `internal` 分支并把这个 build 设为 live；之后的上传用 `--branch internal`。
 4. **自测**：用 Steam 客户端切到 internal 分支安装 → 首次启动即可听写 → 托盘退出 → Steam 显示「未运行」。
 5. **商店页**：
    - 文案：简短描述、详细描述、支持语言、系统要求、标签、内容调查问卷。描述里写明常驻托盘。品类选 Business & Office。

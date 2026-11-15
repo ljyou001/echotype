@@ -45,9 +45,9 @@ stage 的规则：
 
 1. 构建 steam 渠道的 Windows 包（与 scripts/ci/CLAUDE.md §6 相同，只多一个环境变量）：
    `bash scripts/ci/build-engine.sh win-x64`，然后在 frontend/ 里 `npm ci && npm run build && ECHOTYPE_CHANNEL=steam npx electron-builder --config electron-builder.cjs --win --x64 --dir --publish never`
-2. `steam.conf` 已填 AppID 5627870 与基础 Content depot 5627871。在 Steamworks 建好 Windows depot 后填 `STEAM_DEPOT_WINDOWS`，以后每建一个 DLC depot 就填它的键。
+2. `steam.conf` 已填 AppID 5627870、Windows depot 5627872 与基础 Content depot 5627871。以后每建一个 DLC depot 就填它的键。
 3. `bash scripts/steam/steam-build.sh --stage-only` 检查 VDF 与各 depot 的大小；再去掉 `--stage-only` 上传。steamcmd 提示时由用户输入密码与 Steam Guard 验证码。
-4. 在 Steamworks → SteamPipe → Builds 把这个 build 设为 default（或先上 beta 分支自测）。
+4. 在 Steamworks → SteamPipe → Builds 把这个 build 设为 live。Steam 要有第一个 build 后才能在 Builds 页建分支，所以首次上传不带 `--branch`：上传后建 `internal` 分支再设 live，或直接设到 default（App 发布前只有 Developer Comp 的持有者能安装）。
 
 本机实测安装后的样子：用环境变量给假 ID（环境变量覆盖 steam.conf），加 `--assemble <空目录>`。它隐含 `--stage-only`，把本机 OS 的应用、所有 OS 共用的内容 depot、本机 OS 的 DLC depot 复制进该目录，再跑 `verify`。之后直接运行目录里的 EchoType.exe。
 `STEAM_APP_ID=1 STEAM_DEPOT_WINDOWS=2 STEAM_DEPOT_CONTENT=3 STEAM_DEPOT_DLC_NVIDIA_GPU_WINDOWS=4 bash scripts/steam/steam-build.sh --assemble /c/steam-test`
