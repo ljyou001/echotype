@@ -310,7 +310,8 @@
       "noneUsableWithPack": "需要 GPU。在「管理模型」里安装 GPU 运行库后即可使用。"
     },
     "license": {
-      "open": "查看许可证"
+      "open": "查看许可证",
+      "by": "作者：{{author}}"
     },
     "packs": {
       "removeTitle": "删除 {{name}} 引擎？",
@@ -676,7 +677,8 @@
       "SESSION_STOP_FAILED": "没能结束听写，请重试。",
       "DECODE_FAILED": "没能转成文字，请重试。",
       "INVALID_SETTINGS": "这个设置值无效。",
-      "NOT_FOUND": "找不到这一项，它可能已被删除。"
+      "NOT_FOUND": "找不到这一项，它可能已被删除。",
+      "STEAM_MANAGED": "这部分由 Steam 管理。要移除它，请在 Steam 里打开 库 → EchoType → 属性 → DLC。"
     }
   },
   "onboarding": {
@@ -788,6 +790,17 @@
     "needsRuntime_sized": "需要 {{name}}（{{size}}，只需下载一次）。",
     "runtimeUnavailable": "{{name}}暂未提供。",
     "notAvailableYet": "暂未提供"
+  },
+  "delivery": {
+    "included": "已内置",
+    "fromSteam": "来自 Steam",
+    "getOnSteam": "在 Steam 获取",
+    "freeDlc": "免费 DLC · {{name}}",
+    "waiting": "等待 Steam 下载…",
+    "waitingHint": "下载进度在 Steam 的「下载」页里。",
+    "reopen": "在 Steam 中打开",
+    "removeInSteam": "要移除它，请在 Steam 里打开 库 → EchoType → 属性 → DLC。",
+    "removeFromSteamNote": "标为「来自 Steam」的内容，请在 Steam 里移除：库 → EchoType → 属性 → DLC。"
   },
   "statusBar": {
     "chooseModel": "选择模型",

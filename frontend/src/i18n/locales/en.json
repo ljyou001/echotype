@@ -310,7 +310,8 @@
       "noneUsableWithPack": "Needs a GPU. Install the GPU runtime from Manage models to use it."
     },
     "license": {
-      "open": "View license"
+      "open": "View license",
+      "by": "by {{author}}"
     },
     "packs": {
       "removeTitle": "Remove the {{name}} engine?",
@@ -676,7 +677,8 @@
       "SESSION_STOP_FAILED": "Couldn't finish dictation. Try again.",
       "DECODE_FAILED": "Couldn't turn that into text. Try again.",
       "INVALID_SETTINGS": "That setting isn't valid.",
-      "NOT_FOUND": "That item no longer exists."
+      "NOT_FOUND": "That item no longer exists.",
+      "STEAM_MANAGED": "Steam manages this. To remove it, open Steam → Library → EchoType → Properties → DLC."
     }
   },
   "onboarding": {
@@ -788,6 +790,17 @@
     "needsRuntime_sized": "Needs the {{name}} ({{size}}, one-time download).",
     "runtimeUnavailable": "The {{name}} isn't available yet.",
     "notAvailableYet": "Not available yet"
+  },
+  "delivery": {
+    "included": "Included",
+    "fromSteam": "From Steam",
+    "getOnSteam": "Get on Steam",
+    "freeDlc": "Free DLC · {{name}}",
+    "waiting": "Waiting for Steam…",
+    "waitingHint": "Check progress in Steam → Downloads.",
+    "reopen": "Open in Steam",
+    "removeInSteam": "To remove it, open Steam → Library → EchoType → Properties → DLC.",
+    "removeFromSteamNote": "To remove anything marked From Steam, open Steam → Library → EchoType → Properties → DLC."
   },
   "statusBar": {
     "chooseModel": "Choose a model",

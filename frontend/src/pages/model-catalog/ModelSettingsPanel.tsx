@@ -1,11 +1,13 @@
 /**
  * [INPUT]: 依赖 store/appStore 的 updateModelSettings、run、packs；依赖 bridge().models.cancelInstall；依赖 hooks/useVariantInstaller；
- *          依赖 components 的 SettingRow、Switch、ProgressBar；依赖 utils/models、utils/runMode、utils/errors 与 utils/format；react-i18next
+ *          依赖 components 的 SettingRow、Switch、ProgressBar、SteamDelivery；依赖 utils/models、utils/runMode、utils/delivery、utils/errors
+ *          与 utils/format；react-i18next
  * [OUTPUT]: 导出 ModelSettingsPanel 组件
  * [POS]: 单个模型的设置区，挂在 ModelCard 的展开区里。完全由 ModelView.settings（ModelSettingDef[]）驱动：
  *        select / text / number 进上方字段网格，toggle 进下方开关列表；标签与说明取 i18n
  *        models.settings.<key>.label / .help，未知键退回键名。只经 bridge.models.updateSettings 保存。
- *        选中硬件对应的版本没装时，在"运行设备"下方直接给出下载（缺引擎包时一并下载并注明）。
+ *        选中硬件对应的版本没装时，在"运行设备"下方直接给出下载（缺引擎包时一并下载并注明）；
+ *        该版本经 Steam 交付时改为"在 Steam 获取"与等待 Steam 下载。
  *        所需引擎包本机拿不到的硬件在"运行设备"里置灰并标"暂未提供"，不让用户走到必然失败的下载。
  *        按版本管理（逐个下载、删除、体积对比）在模型管理器里。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -18,8 +20,10 @@ import type { ModelSettingDef, ModelView, SettingValue } from "../../../electron
 import { bridge } from "../../bridge";
 import { ProgressBar, Switch } from "../../components/controls";
 import { SettingRow } from "../../components/layout";
+import { GetOnSteamButton, SteamWaiting, steamNote } from "../../components/SteamDelivery";
 import { useVariantInstaller } from "../../hooks/useVariantInstaller";
 import { useAppStore } from "../../store/appStore";
+import { steamDlc } from "../../utils/delivery";
 import { errorText } from "../../utils/errors";
 import { formatBytes, languageName } from "../../utils/format";
 import { isBusy, isGpuVariant, packUnavailable, providerOptions, providerUnavailable, selectedVariant } from "../../utils/models";
@@ -200,7 +204,7 @@ function VariantAction({ model }: { model: ModelView }) {
   const run = useAppStore((s) => s.run);
   const packs = useAppStore((s) => s.packs);
   const packOffered = packs.some((p) => p.install.status !== "installed");
-  const { install, pendingPack } = useVariantInstaller();
+  const { install, pendingPack, stateOf } = useVariantInstaller();
   const variant = selectedVariant(model);
 
   if (!variant) {
@@ -210,6 +214,17 @@ function VariantAction({ model }: { model: ModelView }) {
   const { status, pct, error } = variant.install;
   // 只有一个版本时，卡片顶部的下载按钮已经说清楚了
   if (status === "installed" || model.variants.length < 2) return null;
+
+  const state = stateOf(variant);
+  if (state === "getOnSteam" || state === "waitingForSteam") {
+    const get = () => install(model.id, variant);
+    return (
+      <div className="variant-action">
+        {state === "getOnSteam" ? <GetOnSteamButton small onClick={get} /> : <SteamWaiting onReopen={get} />}
+        <span className="variant-action__steam-note">{steamNote(t, state, steamDlc(variant.delivery))}</span>
+      </div>
+    );
+  }
 
   const size = formatBytes(variant.sizeBytes, i18n.language);
   if (isBusy(status)) {

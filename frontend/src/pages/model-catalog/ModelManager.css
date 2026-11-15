@@ -1,6 +1,6 @@
 /*
  * [INPUT]: 依赖 styles/tokens.css 的变量；抽屉外壳来自 components/components.css 的 .drawer
- * [OUTPUT]: 模型管理器样式：分区 .mm-section、模型块 .mm-model、版本/运行库行 .mm-row、磁盘占用
+ * [OUTPUT]: 模型管理器样式：分区 .mm-section、模型块 .mm-model、版本/运行库行 .mm-row、磁盘占用、顶部的 Steam 说明 .mm-steam-note
  * [POS]: pages/model-catalog/ModelManager.tsx 的专属样式。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
  */
@@ -13,6 +13,25 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 有来自 Steam 的资产时，顶部说一次怎么移除 */
+.mm-steam-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.mm-steam-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .mm-section {

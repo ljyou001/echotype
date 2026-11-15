@@ -1,12 +1,14 @@
 /**
  * [INPUT]: 依赖 ipc-contract 的全部类型；依赖 ./mockModels 的 MockModelRegistry、MockPackRegistry 与预装清单；依赖 ./mockIntegrations
- * [OUTPUT]: 导出 createMockBridge(scenario)、readMockScenario()、MockScenario
+ * [OUTPUT]: 导出 createMockBridge(scenario, channel)、readMockScenario()、readMockChannel()、MockScenario
  * [POS]: 浏览器开发用的内存版 EchotypeBridge（ipcVersion 2）。模拟 Core：快照推送、引擎加载、听写、电平、历史、
  *        模型 variant 安装、模型专属设置、GPU 引擎包（装好后重启引擎）、运行方式（activeModel，含回退）、
  *        磁盘占用、许可证列表、集成（委托 ./mockIntegrations）、热键与听写失败（hotkey.error / dictation.error）、
  *        quickAction.open（文本经 localStorage 交给新开的 #/quick-action 窗口，因为每个窗口各有一份 mock）。
  *        失败一律 reject 带 code 的 Error（./mockErrors），对齐契约；下载失败时安装态同时记成 error，像 Core 一样。
  *        由 bridge/index.ts 在 window.echotype 缺失时动态加载。场景用 URL 参数 ?mock= 切换；
+ *        发行渠道用 ?channel=steam 切换（可与 ?mock= 叠加）：Steam DLC 交付的资产 install 只"打开商店页"，
+ *        几秒后 DLC 的文件全部到位、推送 installed；remove 以 STEAM_MANAGED 拒绝；预装的 DLC 资产整包装好。
  *        运行中可在控制台用 window.echotypeMock.setHotkeyError(code|null) / setDictationError(code|null) /
  *        failDownloads(code|null) 切换失败状态。
  * [PROTOCOL]: 变更时更新此头部，然后检查 CLAUDE.md
@@ -27,6 +29,8 @@ import { bridgeError } from "./mockErrors";
 import { createMockIntegrations } from "./mockIntegrations";
 import {
   DISK_TOTAL_BYTES,
+  type MockChannel,
+  MockDelivery,
   MockMachine,
   MockModelRegistry,
   MockPackRegistry,
@@ -46,6 +50,10 @@ const SCENARIOS: MockScenario[] = ["ready", "fresh", "error", "loading", "fallba
 export function readMockScenario(): MockScenario {
   const value = new URLSearchParams(window.location.search).get("mock");
   return SCENARIOS.find((s) => s === value) ?? "ready";
+}
+
+export function readMockChannel(): MockChannel {
+  return new URLSearchParams(window.location.search).get("channel") === "steam" ? "steam" : "github";
 }
 
 // ============================================================
@@ -76,6 +84,7 @@ const mockError = (code: string): AppError => ({ code, message: MOCK_ERRORS[code
 const QUICK_ACTION_TEXT_KEY = "echotype.mock.quickActionText";
 
 const LEVEL_INTERVAL_MS = 50; // 契约约定 20 Hz
+const STEAM_DOWNLOAD_MS = 8000; // 打开商店页到 DLC 文件到位：留够时间看等待状态
 const PARTIAL_INTERVAL_MS = 320;
 
 type Listener<T> = (value: T) => void;
@@ -122,7 +131,7 @@ function initialSettings(scenario: MockScenario): Settings {
 // ============================================================
 // Mock Core
 // ============================================================
-export function createMockBridge(scenario: MockScenario): EchotypeBridge {
+export function createMockBridge(scenario: MockScenario, channel: MockChannel = "github"): EchotypeBridge {
   const snapshots = new Channel<AppSnapshot>();
   const levels = new Channel<{ rmsDbfs: number; peakDbfs: number }>();
   const modelsChanged = new Channel<ModelView[]>();
@@ -157,10 +166,13 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
   };
 
   const machine = new MockMachine();
+  const delivery = new MockDelivery(channel);
+  const preinstalled = scenario === "fresh" ? new Set<string>() : preinstalledKeys();
   const emitModels = () => modelsChanged.emit(registry.list());
   const registry = new MockModelRegistry(
     machine,
-    scenario === "fresh" ? new Set() : preinstalledKeys(),
+    delivery,
+    preinstalled,
     () => state.settings.models.perModel,
     () => state.settings.models.activeId,
     emitModels,
@@ -177,9 +189,20 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
     state.settings.models.perModel[gpu.id] = { provider: "cuda" };
   }
 
+  // Steam：预装的资产属于某个 DLC 时，这个 DLC 整包都在磁盘上
+  for (const key of preinstalled) {
+    const [id, variantId] = key.split("/");
+    const dlc = registry.deliveryOf(id, variantId);
+    if (dlc?.kind !== "steam" || !dlc.dlc) continue;
+    const { assets, packs: dlcPacks } = delivery.contents(dlc.dlc.appId);
+    registry.markAssets(assets);
+    dlcPacks.forEach((p) => machine.installedPacks.add(p));
+  }
+
   // 引擎包装好或删掉：本机硬件变化 → 模型可用版本变化 → 重启引擎（与 Core 一致）
   const packs = new MockPackRegistry(
     machine,
+    delivery,
     () => (state.activeModel?.providerUsed ?? null) as Provider | null,
     (installedChanged) => {
       packsChanged.emit(packs.list());
@@ -188,6 +211,22 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
       bootEngine();
     },
   );
+
+  // ---------- Steam：打开商店页，过一会儿 DLC 的文件到位（Core 重新扫描磁盘后报 installed） ----------
+  const steamDownloads = new Set<number>();
+  const openSteamStore = (appId: number) => {
+    console.info(`[mock] open steam://store/${appId}`);
+    if (steamDownloads.has(appId)) return;
+    steamDownloads.add(appId);
+    window.setTimeout(() => {
+      steamDownloads.delete(appId);
+      const { assets, packs: dlcPacks } = delivery.contents(appId);
+      registry.markAssets(assets);
+      dlcPacks.forEach((id) => packs.markInstalled(id));
+      emitModels();
+    }, STEAM_DOWNLOAD_MS);
+  };
+  const steamManaged = () => bridgeError("STEAM_MANAGED", "Steam manages this asset. Remove the DLC in Steam.");
 
   // ---------- 引擎生命周期 ----------
   const bootEngine = () => {
@@ -379,6 +418,8 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
     models: {
       list: () => resolved(registry.list()),
       install: async (id, variantId) => {
+        const how = registry.deliveryOf(id, variantId);
+        if (how?.kind === "steam" && how.dlc) return openSteamStore(how.dlc.appId);
         if (downloadFailure) {
           const error = mockError(downloadFailure);
           registry.fail(id, variantId, error);
@@ -388,6 +429,7 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
       },
       cancelInstall: async (id, variantId) => registry.cancelInstall(id, variantId),
       remove: async (id, variantId) => {
+        if (variantId && registry.deliveryOf(id, variantId)?.kind === "steam") throw steamManaged();
         registry.remove(id, variantId);
         if (state.settings.models.activeId === id && !registry.isReady(id)) {
           state.settings.models.activeId = null;
@@ -424,6 +466,8 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
     enginePacks: {
       list: () => resolved(packs.list()),
       install: async (id) => {
+        const how = packs.list().find((p) => p.id === id)?.delivery;
+        if (how?.kind === "steam" && how.dlc) return openSteamStore(how.dlc.appId);
         if (downloadFailure) {
           const error = mockError(downloadFailure);
           packs.fail(id, error);
@@ -431,7 +475,10 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
         }
         packs.install(id);
       },
-      remove: async (id) => packs.remove(id),
+      remove: async (id) => {
+        if (packs.list().find((p) => p.id === id)?.delivery.kind === "steam") throw steamManaged();
+        packs.remove(id);
+      },
       onPacksChanged: (cb) => packsChanged.on(cb),
     },
 
@@ -487,7 +534,7 @@ export function createMockBridge(scenario: MockScenario): EchotypeBridge {
     system: {
       platform: navigator.platform.toUpperCase().includes("MAC") ? "darwin" : "win32",
       arch: "x64",
-      channel: "github",
+      channel,
       getLicenses: async () => ({
         ...MOCK_LICENSES,
         models: registry.list().map((m) => ({ id: m.id, name: m.name, license: m.license })),
