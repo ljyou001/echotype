@@ -9,7 +9,8 @@ pe-imports.mjs: PE 导入表工具（纯 Node，按偏移读取）。`check <dir
 check-engine.mjs: 安装包冒烟检查。在 electron-builder 输出目录里找到解包应用，用 Core 编译产物的 `resolveEngineCommand`（isPackaged 布局）与 `EngineSupervisor` 拉起 `resources/engine/` 的引擎，先要求 `resources/engine` 里每个 PE 的导入都能解析（Windows），再要求 hello 握手成功、`engine_version` 等于 `engine/Cargo.toml` 的版本（拦住残留的旧引擎）、`hello.runtimes` 含 llama.cpp（拦住漏装 llama-server），再调一次 `devices.list`
 third-party-licenses.mjs: 组件许可清单生成器。合并 npm 生产依赖、Rust 依赖闭包（`cargo metadata --filter-platform`，不含 dev 依赖）与原生组件，输出 `[{name, version, license, url}]`。electron-builder 的 beforePack 每个 平台 × 架构 调用一次
 licenses/native.json: 原生组件默认清单：sherpa-onnx、ONNX Runtime、llama.cpp、Silero VAD、Microsoft Visual C++ Runtime（`platforms: ["win32"]`，只进 Windows 的许可清单）。`engine/third-party.json` 按 name 覆盖它（llama.cpp b12360 等版本由 engine 维护）
-release-assets.mjs: 发布资产工具。`checksums` 写 SHA256SUMS.txt；`packs` 按 catalog 校验 pack 资产名、解开每个 Windows pack 做导入表检查、写 `engine-packs.json`，`--publish` 时只上传 engine-packs-v3 上没有的资产：同名同内容跳过，同名不同内容即失败；gh 封装拒绝 `--clobber` 与删除；`verify-packs` 要求 catalog 的每个 pack 都已发布且 sha256 一致（tag 门禁）
+release-assets.mjs: 发布资产工具。`checksums` 写 SHA256SUMS.txt；`packs` 按 catalog 校验 pack 资产名、经 unzip.mjs 解开每个 Windows pack 做导入表检查、写 `engine-packs.json`，`--publish` 时只上传 engine-packs-v3 上没有的资产：同名同内容跳过，同名不同内容即失败；gh 封装拒绝 `--clobber` 与删除；`verify-packs` 要求 catalog 的每个 pack 都已发布且 sha256 一致（tag 门禁）
+unzip.mjs: zip 解压的唯一实现（Node 没有内置解压，调用 python3 或 python 的 zipfile，跳过 Windows 商店占位程序）。返回 zip 全部文件的相对路径与大小；非 Windows 上恢复可执行位。release-assets.mjs 与 scripts/steam/steam-content.mjs 共用
 mac/entitlements.mac.plist: mac 主程序与全部嵌套二进制（引擎、llama-server、dylib）共用的 entitlements：JIT、ad-hoc 必需的 disable-library-validation、麦克风 audio-input
 .gitattributes: 强制 `*.sh` 为 LF。Windows runner 默认 autocrlf=true，CRLF 会让 Git Bash 报 `$'\r'`
 

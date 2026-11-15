@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 node:crypto、node:fs、node:os、node:path、node:child_process；依赖 contracts/models.catalog.json 的
- *          engine_packs[].platforms[].asset；依赖 ./pe-imports.mjs 的 checkImports 与 python3 或 python（解开 Windows pack 检查导入表）；
+ *          engine_packs[].platforms[].asset；依赖 ./pe-imports.mjs 的 checkImports 与 ./unzip.mjs（解开 Windows pack 检查导入表）；
  *          发布与校验时依赖 gh CLI 与 GH_TOKEN、GH_REPO
  * [OUTPUT]: `checksums <dir>` → <dir>/SHA256SUMS.txt
  *           `packs <dir> [--publish]` → Windows pack 的导入表检查；<dir>/engine-packs.json（catalog engine_packs 片段，
@@ -18,6 +18,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkImports, formatMissing } from "./pe-imports.mjs";
+import { findPython, unzip } from "./unzip.mjs";
 
 // ---------------------------------------------------------------------------
 // 公共
@@ -123,25 +124,14 @@ for (const name of declared.keys()) {
 // 解开 zip 再检查：pack 里每个 .exe/.dll 的导入都必须在包内、是系统 DLL 或 GPU 驱动 DLL
 let importErrors = 0;
 const windowsPacks = files.filter((n) => declared.get(n)?.platform.startsWith("win32-"));
-// Windows 上的 python3 可能是商店占位程序：选第一个真能 import zipfile 的
-const python = windowsPacks.length
-  ? ["python3", "python"].find((p) => {
-      try {
-        execFileSync(p, ["-c", "import zipfile"], { stdio: "ignore" });
-        return true;
-      } catch {
-        return false;
-      }
-    })
-  : null;
-if (windowsPacks.length && !python) {
+if (windowsPacks.length && !findPython()) {
   annotate("error", "Python 3 not found; it unpacks the Windows packs for the import check.");
   process.exit(1);
 }
 for (const name of windowsPacks) {
   const tmp = mkdtempSync(path.join(os.tmpdir(), "echotype-pack-"));
   try {
-    execFileSync(python, ["-c", "import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])", path.join(dir, name), tmp], { stdio: "inherit" });
+    unzip(path.join(dir, name), tmp);
     const { binaries, missing } = checkImports(tmp);
     if (missing.length) {
       importErrors++;
